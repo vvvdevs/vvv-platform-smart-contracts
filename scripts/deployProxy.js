@@ -1,4 +1,3 @@
-// scripts/deploy_upgradeable_box.js
 const { ethers, upgrades } = require("hardhat");
 
 async function main() {
