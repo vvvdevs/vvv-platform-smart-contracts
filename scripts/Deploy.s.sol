@@ -5,9 +5,8 @@ pragma solidity 0.8.19;
 forge script scripts/Deploy.s.sol:DeployLockScript --private-key $PRIVATE_KEY --fork-url $ETH_GOERLI_TESTNET_URL
  */
 
-
 import {Lock} from "contracts/demo/Lock.sol";
-import "lib/forge-std/src/Script.sol";
+import {Script} from "lib/forge-std/src/Script.sol";
 
 contract DeployLockScript is Script {
 
