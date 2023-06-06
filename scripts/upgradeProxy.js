@@ -1,4 +1,3 @@
-// scripts/upgrade_box.js
 const { ethers, upgrades } = require("hardhat");
 
 const PROXY = "0xc1EF10880B3aadf07ea45dc8E9D7B4457F4eBD20";
