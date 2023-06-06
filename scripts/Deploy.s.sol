@@ -5,7 +5,7 @@ forge script scripts/Deploy.s.sol:DeployLockScript --private-key $PRIVATE_KEY --
  */
 
 
-import {Lock} from "contracts/Lock.sol";
+import {Lock} from "contracts/demo/Lock.sol";
 import "lib/forge-std/src/Script.sol";
 
 contract DeployLockScript is Script {

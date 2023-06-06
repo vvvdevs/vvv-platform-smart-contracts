@@ -2,7 +2,7 @@
 pragma solidity ^0.8.15;
 
 import "lib/forge-std/src/Test.sol";
-import {Lock} from "contracts/Lock.sol";
+import {Lock} from "contracts/demo/Lock.sol";
 
 contract LockTest is Test {
     //======================================================================
