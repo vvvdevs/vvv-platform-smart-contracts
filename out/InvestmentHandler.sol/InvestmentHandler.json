@@ -1,0 +1,2213 @@
+{
+  "abi": [
+    {
+      "inputs": [],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "anonymous": false,
+      "inputs": [],
+      "name": "AccessManagerSet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint8",
+          "name": "version",
+          "type": "uint8"
+        }
+      ],
+      "name": "Initialized",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [],
+      "name": "InvestmentAdded",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [],
+      "name": "InvestmentModified",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [],
+      "name": "InvestmentPhaseSet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [],
+      "name": "InvestmentRemoved",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "previousOwner",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "OwnershipTransferred",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [],
+      "name": "SAFTWalletFactorySet",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "accessManager",
+      "outputs": [
+        {
+          "internalType": "contract IAccessManager",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "addInvestment",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "claimAllocation",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "computeUserTotalAllocationForInvesment",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getTotalClaimedForInvestment",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getUserInvestmentIds",
+      "outputs": [
+        {
+          "internalType": "uint256[]",
+          "name": "",
+          "type": "uint256[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "initialize",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "invest",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "modifyInvestment",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "owner",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "removeInvestment",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "renounceOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "saftWalletFactory",
+      "outputs": [
+        {
+          "internalType": "contract ISAFTWalletFactory",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "setAccessManager",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "setInvestmentPhase",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "setSAFTWalletFactory",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "transferOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": {
+    "object": "0x608060405234801561001057600080fd5b5061001961001e565b6100dd565b600054610100900460ff161561008a5760405162461bcd60e51b815260206004820152602760248201527f496e697469616c697a61626c653a20636f6e747261637420697320696e697469604482015266616c697a696e6760c81b606482015260840160405180910390fd5b60005460ff908116146100db576000805460ff191660ff9081179091556040519081527f7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb38474024989060200160405180910390a15b565b610542806100ec6000396000f3fe608060405234801561001057600080fd5b506004361061010b5760003560e01c80638129fc1c116100a2578063e691108b11610071578063e691108b14610110578063e8b5e51f14610110578063e8da33301461016e578063f2fde38b14610181578063fdcb60681461019457600080fd5b80638129fc1c146101415780638da5cb5b14610149578063cf5a4b501461012a578063d2d1fb251461011057600080fd5b80634bca580d116100de5780634bca580d14610110578063565c6f951461012a5780635fa6711014610110578063715018a61461013957600080fd5b8063122d19a4146101105780632278112e146101105780632cd9a6fa1461011257806349cd1e9314610110575b600080fd5b005b6060604051610121919061044d565b60405180910390f35b60405160008152602001610121565b6101106101a9565b6101106101bb565b6033546001600160a01b03165b6040516001600160a01b039091168152602001610121565b606654610156906001600160a01b031681565b61011061018f366004610491565b6102d1565b606554610156906001600160a01b031681565b565b6101b1610347565b6101a760006103a1565b600054610100900460ff16158080156101db5750600054600160ff909116105b806101f55750303b1580156101f5575060005460ff166001145b61025d5760405162461bcd60e51b815260206004820152602e60248201527f496e697469616c697a61626c653a20636f6e747261637420697320616c72656160448201526d191e481a5b9a5d1a585b1a5e995960921b60648201526084015b60405180910390fd5b6000805460ff191660011790558015610280576000805461ff0019166101001790555b6102886103f3565b80156102ce576000805461ff0019169055604051600181527f7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb38474024989060200160405180910390a15b50565b6102d9610347565b6001600160a01b03811661033e5760405162461bcd60e51b815260206004820152602660248201527f4f776e61626c653a206e6577206f776e657220697320746865207a65726f206160448201526564647265737360d01b6064820152608401610254565b6102ce816103a1565b6033546001600160a01b031633146101a75760405162461bcd60e51b815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e65726044820152606401610254565b603380546001600160a01b038381166001600160a01b0319831681179093556040519116919082907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e090600090a35050565b600054610100900460ff1661041a5760405162461bcd60e51b8152600401610254906104c1565b6101a7600054610100900460ff166104445760405162461bcd60e51b8152600401610254906104c1565b6101a7336103a1565b6020808252825182820181905260009190848201906040850190845b8181101561048557835183529284019291840191600101610469565b50909695505050505050565b6000602082840312156104a357600080fd5b81356001600160a01b03811681146104ba57600080fd5b9392505050565b6020808252602b908201527f496e697469616c697a61626c653a20636f6e7472616374206973206e6f74206960408201526a6e697469616c697a696e6760a81b60608201526080019056fea264697066735822122005eeb501cc4345f111aabfc2d3377904ef52a9cf0c2dc2a07cb2c2d29c573bb564736f6c63430008130033",
+    "sourceMap": "1531:2233:1:-:0;;;2646:55;;;;;;;;;-1:-1:-1;2671:22:1;:20;:22::i;:::-;1531:2233;;5939:280:28;6007:13;;;;;;;6006:14;5998:66;;;;-1:-1:-1;;;5998:66:28;;216:2:33;5998:66:28;;;198:21:33;255:2;235:18;;;228:30;294:34;274:18;;;267:62;-1:-1:-1;;;345:18:33;;;338:37;392:19;;5998:66:28;;;;;;;;6078:12;;6094:15;6078:12;;;:31;6074:139;;6125:12;:30;;-1:-1:-1;;6125:30:28;6140:15;6125:30;;;;;;6174:28;;564:36:33;;;6174:28:28;;552:2:33;537:18;6174:28:28;;;;;;;6074:139;5939:280::o;422:184:33:-;1531:2233:1;;;;;;",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x608060405234801561001057600080fd5b506004361061010b5760003560e01c80638129fc1c116100a2578063e691108b11610071578063e691108b14610110578063e8b5e51f14610110578063e8da33301461016e578063f2fde38b14610181578063fdcb60681461019457600080fd5b80638129fc1c146101415780638da5cb5b14610149578063cf5a4b501461012a578063d2d1fb251461011057600080fd5b80634bca580d116100de5780634bca580d14610110578063565c6f951461012a5780635fa6711014610110578063715018a61461013957600080fd5b8063122d19a4146101105780632278112e146101105780632cd9a6fa1461011257806349cd1e9314610110575b600080fd5b005b6060604051610121919061044d565b60405180910390f35b60405160008152602001610121565b6101106101a9565b6101106101bb565b6033546001600160a01b03165b6040516001600160a01b039091168152602001610121565b606654610156906001600160a01b031681565b61011061018f366004610491565b6102d1565b606554610156906001600160a01b031681565b565b6101b1610347565b6101a760006103a1565b600054610100900460ff16158080156101db5750600054600160ff909116105b806101f55750303b1580156101f5575060005460ff166001145b61025d5760405162461bcd60e51b815260206004820152602e60248201527f496e697469616c697a61626c653a20636f6e747261637420697320616c72656160448201526d191e481a5b9a5d1a585b1a5e995960921b60648201526084015b60405180910390fd5b6000805460ff191660011790558015610280576000805461ff0019166101001790555b6102886103f3565b80156102ce576000805461ff0019169055604051600181527f7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb38474024989060200160405180910390a15b50565b6102d9610347565b6001600160a01b03811661033e5760405162461bcd60e51b815260206004820152602660248201527f4f776e61626c653a206e6577206f776e657220697320746865207a65726f206160448201526564647265737360d01b6064820152608401610254565b6102ce816103a1565b6033546001600160a01b031633146101a75760405162461bcd60e51b815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e65726044820152606401610254565b603380546001600160a01b038381166001600160a01b0319831681179093556040519116919082907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e090600090a35050565b600054610100900460ff1661041a5760405162461bcd60e51b8152600401610254906104c1565b6101a7600054610100900460ff166104445760405162461bcd60e51b8152600401610254906104c1565b6101a7336103a1565b6020808252825182820181905260009190848201906040850190845b8181101561048557835183529284019291840191600101610469565b50909695505050505050565b6000602082840312156104a357600080fd5b81356001600160a01b03811681146104ba57600080fd5b9392505050565b6020808252602b908201527f496e697469616c697a61626c653a20636f6e7472616374206973206e6f74206960408201526a6e697469616c697a696e6760a81b60608201526080019056fea264697066735822122005eeb501cc4345f111aabfc2d3377904ef52a9cf0c2dc2a07cb2c2d29c573bb564736f6c63430008130033",
+    "sourceMap": "1531:2233:1:-:0;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;3670:37;;3197:70;3250:13;3197:70;;;;;;:::i;:::-;;;;;;;;3348:79;;;3419:4;797:25:33;;785:2;770:18;3348:79:1;651:177:33;2064:101:26;;;:::i;2744:76:1:-;;;:::i;1441:85:26:-;1513:6;;-1:-1:-1;;;;;1513:6:26;1441:85;;;-1:-1:-1;;;;;997:32:33;;;979:51;;967:2;952:18;1441:85:26;833:203:33;1661:43:1;;;;;-1:-1:-1;;;;;1661:43:1;;;2314:198:26;;;;;;:::i;:::-;;:::i;1619:35:1:-;;;;;-1:-1:-1;;;;;1619:35:1;;;3670:37;:::o;2064:101:26:-;1334:13;:11;:13::i;:::-;2128:30:::1;2155:1;2128:18;:30::i;2744:76:1:-:0;3279:19:28;3302:13;;;;;;3301:14;;3347:34;;;;-1:-1:-1;3365:12:28;;3380:1;3365:12;;;;:16;3347:34;3346:108;;;-1:-1:-1;3426:4:28;1713:19:29;:23;;;3387:66:28;;-1:-1:-1;3436:12:28;;;;;:17;3387:66;3325:201;;;;-1:-1:-1;;;3325:201:28;;1998:2:33;3325:201:28;;;1980:21:33;2037:2;2017:18;;;2010:30;2076:34;2056:18;;;2049:62;-1:-1:-1;;;2127:18:33;;;2120:44;2181:19;;3325:201:28;;;;;;;;;3536:12;:16;;-1:-1:-1;;3536:16:28;3551:1;3536:16;;;3562:65;;;;3596:13;:20;;-1:-1:-1;;3596:20:28;;;;;3562:65;2796:16:1::1;:14;:16::i;:::-;3651:14:28::0;3647:99;;;3697:5;3681:21;;-1:-1:-1;;3681:21:28;;;3721:14;;-1:-1:-1;2363:36:33;;3721:14:28;;2351:2:33;2336:18;3721:14:28;;;;;;;3647:99;3269:483;2744:76:1:o;2314:198:26:-;1334:13;:11;:13::i;:::-;-1:-1:-1;;;;;2402:22:26;::::1;2394:73;;;::::0;-1:-1:-1;;;2394:73:26;;2612:2:33;2394:73:26::1;::::0;::::1;2594:21:33::0;2651:2;2631:18;;;2624:30;2690:34;2670:18;;;2663:62;-1:-1:-1;;;2741:18:33;;;2734:36;2787:19;;2394:73:26::1;2410:402:33::0;2394:73:26::1;2477:28;2496:8;2477:18;:28::i;1599:130::-:0;1513:6;;-1:-1:-1;;;;;1513:6:26;929:10:30;1662:23:26;1654:68;;;;-1:-1:-1;;;1654:68:26;;3019:2:33;1654:68:26;;;3001:21:33;;;3038:18;;;3031:30;3097:34;3077:18;;;3070:62;3149:18;;1654:68:26;2817:356:33;2666:187:26;2758:6;;;-1:-1:-1;;;;;2774:17:26;;;-1:-1:-1;;;;;;2774:17:26;;;;;;;2806:40;;2758:6;;;2774:17;2758:6;;2806:40;;2739:16;;2806:40;2729:124;2666:187;:::o;1003:95::-;5374:13:28;;;;;;;5366:69;;;;-1:-1:-1;;;5366:69:28;;;;;;;:::i;:::-;1065:26:26::1;5374:13:28::0;;;;;;;5366:69;;;;-1:-1:-1;;;5366:69:28;;;;;;;:::i;:::-;1176:32:26::1;929:10:30::0;1176:18:26::1;:32::i;14:632:33:-:0;185:2;237:21;;;307:13;;210:18;;;329:22;;;156:4;;185:2;408:15;;;;382:2;367:18;;;156:4;451:169;465:6;462:1;459:13;451:169;;;526:13;;514:26;;595:15;;;;560:12;;;;487:1;480:9;451:169;;;-1:-1:-1;637:3:33;;14:632;-1:-1:-1;;;;;;14:632:33:o;1275:286::-;1334:6;1387:2;1375:9;1366:7;1362:23;1358:32;1355:52;;;1403:1;1400;1393:12;1355:52;1429:23;;-1:-1:-1;;;;;1481:31:33;;1471:42;;1461:70;;1527:1;1524;1517:12;1461:70;1550:5;1275:286;-1:-1:-1;;;1275:286:33:o;3178:407::-;3380:2;3362:21;;;3419:2;3399:18;;;3392:30;3458:34;3453:2;3438:18;;3431:62;-1:-1:-1;;;3524:2:33;3509:18;;3502:41;3575:3;3560:19;;3178:407::o",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {
+    "accessManager()": "fdcb6068",
+    "addInvestment()": "2278112e",
+    "claimAllocation()": "d2d1fb25",
+    "computeUserTotalAllocationForInvesment()": "565c6f95",
+    "getTotalClaimedForInvestment()": "cf5a4b50",
+    "getUserInvestmentIds()": "2cd9a6fa",
+    "initialize()": "8129fc1c",
+    "invest()": "e8b5e51f",
+    "modifyInvestment()": "49cd1e93",
+    "owner()": "8da5cb5b",
+    "removeInvestment()": "5fa67110",
+    "renounceOwnership()": "715018a6",
+    "saftWalletFactory()": "e8da3330",
+    "setAccessManager()": "122d19a4",
+    "setInvestmentPhase()": "e691108b",
+    "setSAFTWalletFactory()": "4bca580d",
+    "transferOwnership(address)": "f2fde38b"
+  },
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.19+commit.7dd6d404\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"AccessManagerSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"InvestmentAdded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"InvestmentModified\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"InvestmentPhaseSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"InvestmentRemoved\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"SAFTWalletFactorySet\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"accessManager\",\"outputs\":[{\"internalType\":\"contract IAccessManager\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"addInvestment\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"claimAllocation\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"computeUserTotalAllocationForInvesment\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getTotalClaimedForInvestment\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getUserInvestmentIds\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"invest\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"modifyInvestment\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"removeInvestment\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"saftWalletFactory\",\"outputs\":[{\"internalType\":\"contract ISAFTWalletFactory\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"setAccessManager\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"setInvestmentPhase\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"setSAFTWalletFactory\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"events\":{\"Initialized(uint8)\":{\"details\":\"Triggered when the contract has been initialized or reinitialized.\"}},\"kind\":\"dev\",\"methods\":{\"constructor\":{\"custom:oz-upgrades-unsafe-allow\":\"constructor\"},\"owner()\":{\"details\":\"Returns the address of the current owner.\"},\"renounceOwnership()\":{\"details\":\"Leaves the contract without owner. It will not be possible to call `onlyOwner` functions. Can only be called by the current owner. NOTE: Renouncing ownership will leave the contract without an owner, thereby disabling any functionality that is only available to the owner.\"},\"transferOwnership(address)\":{\"details\":\"Transfers ownership of the contract to a new account (`newOwner`). Can only be called by the current owner.\"}},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/InvestmentHandler.sol\":\"InvestmentHandler\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[\":@openzeppelin/=node_modules/@openzeppelin/\",\":ds-test/=lib/forge-std/lib/ds-test/src/\",\":eth-gas-reporter/=node_modules/eth-gas-reporter/\",\":forge-std/=lib/forge-std/src/\",\":hardhat/=node_modules/hardhat/\"]},\"sources\":{\"contracts/InvestmentHandler.sol\":{\"keccak256\":\"0xd7173a2da6164328ef4ab77b0d185ad26949eeb827f2982f9f8ebc2745828432\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://ebd1f72980e6ab6107def662b2bcd483585fa9eee8d47d03556ddc8609cde16a\",\"dweb:/ipfs/QmfBmapnKD4V9Ewjs4KptZv53F63gdYKB1zADvwH8GEBL1\"]},\"contracts/interfaces/IAccessManager.sol\":{\"keccak256\":\"0x220e2cf78f0480d16d14e80e4c2cafe2ef262749ec6fd6a8973aca56705acc7b\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://6e609dedb4158dbcb2bd5ec6c0ba096af1068a07db75f7f9b32adbd940a4ac5e\",\"dweb:/ipfs/QmbZLEH8GypQroYkbNACSaandPudPNtMBd2QRvWX4rtthk\"]},\"contracts/interfaces/ISAFTWalletFactory.sol\":{\"keccak256\":\"0x20d1c8746ed4fa10b2e65ee9e12aa197e92434c1cc4a24730e56f0e360a53c8c\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://84f1395d959fa48049ed96b8a851c9396efd5e70ed90421d3ac0df8810bfe8ce\",\"dweb:/ipfs/QmdnPVHaSrCC6U87tUEX8Zjn9sKs7A9eFrhZqpdUruoNmj\"]},\"node_modules/@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol\":{\"keccak256\":\"0x4075622496acc77fd6d4de4cc30a8577a744d5c75afad33fdeacf1704d6eda98\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://99c8cb3cd19a44bbfb6612605affb7d8b06cee1f6aa9362a37a8672b4f7eeaf8\",\"dweb:/ipfs/QmasyxFDBUp7k5KFgfDWEzM8PYSKEq7GVznzMJ1VxVRF4B\"]},\"node_modules/@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol\":{\"keccak256\":\"0x89be10e757d242e9b18d5a32c9fbe2019f6d63052bbe46397a430a1d60d7f794\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://f103ee2e4aecd37aac6ceefe670709cdd7613dee25fa2d4d9feaf7fc0aaa155e\",\"dweb:/ipfs/QmRiNZLoJk5k3HPMYGPGjZFd2ke1ZxjhJZkM45Ec9GH9hv\"]},\"node_modules/@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol\":{\"keccak256\":\"0x9c80f545915582e63fe206c6ce27cbe85a86fc10b9cd2a0e8c9488fb7c2ee422\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://310136ad60820af4177a11a61d77a3686faf5fca4942b600e08fc940db38396b\",\"dweb:/ipfs/QmbCzMNSTL7Zi7M4UCSqBrkHtp4jjxUnGbkneCZKdR1qeq\"]},\"node_modules/@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol\":{\"keccak256\":\"0x963ea7f0b48b032eef72fe3a7582edf78408d6f834115b9feadd673a4d5bd149\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://d6520943ea55fdf5f0bafb39ed909f64de17051bc954ff3e88c9e5621412c79c\",\"dweb:/ipfs/QmWZ4rAKTQbNG2HxGs46AcTXShsVytKeLs7CUCdCSv5N7a\"]}},\"version\":1}",
+  "metadata": {
+    "compiler": {
+      "version": "0.8.19+commit.7dd6d404"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [
+        {
+          "inputs": [],
+          "stateMutability": "nonpayable",
+          "type": "constructor"
+        },
+        {
+          "inputs": [],
+          "type": "event",
+          "name": "AccessManagerSet",
+          "anonymous": false
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint8",
+              "name": "version",
+              "type": "uint8",
+              "indexed": false
+            }
+          ],
+          "type": "event",
+          "name": "Initialized",
+          "anonymous": false
+        },
+        {
+          "inputs": [],
+          "type": "event",
+          "name": "InvestmentAdded",
+          "anonymous": false
+        },
+        {
+          "inputs": [],
+          "type": "event",
+          "name": "InvestmentModified",
+          "anonymous": false
+        },
+        {
+          "inputs": [],
+          "type": "event",
+          "name": "InvestmentPhaseSet",
+          "anonymous": false
+        },
+        {
+          "inputs": [],
+          "type": "event",
+          "name": "InvestmentRemoved",
+          "anonymous": false
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "previousOwner",
+              "type": "address",
+              "indexed": true
+            },
+            {
+              "internalType": "address",
+              "name": "newOwner",
+              "type": "address",
+              "indexed": true
+            }
+          ],
+          "type": "event",
+          "name": "OwnershipTransferred",
+          "anonymous": false
+        },
+        {
+          "inputs": [],
+          "type": "event",
+          "name": "SAFTWalletFactorySet",
+          "anonymous": false
+        },
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "accessManager",
+          "outputs": [
+            {
+              "internalType": "contract IAccessManager",
+              "name": "",
+              "type": "address"
+            }
+          ]
+        },
+        {
+          "inputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "addInvestment"
+        },
+        {
+          "inputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "claimAllocation"
+        },
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "computeUserTotalAllocationForInvesment",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ]
+        },
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "getTotalClaimedForInvestment",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ]
+        },
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "getUserInvestmentIds",
+          "outputs": [
+            {
+              "internalType": "uint256[]",
+              "name": "",
+              "type": "uint256[]"
+            }
+          ]
+        },
+        {
+          "inputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "initialize"
+        },
+        {
+          "inputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "invest"
+        },
+        {
+          "inputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "modifyInvestment"
+        },
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "owner",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ]
+        },
+        {
+          "inputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "removeInvestment"
+        },
+        {
+          "inputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "renounceOwnership"
+        },
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "saftWalletFactory",
+          "outputs": [
+            {
+              "internalType": "contract ISAFTWalletFactory",
+              "name": "",
+              "type": "address"
+            }
+          ]
+        },
+        {
+          "inputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "setAccessManager"
+        },
+        {
+          "inputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "setInvestmentPhase"
+        },
+        {
+          "inputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "setSAFTWalletFactory"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "newOwner",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "transferOwnership"
+        }
+      ],
+      "devdoc": {
+        "kind": "dev",
+        "methods": {
+          "constructor": {
+            "custom:oz-upgrades-unsafe-allow": "constructor"
+          },
+          "owner()": {
+            "details": "Returns the address of the current owner."
+          },
+          "renounceOwnership()": {
+            "details": "Leaves the contract without owner. It will not be possible to call `onlyOwner` functions. Can only be called by the current owner. NOTE: Renouncing ownership will leave the contract without an owner, thereby disabling any functionality that is only available to the owner."
+          },
+          "transferOwnership(address)": {
+            "details": "Transfers ownership of the contract to a new account (`newOwner`). Can only be called by the current owner."
+          }
+        },
+        "version": 1
+      },
+      "userdoc": {
+        "kind": "user",
+        "methods": {},
+        "version": 1
+      }
+    },
+    "settings": {
+      "remappings": [
+        ":@openzeppelin/=node_modules/@openzeppelin/",
+        ":ds-test/=lib/forge-std/lib/ds-test/src/",
+        ":eth-gas-reporter/=node_modules/eth-gas-reporter/",
+        ":forge-std/=lib/forge-std/src/",
+        ":hardhat/=node_modules/hardhat/"
+      ],
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "metadata": {
+        "bytecodeHash": "ipfs"
+      },
+      "compilationTarget": {
+        "contracts/InvestmentHandler.sol": "InvestmentHandler"
+      },
+      "libraries": {}
+    },
+    "sources": {
+      "contracts/InvestmentHandler.sol": {
+        "keccak256": "0xd7173a2da6164328ef4ab77b0d185ad26949eeb827f2982f9f8ebc2745828432",
+        "urls": [
+          "bzz-raw://ebd1f72980e6ab6107def662b2bcd483585fa9eee8d47d03556ddc8609cde16a",
+          "dweb:/ipfs/QmfBmapnKD4V9Ewjs4KptZv53F63gdYKB1zADvwH8GEBL1"
+        ],
+        "license": "MIT"
+      },
+      "contracts/interfaces/IAccessManager.sol": {
+        "keccak256": "0x220e2cf78f0480d16d14e80e4c2cafe2ef262749ec6fd6a8973aca56705acc7b",
+        "urls": [
+          "bzz-raw://6e609dedb4158dbcb2bd5ec6c0ba096af1068a07db75f7f9b32adbd940a4ac5e",
+          "dweb:/ipfs/QmbZLEH8GypQroYkbNACSaandPudPNtMBd2QRvWX4rtthk"
+        ],
+        "license": "MIT"
+      },
+      "contracts/interfaces/ISAFTWalletFactory.sol": {
+        "keccak256": "0x20d1c8746ed4fa10b2e65ee9e12aa197e92434c1cc4a24730e56f0e360a53c8c",
+        "urls": [
+          "bzz-raw://84f1395d959fa48049ed96b8a851c9396efd5e70ed90421d3ac0df8810bfe8ce",
+          "dweb:/ipfs/QmdnPVHaSrCC6U87tUEX8Zjn9sKs7A9eFrhZqpdUruoNmj"
+        ],
+        "license": "MIT"
+      },
+      "node_modules/@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol": {
+        "keccak256": "0x4075622496acc77fd6d4de4cc30a8577a744d5c75afad33fdeacf1704d6eda98",
+        "urls": [
+          "bzz-raw://99c8cb3cd19a44bbfb6612605affb7d8b06cee1f6aa9362a37a8672b4f7eeaf8",
+          "dweb:/ipfs/QmasyxFDBUp7k5KFgfDWEzM8PYSKEq7GVznzMJ1VxVRF4B"
+        ],
+        "license": "MIT"
+      },
+      "node_modules/@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol": {
+        "keccak256": "0x89be10e757d242e9b18d5a32c9fbe2019f6d63052bbe46397a430a1d60d7f794",
+        "urls": [
+          "bzz-raw://f103ee2e4aecd37aac6ceefe670709cdd7613dee25fa2d4d9feaf7fc0aaa155e",
+          "dweb:/ipfs/QmRiNZLoJk5k3HPMYGPGjZFd2ke1ZxjhJZkM45Ec9GH9hv"
+        ],
+        "license": "MIT"
+      },
+      "node_modules/@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol": {
+        "keccak256": "0x9c80f545915582e63fe206c6ce27cbe85a86fc10b9cd2a0e8c9488fb7c2ee422",
+        "urls": [
+          "bzz-raw://310136ad60820af4177a11a61d77a3686faf5fca4942b600e08fc940db38396b",
+          "dweb:/ipfs/QmbCzMNSTL7Zi7M4UCSqBrkHtp4jjxUnGbkneCZKdR1qeq"
+        ],
+        "license": "MIT"
+      },
+      "node_modules/@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol": {
+        "keccak256": "0x963ea7f0b48b032eef72fe3a7582edf78408d6f834115b9feadd673a4d5bd149",
+        "urls": [
+          "bzz-raw://d6520943ea55fdf5f0bafb39ed909f64de17051bc954ff3e88c9e5621412c79c",
+          "dweb:/ipfs/QmWZ4rAKTQbNG2HxGs46AcTXShsVytKeLs7CUCdCSv5N7a"
+        ],
+        "license": "MIT"
+      }
+    },
+    "version": 1
+  },
+  "ast": {
+    "absolutePath": "contracts/InvestmentHandler.sol",
+    "id": 202,
+    "exportedSymbols": {
+      "IAccessManager": [
+        471
+      ],
+      "ISAFTWalletFactory": [
+        474
+      ],
+      "Initializable": [
+        30185
+      ],
+      "InvestmentHandler": [
+        201
+      ],
+      "OwnableUpgradeable": [
+        29936
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "32:3732:1",
+    "nodes": [
+      {
+        "id": 49,
+        "nodeType": "PragmaDirective",
+        "src": "32:23:1",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "0.8",
+          ".19"
+        ]
+      },
+      {
+        "id": 51,
+        "nodeType": "ImportDirective",
+        "src": "1190:96:1",
+        "nodes": [],
+        "absolutePath": "node_modules/@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol",
+        "file": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol",
+        "nameLocation": "-1:-1:-1",
+        "scope": 202,
+        "sourceUnit": 30186,
+        "symbolAliases": [
+          {
+            "foreign": {
+              "id": 50,
+              "name": "Initializable",
+              "nodeType": "Identifier",
+              "overloadedDeclarations": [],
+              "referencedDeclaration": 30185,
+              "src": "1198:13:1",
+              "typeDescriptions": {}
+            },
+            "nameLocation": "-1:-1:-1"
+          }
+        ],
+        "unitAlias": ""
+      },
+      {
+        "id": 53,
+        "nodeType": "ImportDirective",
+        "src": "1288:101:1",
+        "nodes": [],
+        "absolutePath": "node_modules/@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol",
+        "file": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol",
+        "nameLocation": "-1:-1:-1",
+        "scope": 202,
+        "sourceUnit": 29937,
+        "symbolAliases": [
+          {
+            "foreign": {
+              "id": 52,
+              "name": "OwnableUpgradeable",
+              "nodeType": "Identifier",
+              "overloadedDeclarations": [],
+              "referencedDeclaration": 29936,
+              "src": "1296:18:1",
+              "typeDescriptions": {}
+            },
+            "nameLocation": "-1:-1:-1"
+          }
+        ],
+        "unitAlias": ""
+      },
+      {
+        "id": 55,
+        "nodeType": "ImportDirective",
+        "src": "1391:63:1",
+        "nodes": [],
+        "absolutePath": "contracts/interfaces/IAccessManager.sol",
+        "file": "./interfaces/IAccessManager.sol",
+        "nameLocation": "-1:-1:-1",
+        "scope": 202,
+        "sourceUnit": 472,
+        "symbolAliases": [
+          {
+            "foreign": {
+              "id": 54,
+              "name": "IAccessManager",
+              "nodeType": "Identifier",
+              "overloadedDeclarations": [],
+              "referencedDeclaration": 471,
+              "src": "1399:14:1",
+              "typeDescriptions": {}
+            },
+            "nameLocation": "-1:-1:-1"
+          }
+        ],
+        "unitAlias": ""
+      },
+      {
+        "id": 57,
+        "nodeType": "ImportDirective",
+        "src": "1456:71:1",
+        "nodes": [],
+        "absolutePath": "contracts/interfaces/ISAFTWalletFactory.sol",
+        "file": "./interfaces/ISAFTWalletFactory.sol",
+        "nameLocation": "-1:-1:-1",
+        "scope": 202,
+        "sourceUnit": 475,
+        "symbolAliases": [
+          {
+            "foreign": {
+              "id": 56,
+              "name": "ISAFTWalletFactory",
+              "nodeType": "Identifier",
+              "overloadedDeclarations": [],
+              "referencedDeclaration": 474,
+              "src": "1464:18:1",
+              "typeDescriptions": {}
+            },
+            "nameLocation": "-1:-1:-1"
+          }
+        ],
+        "unitAlias": ""
+      },
+      {
+        "id": 201,
+        "nodeType": "ContractDefinition",
+        "src": "1531:2233:1",
+        "nodes": [
+          {
+            "id": 64,
+            "nodeType": "VariableDeclaration",
+            "src": "1619:35:1",
+            "nodes": [],
+            "constant": false,
+            "functionSelector": "fdcb6068",
+            "mutability": "mutable",
+            "name": "accessManager",
+            "nameLocation": "1641:13:1",
+            "scope": 201,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_contract$_IAccessManager_$471",
+              "typeString": "contract IAccessManager"
+            },
+            "typeName": {
+              "id": 63,
+              "nodeType": "UserDefinedTypeName",
+              "pathNode": {
+                "id": 62,
+                "name": "IAccessManager",
+                "nameLocations": [
+                  "1619:14:1"
+                ],
+                "nodeType": "IdentifierPath",
+                "referencedDeclaration": 471,
+                "src": "1619:14:1"
+              },
+              "referencedDeclaration": 471,
+              "src": "1619:14:1",
+              "typeDescriptions": {
+                "typeIdentifier": "t_contract$_IAccessManager_$471",
+                "typeString": "contract IAccessManager"
+              }
+            },
+            "visibility": "public"
+          },
+          {
+            "id": 67,
+            "nodeType": "VariableDeclaration",
+            "src": "1661:43:1",
+            "nodes": [],
+            "constant": false,
+            "functionSelector": "e8da3330",
+            "mutability": "mutable",
+            "name": "saftWalletFactory",
+            "nameLocation": "1687:17:1",
+            "scope": 201,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_contract$_ISAFTWalletFactory_$474",
+              "typeString": "contract ISAFTWalletFactory"
+            },
+            "typeName": {
+              "id": 66,
+              "nodeType": "UserDefinedTypeName",
+              "pathNode": {
+                "id": 65,
+                "name": "ISAFTWalletFactory",
+                "nameLocations": [
+                  "1661:18:1"
+                ],
+                "nodeType": "IdentifierPath",
+                "referencedDeclaration": 474,
+                "src": "1661:18:1"
+              },
+              "referencedDeclaration": 474,
+              "src": "1661:18:1",
+              "typeDescriptions": {
+                "typeIdentifier": "t_contract$_ISAFTWalletFactory_$474",
+                "typeString": "contract ISAFTWalletFactory"
+              }
+            },
+            "visibility": "public"
+          },
+          {
+            "id": 72,
+            "nodeType": "EnumDefinition",
+            "src": "1713:82:1",
+            "nodes": [],
+            "canonicalName": "InvestmentHandler.Phase",
+            "members": [
+              {
+                "id": 68,
+                "name": "CLOSED",
+                "nameLocation": "1735:6:1",
+                "nodeType": "EnumValue",
+                "src": "1735:6:1"
+              },
+              {
+                "id": 69,
+                "name": "WHALE",
+                "nameLocation": "1752:5:1",
+                "nodeType": "EnumValue",
+                "src": "1752:5:1"
+              },
+              {
+                "id": 70,
+                "name": "SHARK",
+                "nameLocation": "1768:5:1",
+                "nodeType": "EnumValue",
+                "src": "1768:5:1"
+              },
+              {
+                "id": 71,
+                "name": "FCFS",
+                "nameLocation": "1784:4:1",
+                "nodeType": "EnumValue",
+                "src": "1784:4:1"
+              }
+            ],
+            "name": "Phase",
+            "nameLocation": "1718:5:1"
+          },
+          {
+            "id": 89,
+            "nodeType": "StructDefinition",
+            "src": "1804:270:1",
+            "nodes": [],
+            "canonicalName": "InvestmentHandler.Investment",
+            "members": [
+              {
+                "constant": false,
+                "id": 74,
+                "mutability": "mutable",
+                "name": "id",
+                "nameLocation": "1838:2:1",
+                "nodeType": "VariableDeclaration",
+                "scope": 89,
+                "src": "1833:7:1",
+                "stateVariable": false,
+                "storageLocation": "default",
+                "typeDescriptions": {
+                  "typeIdentifier": "t_uint256",
+                  "typeString": "uint256"
+                },
+                "typeName": {
+                  "id": 73,
+                  "name": "uint",
+                  "nodeType": "ElementaryTypeName",
+                  "src": "1833:4:1",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  }
+                },
+                "visibility": "internal"
+              },
+              {
+                "constant": false,
+                "id": 76,
+                "mutability": "mutable",
+                "name": "name",
+                "nameLocation": "1858:4:1",
+                "nodeType": "VariableDeclaration",
+                "scope": 89,
+                "src": "1851:11:1",
+                "stateVariable": false,
+                "storageLocation": "default",
+                "typeDescriptions": {
+                  "typeIdentifier": "t_string_storage_ptr",
+                  "typeString": "string"
+                },
+                "typeName": {
+                  "id": 75,
+                  "name": "string",
+                  "nodeType": "ElementaryTypeName",
+                  "src": "1851:6:1",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_string_storage_ptr",
+                    "typeString": "string"
+                  }
+                },
+                "visibility": "internal"
+              },
+              {
+                "constant": false,
+                "id": 79,
+                "mutability": "mutable",
+                "name": "allocationPhase",
+                "nameLocation": "1889:15:1",
+                "nodeType": "VariableDeclaration",
+                "scope": 89,
+                "src": "1873:31:1",
+                "stateVariable": false,
+                "storageLocation": "default",
+                "typeDescriptions": {
+                  "typeIdentifier": "t_struct$_AllocationPhase_$97_storage_ptr",
+                  "typeString": "struct InvestmentHandler.AllocationPhase"
+                },
+                "typeName": {
+                  "id": 78,
+                  "nodeType": "UserDefinedTypeName",
+                  "pathNode": {
+                    "id": 77,
+                    "name": "AllocationPhase",
+                    "nameLocations": [
+                      "1873:15:1"
+                    ],
+                    "nodeType": "IdentifierPath",
+                    "referencedDeclaration": 97,
+                    "src": "1873:15:1"
+                  },
+                  "referencedDeclaration": 97,
+                  "src": "1873:15:1",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_struct$_AllocationPhase_$97_storage_ptr",
+                    "typeString": "struct InvestmentHandler.AllocationPhase"
+                  }
+                },
+                "visibility": "internal"
+              },
+              {
+                "constant": false,
+                "id": 81,
+                "mutability": "mutable",
+                "name": "root",
+                "nameLocation": "1923:4:1",
+                "nodeType": "VariableDeclaration",
+                "scope": 89,
+                "src": "1915:12:1",
+                "stateVariable": false,
+                "storageLocation": "default",
+                "typeDescriptions": {
+                  "typeIdentifier": "t_bytes32",
+                  "typeString": "bytes32"
+                },
+                "typeName": {
+                  "id": 80,
+                  "name": "bytes32",
+                  "nodeType": "ElementaryTypeName",
+                  "src": "1915:7:1",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes32",
+                    "typeString": "bytes32"
+                  }
+                },
+                "visibility": "internal"
+              },
+              {
+                "constant": false,
+                "id": 83,
+                "mutability": "mutable",
+                "name": "totalAllocation",
+                "nameLocation": "1943:15:1",
+                "nodeType": "VariableDeclaration",
+                "scope": 89,
+                "src": "1938:20:1",
+                "stateVariable": false,
+                "storageLocation": "default",
+                "typeDescriptions": {
+                  "typeIdentifier": "t_uint256",
+                  "typeString": "uint256"
+                },
+                "typeName": {
+                  "id": 82,
+                  "name": "uint",
+                  "nodeType": "ElementaryTypeName",
+                  "src": "1938:4:1",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  }
+                },
+                "visibility": "internal"
+              },
+              {
+                "constant": false,
+                "id": 85,
+                "mutability": "mutable",
+                "name": "totalAllocationLimit",
+                "nameLocation": "1974:20:1",
+                "nodeType": "VariableDeclaration",
+                "scope": 89,
+                "src": "1969:25:1",
+                "stateVariable": false,
+                "storageLocation": "default",
+                "typeDescriptions": {
+                  "typeIdentifier": "t_uint256",
+                  "typeString": "uint256"
+                },
+                "typeName": {
+                  "id": 84,
+                  "name": "uint",
+                  "nodeType": "ElementaryTypeName",
+                  "src": "1969:4:1",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  }
+                },
+                "visibility": "internal"
+              },
+              {
+                "constant": false,
+                "id": 88,
+                "mutability": "mutable",
+                "name": "totalClaimed",
+                "nameLocation": "2054:12:1",
+                "nodeType": "VariableDeclaration",
+                "scope": 89,
+                "src": "2049:17:1",
+                "stateVariable": false,
+                "storageLocation": "default",
+                "typeDescriptions": {
+                  "typeIdentifier": "t_uint256",
+                  "typeString": "uint256"
+                },
+                "typeName": {
+                  "id": 87,
+                  "name": "uint",
+                  "nodeType": "ElementaryTypeName",
+                  "src": "2049:4:1",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  }
+                },
+                "visibility": "internal"
+              }
+            ],
+            "name": "Investment",
+            "nameLocation": "1811:10:1",
+            "scope": 201,
+            "visibility": "public"
+          },
+          {
+            "id": 97,
+            "nodeType": "StructDefinition",
+            "src": "2082:101:1",
+            "nodes": [],
+            "canonicalName": "InvestmentHandler.AllocationPhase",
+            "members": [
+              {
+                "constant": false,
+                "id": 92,
+                "mutability": "mutable",
+                "name": "phase",
+                "nameLocation": "2122:5:1",
+                "nodeType": "VariableDeclaration",
+                "scope": 97,
+                "src": "2116:11:1",
+                "stateVariable": false,
+                "storageLocation": "default",
+                "typeDescriptions": {
+                  "typeIdentifier": "t_enum$_Phase_$72",
+                  "typeString": "enum InvestmentHandler.Phase"
+                },
+                "typeName": {
+                  "id": 91,
+                  "nodeType": "UserDefinedTypeName",
+                  "pathNode": {
+                    "id": 90,
+                    "name": "Phase",
+                    "nameLocations": [
+                      "2116:5:1"
+                    ],
+                    "nodeType": "IdentifierPath",
+                    "referencedDeclaration": 72,
+                    "src": "2116:5:1"
+                  },
+                  "referencedDeclaration": 72,
+                  "src": "2116:5:1",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_enum$_Phase_$72",
+                    "typeString": "enum InvestmentHandler.Phase"
+                  }
+                },
+                "visibility": "internal"
+              },
+              {
+                "constant": false,
+                "id": 94,
+                "mutability": "mutable",
+                "name": "startTime",
+                "nameLocation": "2143:9:1",
+                "nodeType": "VariableDeclaration",
+                "scope": 97,
+                "src": "2138:14:1",
+                "stateVariable": false,
+                "storageLocation": "default",
+                "typeDescriptions": {
+                  "typeIdentifier": "t_uint256",
+                  "typeString": "uint256"
+                },
+                "typeName": {
+                  "id": 93,
+                  "name": "uint",
+                  "nodeType": "ElementaryTypeName",
+                  "src": "2138:4:1",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  }
+                },
+                "visibility": "internal"
+              },
+              {
+                "constant": false,
+                "id": 96,
+                "mutability": "mutable",
+                "name": "endTime",
+                "nameLocation": "2168:7:1",
+                "nodeType": "VariableDeclaration",
+                "scope": 97,
+                "src": "2163:12:1",
+                "stateVariable": false,
+                "storageLocation": "default",
+                "typeDescriptions": {
+                  "typeIdentifier": "t_uint256",
+                  "typeString": "uint256"
+                },
+                "typeName": {
+                  "id": 95,
+                  "name": "uint",
+                  "nodeType": "ElementaryTypeName",
+                  "src": "2163:4:1",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  }
+                },
+                "visibility": "internal"
+              }
+            ],
+            "name": "AllocationPhase",
+            "nameLocation": "2089:15:1",
+            "scope": 201,
+            "visibility": "public"
+          },
+          {
+            "id": 104,
+            "nodeType": "StructDefinition",
+            "src": "2191:106:1",
+            "nodes": [],
+            "canonicalName": "InvestmentHandler.ClaimWithdrawal",
+            "members": [
+              {
+                "constant": false,
+                "id": 99,
+                "mutability": "mutable",
+                "name": "investmentId",
+                "nameLocation": "2230:12:1",
+                "nodeType": "VariableDeclaration",
+                "scope": 104,
+                "src": "2225:17:1",
+                "stateVariable": false,
+                "storageLocation": "default",
+                "typeDescriptions": {
+                  "typeIdentifier": "t_uint256",
+                  "typeString": "uint256"
+                },
+                "typeName": {
+                  "id": 98,
+                  "name": "uint",
+                  "nodeType": "ElementaryTypeName",
+                  "src": "2225:4:1",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  }
+                },
+                "visibility": "internal"
+              },
+              {
+                "constant": false,
+                "id": 101,
+                "mutability": "mutable",
+                "name": "amount",
+                "nameLocation": "2258:6:1",
+                "nodeType": "VariableDeclaration",
+                "scope": 104,
+                "src": "2253:11:1",
+                "stateVariable": false,
+                "storageLocation": "default",
+                "typeDescriptions": {
+                  "typeIdentifier": "t_uint256",
+                  "typeString": "uint256"
+                },
+                "typeName": {
+                  "id": 100,
+                  "name": "uint",
+                  "nodeType": "ElementaryTypeName",
+                  "src": "2253:4:1",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  }
+                },
+                "visibility": "internal"
+              },
+              {
+                "constant": false,
+                "id": 103,
+                "mutability": "mutable",
+                "name": "timestamp",
+                "nameLocation": "2280:9:1",
+                "nodeType": "VariableDeclaration",
+                "scope": 104,
+                "src": "2275:14:1",
+                "stateVariable": false,
+                "storageLocation": "default",
+                "typeDescriptions": {
+                  "typeIdentifier": "t_uint256",
+                  "typeString": "uint256"
+                },
+                "typeName": {
+                  "id": 102,
+                  "name": "uint",
+                  "nodeType": "ElementaryTypeName",
+                  "src": "2275:4:1",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  }
+                },
+                "visibility": "internal"
+              }
+            ],
+            "name": "ClaimWithdrawal",
+            "nameLocation": "2198:15:1",
+            "scope": 201,
+            "visibility": "public"
+          },
+          {
+            "id": 108,
+            "nodeType": "VariableDeclaration",
+            "src": "2305:17:1",
+            "nodes": [],
+            "constant": false,
+            "mutability": "mutable",
+            "name": "__gap",
+            "nameLocation": "2317:5:1",
+            "scope": 201,
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_array$_t_uint256_$48_storage",
+              "typeString": "uint256[48]"
+            },
+            "typeName": {
+              "baseType": {
+                "id": 105,
+                "name": "uint256",
+                "nodeType": "ElementaryTypeName",
+                "src": "2305:7:1",
+                "typeDescriptions": {
+                  "typeIdentifier": "t_uint256",
+                  "typeString": "uint256"
+                }
+              },
+              "id": 107,
+              "length": {
+                "hexValue": "3438",
+                "id": 106,
+                "isConstant": false,
+                "isLValue": false,
+                "isPure": true,
+                "kind": "number",
+                "lValueRequested": false,
+                "nodeType": "Literal",
+                "src": "2313:2:1",
+                "typeDescriptions": {
+                  "typeIdentifier": "t_rational_48_by_1",
+                  "typeString": "int_const 48"
+                },
+                "value": "48"
+              },
+              "nodeType": "ArrayTypeName",
+              "src": "2305:11:1",
+              "typeDescriptions": {
+                "typeIdentifier": "t_array$_t_uint256_$48_storage_ptr",
+                "typeString": "uint256[48]"
+              }
+            },
+            "visibility": "internal"
+          },
+          {
+            "id": 110,
+            "nodeType": "EventDefinition",
+            "src": "2396:24:1",
+            "nodes": [],
+            "anonymous": false,
+            "eventSelector": "eb93aa285af742034faffb9bb321eaabbaaf1991bf57b618271a02bf28c0fc9b",
+            "name": "InvestmentAdded",
+            "nameLocation": "2402:15:1",
+            "parameters": {
+              "id": 109,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2417:2:1"
+            }
+          },
+          {
+            "id": 112,
+            "nodeType": "EventDefinition",
+            "src": "2426:26:1",
+            "nodes": [],
+            "anonymous": false,
+            "eventSelector": "cba7cc44432c9db98afdec5a45723698adae1469ca4fdab161a6370f73f2103b",
+            "name": "InvestmentRemoved",
+            "nameLocation": "2432:17:1",
+            "parameters": {
+              "id": 111,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2449:2:1"
+            }
+          },
+          {
+            "id": 114,
+            "nodeType": "EventDefinition",
+            "src": "2458:27:1",
+            "nodes": [],
+            "anonymous": false,
+            "eventSelector": "9c7908c849ad9ee63e5101a4a6a20cb4f1d24682843b44888111ca41048fa008",
+            "name": "InvestmentModified",
+            "nameLocation": "2464:18:1",
+            "parameters": {
+              "id": 113,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2482:2:1"
+            }
+          },
+          {
+            "id": 116,
+            "nodeType": "EventDefinition",
+            "src": "2491:27:1",
+            "nodes": [],
+            "anonymous": false,
+            "eventSelector": "aa29b856c938704aba3872dde155319834075bbb8701fe632c2d99ed72283582",
+            "name": "InvestmentPhaseSet",
+            "nameLocation": "2497:18:1",
+            "parameters": {
+              "id": 115,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2515:2:1"
+            }
+          },
+          {
+            "id": 118,
+            "nodeType": "EventDefinition",
+            "src": "2524:25:1",
+            "nodes": [],
+            "anonymous": false,
+            "eventSelector": "4dab29e38990d0973db0bf06472976361e6e659cff14723e28f450d179285451",
+            "name": "AccessManagerSet",
+            "nameLocation": "2530:16:1",
+            "parameters": {
+              "id": 117,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2546:2:1"
+            }
+          },
+          {
+            "id": 120,
+            "nodeType": "EventDefinition",
+            "src": "2555:29:1",
+            "nodes": [],
+            "anonymous": false,
+            "eventSelector": "178957877d956399fd0ab4414aa0256802511f983b4ba169944cd04f365f0c40",
+            "name": "SAFTWalletFactorySet",
+            "nameLocation": "2561:20:1",
+            "parameters": {
+              "id": 119,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2581:2:1"
+            }
+          },
+          {
+            "id": 128,
+            "nodeType": "FunctionDefinition",
+            "src": "2646:55:1",
+            "nodes": [],
+            "body": {
+              "id": 127,
+              "nodeType": "Block",
+              "src": "2660:41:1",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "arguments": [],
+                    "expression": {
+                      "argumentTypes": [],
+                      "id": 124,
+                      "name": "_disableInitializers",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 30166,
+                      "src": "2671:20:1",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_internal_nonpayable$__$returns$__$",
+                        "typeString": "function ()"
+                      }
+                    },
+                    "id": 125,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "nameLocations": [],
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "2671:22:1",
+                    "tryCall": false,
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_tuple$__$",
+                      "typeString": "tuple()"
+                    }
+                  },
+                  "id": 126,
+                  "nodeType": "ExpressionStatement",
+                  "src": "2671:22:1"
+                }
+              ]
+            },
+            "documentation": {
+              "id": 121,
+              "nodeType": "StructuredDocumentation",
+              "src": "2592:48:1",
+              "text": "@custom:oz-upgrades-unsafe-allow constructor"
+            },
+            "implemented": true,
+            "kind": "constructor",
+            "modifiers": [],
+            "name": "",
+            "nameLocation": "-1:-1:-1",
+            "parameters": {
+              "id": 122,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2657:2:1"
+            },
+            "returnParameters": {
+              "id": 123,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2660:0:1"
+            },
+            "scope": 201,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "public"
+          },
+          {
+            "id": 137,
+            "nodeType": "FunctionDefinition",
+            "src": "2744:76:1",
+            "nodes": [],
+            "body": {
+              "id": 136,
+              "nodeType": "Block",
+              "src": "2785:35:1",
+              "nodes": [],
+              "statements": [
+                {
+                  "expression": {
+                    "arguments": [],
+                    "expression": {
+                      "argumentTypes": [],
+                      "id": 133,
+                      "name": "__Ownable_init",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 29831,
+                      "src": "2796:14:1",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_internal_nonpayable$__$returns$__$",
+                        "typeString": "function ()"
+                      }
+                    },
+                    "id": 134,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "nameLocations": [],
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "2796:16:1",
+                    "tryCall": false,
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_tuple$__$",
+                      "typeString": "tuple()"
+                    }
+                  },
+                  "id": 135,
+                  "nodeType": "ExpressionStatement",
+                  "src": "2796:16:1"
+                }
+              ]
+            },
+            "functionSelector": "8129fc1c",
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [
+              {
+                "id": 131,
+                "kind": "modifierInvocation",
+                "modifierName": {
+                  "id": 130,
+                  "name": "initializer",
+                  "nameLocations": [
+                    "2773:11:1"
+                  ],
+                  "nodeType": "IdentifierPath",
+                  "referencedDeclaration": 30087,
+                  "src": "2773:11:1"
+                },
+                "nodeType": "ModifierInvocation",
+                "src": "2773:11:1"
+              }
+            ],
+            "name": "initialize",
+            "nameLocation": "2753:10:1",
+            "parameters": {
+              "id": 129,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2763:2:1"
+            },
+            "returnParameters": {
+              "id": 132,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2785:0:1"
+            },
+            "scope": 201,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "public"
+          },
+          {
+            "id": 141,
+            "nodeType": "ModifierDefinition",
+            "src": "2832:92:1",
+            "nodes": [],
+            "body": {
+              "id": 140,
+              "nodeType": "Block",
+              "src": "2855:69:1",
+              "nodes": [],
+              "statements": [
+                {
+                  "id": 139,
+                  "nodeType": "PlaceholderStatement",
+                  "src": "2915:1:1"
+                }
+              ]
+            },
+            "name": "claimChecks",
+            "nameLocation": "2841:11:1",
+            "parameters": {
+              "id": 138,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2852:2:1"
+            },
+            "virtual": false,
+            "visibility": "internal"
+          },
+          {
+            "id": 145,
+            "nodeType": "ModifierDefinition",
+            "src": "2932:94:1",
+            "nodes": [],
+            "body": {
+              "id": 144,
+              "nodeType": "Block",
+              "src": "2956:70:1",
+              "nodes": [],
+              "statements": [
+                {
+                  "id": 143,
+                  "nodeType": "PlaceholderStatement",
+                  "src": "3017:1:1"
+                }
+              ]
+            },
+            "name": "investChecks",
+            "nameLocation": "2941:12:1",
+            "parameters": {
+              "id": 142,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2953:2:1"
+            },
+            "virtual": false,
+            "visibility": "internal"
+          },
+          {
+            "id": 151,
+            "nodeType": "FunctionDefinition",
+            "src": "3063:50:1",
+            "nodes": [],
+            "body": {
+              "id": 150,
+              "nodeType": "Block",
+              "src": "3111:2:1",
+              "nodes": [],
+              "statements": []
+            },
+            "functionSelector": "d2d1fb25",
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [
+              {
+                "arguments": [],
+                "id": 148,
+                "kind": "modifierInvocation",
+                "modifierName": {
+                  "id": 147,
+                  "name": "claimChecks",
+                  "nameLocations": [
+                    "3097:11:1"
+                  ],
+                  "nodeType": "IdentifierPath",
+                  "referencedDeclaration": 141,
+                  "src": "3097:11:1"
+                },
+                "nodeType": "ModifierInvocation",
+                "src": "3097:13:1"
+              }
+            ],
+            "name": "claimAllocation",
+            "nameLocation": "3072:15:1",
+            "parameters": {
+              "id": 146,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "3087:2:1"
+            },
+            "returnParameters": {
+              "id": 149,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "3111:0:1"
+            },
+            "scope": 201,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "public"
+          },
+          {
+            "id": 157,
+            "nodeType": "FunctionDefinition",
+            "src": "3119:42:1",
+            "nodes": [],
+            "body": {
+              "id": 156,
+              "nodeType": "Block",
+              "src": "3159:2:1",
+              "nodes": [],
+              "statements": []
+            },
+            "functionSelector": "e8b5e51f",
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [
+              {
+                "arguments": [],
+                "id": 154,
+                "kind": "modifierInvocation",
+                "modifierName": {
+                  "id": 153,
+                  "name": "investChecks",
+                  "nameLocations": [
+                    "3144:12:1"
+                  ],
+                  "nodeType": "IdentifierPath",
+                  "referencedDeclaration": 145,
+                  "src": "3144:12:1"
+                },
+                "nodeType": "ModifierInvocation",
+                "src": "3144:14:1"
+              }
+            ],
+            "name": "invest",
+            "nameLocation": "3128:6:1",
+            "parameters": {
+              "id": 152,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "3134:2:1"
+            },
+            "returnParameters": {
+              "id": 155,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "3159:0:1"
+            },
+            "scope": 201,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "public"
+          },
+          {
+            "id": 164,
+            "nodeType": "FunctionDefinition",
+            "src": "3197:70:1",
+            "nodes": [],
+            "body": {
+              "id": 163,
+              "nodeType": "Block",
+              "src": "3265:2:1",
+              "nodes": [],
+              "statements": []
+            },
+            "functionSelector": "2cd9a6fa",
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [],
+            "name": "getUserInvestmentIds",
+            "nameLocation": "3206:20:1",
+            "parameters": {
+              "id": 158,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "3226:2:1"
+            },
+            "returnParameters": {
+              "id": 162,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 161,
+                  "mutability": "mutable",
+                  "name": "",
+                  "nameLocation": "-1:-1:-1",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 164,
+                  "src": "3250:13:1",
+                  "stateVariable": false,
+                  "storageLocation": "memory",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_array$_t_uint256_$dyn_memory_ptr",
+                    "typeString": "uint256[]"
+                  },
+                  "typeName": {
+                    "baseType": {
+                      "id": 159,
+                      "name": "uint",
+                      "nodeType": "ElementaryTypeName",
+                      "src": "3250:4:1",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "id": 160,
+                    "nodeType": "ArrayTypeName",
+                    "src": "3250:6:1",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_array$_t_uint256_$dyn_storage_ptr",
+                      "typeString": "uint256[]"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "3249:15:1"
+            },
+            "scope": 201,
+            "stateMutability": "view",
+            "virtual": false,
+            "visibility": "public"
+          },
+          {
+            "id": 170,
+            "nodeType": "FunctionDefinition",
+            "src": "3273:69:1",
+            "nodes": [],
+            "body": {
+              "id": 169,
+              "nodeType": "Block",
+              "src": "3340:2:1",
+              "nodes": [],
+              "statements": []
+            },
+            "functionSelector": "cf5a4b50",
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [],
+            "name": "getTotalClaimedForInvestment",
+            "nameLocation": "3282:28:1",
+            "parameters": {
+              "id": 165,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "3310:2:1"
+            },
+            "returnParameters": {
+              "id": 168,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 167,
+                  "mutability": "mutable",
+                  "name": "",
+                  "nameLocation": "-1:-1:-1",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 170,
+                  "src": "3334:4:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 166,
+                    "name": "uint",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3334:4:1",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "3333:6:1"
+            },
+            "scope": 201,
+            "stateMutability": "view",
+            "virtual": false,
+            "visibility": "public"
+          },
+          {
+            "id": 176,
+            "nodeType": "FunctionDefinition",
+            "src": "3348:79:1",
+            "nodes": [],
+            "body": {
+              "id": 175,
+              "nodeType": "Block",
+              "src": "3425:2:1",
+              "nodes": [],
+              "statements": []
+            },
+            "functionSelector": "565c6f95",
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [],
+            "name": "computeUserTotalAllocationForInvesment",
+            "nameLocation": "3357:38:1",
+            "parameters": {
+              "id": 171,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "3395:2:1"
+            },
+            "returnParameters": {
+              "id": 174,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 173,
+                  "mutability": "mutable",
+                  "name": "",
+                  "nameLocation": "-1:-1:-1",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 176,
+                  "src": "3419:4:1",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 172,
+                    "name": "uint",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3419:4:1",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "3418:6:1"
+            },
+            "scope": 201,
+            "stateMutability": "view",
+            "virtual": false,
+            "visibility": "public"
+          },
+          {
+            "id": 180,
+            "nodeType": "FunctionDefinition",
+            "src": "3465:34:1",
+            "nodes": [],
+            "body": {
+              "id": 179,
+              "nodeType": "Block",
+              "src": "3497:2:1",
+              "nodes": [],
+              "statements": []
+            },
+            "functionSelector": "2278112e",
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [],
+            "name": "addInvestment",
+            "nameLocation": "3474:13:1",
+            "parameters": {
+              "id": 177,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "3487:2:1"
+            },
+            "returnParameters": {
+              "id": 178,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "3497:0:1"
+            },
+            "scope": 201,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "public"
+          },
+          {
+            "id": 184,
+            "nodeType": "FunctionDefinition",
+            "src": "3505:37:1",
+            "nodes": [],
+            "body": {
+              "id": 183,
+              "nodeType": "Block",
+              "src": "3540:2:1",
+              "nodes": [],
+              "statements": []
+            },
+            "functionSelector": "5fa67110",
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [],
+            "name": "removeInvestment",
+            "nameLocation": "3514:16:1",
+            "parameters": {
+              "id": 181,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "3530:2:1"
+            },
+            "returnParameters": {
+              "id": 182,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "3540:0:1"
+            },
+            "scope": 201,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "public"
+          },
+          {
+            "id": 188,
+            "nodeType": "FunctionDefinition",
+            "src": "3582:37:1",
+            "nodes": [],
+            "body": {
+              "id": 187,
+              "nodeType": "Block",
+              "src": "3617:2:1",
+              "nodes": [],
+              "statements": []
+            },
+            "functionSelector": "49cd1e93",
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [],
+            "name": "modifyInvestment",
+            "nameLocation": "3591:16:1",
+            "parameters": {
+              "id": 185,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "3607:2:1"
+            },
+            "returnParameters": {
+              "id": 186,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "3617:0:1"
+            },
+            "scope": 201,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "public"
+          },
+          {
+            "id": 192,
+            "nodeType": "FunctionDefinition",
+            "src": "3625:39:1",
+            "nodes": [],
+            "body": {
+              "id": 191,
+              "nodeType": "Block",
+              "src": "3662:2:1",
+              "nodes": [],
+              "statements": []
+            },
+            "functionSelector": "e691108b",
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [],
+            "name": "setInvestmentPhase",
+            "nameLocation": "3634:18:1",
+            "parameters": {
+              "id": 189,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "3652:2:1"
+            },
+            "returnParameters": {
+              "id": 190,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "3662:0:1"
+            },
+            "scope": 201,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "public"
+          },
+          {
+            "id": 196,
+            "nodeType": "FunctionDefinition",
+            "src": "3670:37:1",
+            "nodes": [],
+            "body": {
+              "id": 195,
+              "nodeType": "Block",
+              "src": "3705:2:1",
+              "nodes": [],
+              "statements": []
+            },
+            "functionSelector": "122d19a4",
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [],
+            "name": "setAccessManager",
+            "nameLocation": "3679:16:1",
+            "parameters": {
+              "id": 193,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "3695:2:1"
+            },
+            "returnParameters": {
+              "id": 194,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "3705:0:1"
+            },
+            "scope": 201,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "public"
+          },
+          {
+            "id": 200,
+            "nodeType": "FunctionDefinition",
+            "src": "3713:41:1",
+            "nodes": [],
+            "body": {
+              "id": 199,
+              "nodeType": "Block",
+              "src": "3752:2:1",
+              "nodes": [],
+              "statements": []
+            },
+            "functionSelector": "4bca580d",
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [],
+            "name": "setSAFTWalletFactory",
+            "nameLocation": "3722:20:1",
+            "parameters": {
+              "id": 197,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "3742:2:1"
+            },
+            "returnParameters": {
+              "id": 198,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "3752:0:1"
+            },
+            "scope": 201,
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "public"
+          }
+        ],
+        "abstract": false,
+        "baseContracts": [
+          {
+            "baseName": {
+              "id": 58,
+              "name": "Initializable",
+              "nameLocations": [
+                "1561:13:1"
+              ],
+              "nodeType": "IdentifierPath",
+              "referencedDeclaration": 30185,
+              "src": "1561:13:1"
+            },
+            "id": 59,
+            "nodeType": "InheritanceSpecifier",
+            "src": "1561:13:1"
+          },
+          {
+            "baseName": {
+              "id": 60,
+              "name": "OwnableUpgradeable",
+              "nameLocations": [
+                "1576:18:1"
+              ],
+              "nodeType": "IdentifierPath",
+              "referencedDeclaration": 29936,
+              "src": "1576:18:1"
+            },
+            "id": 61,
+            "nodeType": "InheritanceSpecifier",
+            "src": "1576:18:1"
+          }
+        ],
+        "canonicalName": "InvestmentHandler",
+        "contractDependencies": [],
+        "contractKind": "contract",
+        "fullyImplemented": true,
+        "linearizedBaseContracts": [
+          201,
+          29936,
+          30557,
+          30185
+        ],
+        "name": "InvestmentHandler",
+        "nameLocation": "1540:17:1",
+        "scope": 202,
+        "usedErrors": []
+      }
+    ],
+    "license": "MIT"
+  },
+  "id": 1
+}
