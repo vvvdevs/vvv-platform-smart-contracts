@@ -65,6 +65,12 @@ contract InvestmentHandler is Initializable, OwnableUpgradeable {
         uint timestamp;
     }
 
+    mapping(uint => Investment) public investments;
+
+    // @curi0n-s thinking about how to store user activity in a way that is searchable later to calculate things like remaining claimable amount
+    mapping(address => mapping(uint => ClaimWithdrawal)) public userClaimWithdrawals; // @curi0n-s should this be here? (i.e. should this be in a separate contract?
+
+
     uint256[48] __gap; // @curi0n-s reserve space for upgrade if needed?
 
     // Events
