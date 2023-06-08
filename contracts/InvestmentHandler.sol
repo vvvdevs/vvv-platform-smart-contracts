@@ -43,14 +43,30 @@ contract InvestmentHandler is Initializable, OwnableUpgradeable {
         FCFS
     } 
 
+    /**
+        @curi0n-s adding everything discussed so far here,
+        likely we can remove what isn't needed later, 
+        so adding all options I can think of for now
+
+        investment IDs may not be necessary in the struct,
+        since this will be the index used to get the struct
+        in the first place
+
+        def open to new approaches on how to best structure this,
+        for example will we ID investments by uint, project token address, or other?
+
+     */
+
     struct Investment {
-        uint id;
-        string name;
+        // uint id;
+        address projectToken;
         AllocationPhase allocationPhase;
         bytes32 root;
-        uint totalAllocation;
-        uint totalAllocationLimit; /// @curi0n-s what does this signify again?
-        uint totalClaimed;
+        string name;
+        uint totalInvestedUsd;
+        uint totalAllocatedUsd;
+        uint totalTokensClaimed;
+        uint totalTokensAllocated;
     }
 
     struct AllocationPhase {
@@ -59,17 +75,18 @@ contract InvestmentHandler is Initializable, OwnableUpgradeable {
         uint endTime;
     }
 
-    struct ClaimWithdrawal {
-        uint investmentId;
-        uint amount;
-        uint timestamp;
+    struct UserInvestment {
+        // uint investmentId;
+        uint totalInvestedUsd;
+        uint totalAllocatedUsd;
+        uint totalTokensClaimed;
+        uint totalTokensAllocated;
+        uint[] tokenWithdrawalAmounts; //@curi0n-s are arrays the move for recording withdrawal amounts and timestamps here?
+        uint[] tokenWithdrawalTimestamps;
     }
 
     mapping(uint => Investment) public investments;
-
-    // @curi0n-s thinking about how to store user activity in a way that is searchable later to calculate things like remaining claimable amount
-    mapping(address => mapping(uint => ClaimWithdrawal)) public userClaimWithdrawals; // @curi0n-s should this be here? (i.e. should this be in a separate contract?
-
+    mapping(address => mapping(uint => UserInvestment)) public userInvestments;
 
     uint256[48] __gap; // @curi0n-s reserve space for upgrade if needed?
 
@@ -93,15 +110,18 @@ contract InvestmentHandler is Initializable, OwnableUpgradeable {
     
     modifier claimChecks() {
         // accessManager.checkIfUserCanClaim();
+        _computeUserClaimableAllocationForInvestment();
         _;
     }
 
     modifier investChecks() {
         // accessManager.checkIfUserCanInvest();
+        // @curi0n-s check if amount attempted to invest is <= user limit from merkle tree for this investment
         _;
     }
 
     // User Write Functions
+
     function claimAllocation() public claimChecks() {}
     function invest() public investChecks() {}
 
@@ -109,6 +129,14 @@ contract InvestmentHandler is Initializable, OwnableUpgradeable {
     function getUserInvestmentIds() public view returns (uint[] memory) {}
     function getTotalClaimedForInvestment() public view returns (uint) {}
     function computeUserTotalAllocationForInvesment() public view returns (uint) {}
+
+    /**
+        this will be a bit spicy - this will calculate claimable tokens 
+        based on users % share of allocation, as well as
+        tokens deposited into project saft wallet during the last vesting period (i.e. a month)
+     */
+
+    function _computeUserClaimableAllocationForInvestment() private view returns (uint) {}
 
     // Admin Write Functions
     function addInvestment() public {}

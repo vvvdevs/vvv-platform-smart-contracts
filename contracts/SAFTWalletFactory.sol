@@ -63,6 +63,7 @@ contract SAFTWalletFactory is Initializable {
         address clone = ClonesUpgradeable.clone(walletImplementation);
         SAFTWallet(clone).initialize(_projectToken, _projectTokenDepositor, _investmentHandler);
         emit NewSaftWalletCreated(clone);
+        return clone;
     }
 
 }
