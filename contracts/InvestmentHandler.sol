@@ -23,18 +23,38 @@ pragma solidity 0.8.19;
     5. functions working + gas optimizations (data location, data type/packing, etc.)
     6. adding storage gaps to allocate some room for any potential future variables added in upgrades?
     7. more testing, auditing, more auditing, remediation, etc.
+
+FEATURES:
+1. ECDSA vs Merkle
+2. Manual Add of investors in addition to validation stragegy from (1)
  */
 
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import {StringsUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
 import {IAccessManager} from "./interfaces/IAccessManager.sol";
 import {ISAFTWalletFactory} from "./interfaces/ISAFTWalletFactory.sol";
 
-contract InvestmentHandler is Initializable, OwnableUpgradeable {
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+// import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+// import {SafeERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
+contract InvestmentHandler is 
+    Initializable, 
+    OwnableUpgradeable,
+    PausableUpgradeable,
+    ReentrancyGuardUpgradeable
+{
+    using StringsUpgradeable for uint256;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
     //Storage
     IAccessManager public accessManager;
     ISAFTWalletFactory public saftWalletFactory;
+    
+    IERC20 USDC;
+    IERC20 USDT;
 
     enum Phase {
         CLOSED,
@@ -61,7 +81,7 @@ contract InvestmentHandler is Initializable, OwnableUpgradeable {
         // uint id;
         address projectToken;
         AllocationPhase allocationPhase;
-        bytes32 root;
+        bytes32 root; //or bytes32 signature if using ECDSA signatures
         string name;
         uint totalInvestedUsd;
         uint totalAllocatedUsd;
@@ -106,6 +126,11 @@ contract InvestmentHandler is Initializable, OwnableUpgradeable {
     // Initialization + Modifiers
     function initialize() public initializer {
         __Ownable_init();
+        __Pausable_init();
+        __ReentrancyGuard_init();
+        
+        USDC = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
+        USDT = IERC20(0xdAC17F958D2ee523a2206206994597C13D831ec7);
     }
     
     modifier claimChecks() {
@@ -143,6 +168,12 @@ contract InvestmentHandler is Initializable, OwnableUpgradeable {
     function removeInvestment() public {} // @curi0n-s should this be here?
     function modifyInvestment() public {}
     function setInvestmentPhase() public {}
+
+    /**
+        @dev this function will be used to manually add contributions to an investment
+     */
+    function manualAddContribution() public {}
+
     function setAccessManager() public {}
     function setSAFTWalletFactory() public {}
      
