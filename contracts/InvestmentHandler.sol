@@ -27,6 +27,8 @@ pragma solidity 0.8.19;
 FEATURES:
 1. ECDSA vs Merkle
 2. Manual Add of investors in addition to validation stragegy from (1)
+3. 1 claim of full % of allocation per vesting period? i.e. if 10%/month vesting,
+    user can only claim 10% of their allocation per month. otherwise, can claim later, as they accumulate.
  */
 
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
@@ -168,6 +170,8 @@ contract InvestmentHandler is
     function removeInvestment() public {} // @curi0n-s should this be here?
     function modifyInvestment() public {}
     function setInvestmentPhase() public {}
+
+    function setRefundsAreOpen() public {}
 
     /**
         @dev this function will be used to manually add contributions to an investment
