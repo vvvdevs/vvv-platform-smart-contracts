@@ -18,12 +18,11 @@ import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {StringsUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
 import {MathUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
-// import {IAccessManager} from "./interfaces/IAccessManager.sol";
-// import {ISAFTWalletFactory} from "./interfaces/ISAFTWalletFactory.sol";
-
+import {ECDSAUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
+import {SignatureCheckerUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/SignatureCheckerUpgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-// import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-// import {SafeERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import {SafeERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 contract InvestmentHandlerSingleFile is 
     Initializable, 
@@ -33,11 +32,8 @@ contract InvestmentHandlerSingleFile is
 {
     using StringsUpgradeable for uint;
     using SafeERC20Upgradeable for IERC20Upgradeable;
-    using ECDSAUpgradeable for bytes32;
 
     //Storage
-    IAccessManager public accessManager;
-    ISAFTWalletFactory public saftWalletFactory;
     IERC20 USDC;
     IERC20 USDT;
 
@@ -66,7 +62,7 @@ contract InvestmentHandlerSingleFile is
         // uint id;
         address projectToken;
         AllocationPhase allocationPhase;
-        bytes32 root; //or bytes32 signature if using ECDSA signatures
+        address signer; //or bytes32 root if using merkle tree
         string name;
         uint totalInvestedUsd;
         uint totalAllocatedUsd;
@@ -104,6 +100,7 @@ contract InvestmentHandlerSingleFile is
     event SAFTWalletFactorySet();
 
     error ClaimAmountExceedsTotalClaimable();
+    error InvestmentAmountExceedsMax();
     error InvestmentIsNotOpen();
     error InvalidSignature();
 
@@ -134,7 +131,7 @@ contract InvestmentHandlerSingleFile is
             3. user investment amount + current proposed investment amount is less than max investable amount
      */
     modifier investChecks(uint investmentId, uint maxInvestableAmount, uint thisInvestmentAmount, bytes memory sig) {
-        if(investmentIsOpen(investmentId, phase)) {
+        if(_investmentIsOpen(investmentId, investments[investmentId].allocationPhase)) {
             _;
         } else {
             revert InvestmentIsNotOpen();
@@ -142,9 +139,8 @@ contract InvestmentHandlerSingleFile is
         
         if(
             SignatureCheckerUpgradeable.isValidSignatureNow(
-                project.signer,
-                keccak256(abi.encodePacked(msg.sender, maxInvestableAmount))
-                    .toEthSignedMessageHash(),
+                investments[investmentId].signer,
+                ECDSAUpgradeable.toEthSignedMessageHash(keccak256(abi.encodePacked(msg.sender, maxInvestableAmount))),
                 sig
             )
         ) {
@@ -172,6 +168,11 @@ contract InvestmentHandlerSingleFile is
     function getTotalClaimedForInvestment() public view returns (uint) {}
     function computeUserTotalAllocationForInvesment() public view returns (uint) {}
 
+
+    function _investmentIsOpen(uint investmentId, Phase phase) private view returns (bool) {
+        return investments[investmentId].allocationPhase == phase;
+    }
+
     /**
         this will be a bit spicy - this will calculate claimable tokens, 
         based on users % share of allocation
@@ -193,20 +194,21 @@ contract InvestmentHandlerSingleFile is
 
             may not be neccessary, can be used to make sure user has not exceeded their total claimable amount
          */
-        uint userTotalClaimableTokens = Math.mulDiv(totalTokensAllocated, userTotalInvestedUsdc, totalInvestedUsdc);
+        uint userTotalClaimableTokens = MathUpgradeable.mulDiv(totalTokensAllocated, userTotalInvestedUsdc, totalInvestedUsdc);
         if(claimAmount + userTokensClaimed >= userTotalClaimableTokens) {
             revert ClaimAmountExceedsTotalClaimable();
         }
+
         /**
             user claimable tokens for current total deposited
          */
         uint contractTokenBalance = IERC20(investments[investmentId].projectToken).balanceOf(address(this));
-        uint userContractBalanceClaimableTokens = Math.mulDiv(contractTokenBalance, userTotalInvestedUsdc, totalInvestedUsdc);
+        uint userContractBalanceClaimableTokens = MathUpgradeable.mulDiv(contractTokenBalance, userTotalInvestedUsdc, totalInvestedUsdc);
 
         /**
             user claimable tokens for current total deposited + claim amount
          */
-        uint userClaimableTokens = userContractbalanceClaimableTokens - userTokensClaimed;
+        uint userClaimableTokens = userContractBalanceClaimableTokens - userTokensClaimed;
         
         return userClaimableTokens;
     }
@@ -215,16 +217,4 @@ contract InvestmentHandlerSingleFile is
     function addInvestment() public {}
     function removeInvestment() public {} // @curi0n-s should this be here?
     function modifyInvestment() public {}
-    function setInvestmentPhase() public {}
-
-    function setRefundsAreOpen() public {}
-
-    /**
-        @dev this function will be used to manually add contributions to an investment
-     */
-    function manualAddContribution() public {}
-
-    function setAccessManager() public {}
-    function setSAFTWalletFactory() public {}
-     
-}
+    functio
