@@ -3,6 +3,12 @@ require("@nomicfoundation/hardhat-foundry");
 require("@openzeppelin/hardhat-upgrades");
 require("dotenv").config();
 
+// Potentially not needed...
+// require("@nomiclabs/hardhat-ethers");
+// require("@nomiclabs/hardhat-waffle");
+// require("@nomiclabs/hardhat-etherscan");
+// require('hardhat-deploy');
+
 const dev_wallet_key = process.env.PRIVATE_KEY;
 const etherscan_api_key = process.env.ETHERSCAN_API_KEY;
 
