@@ -278,20 +278,15 @@ contract InvestmentHandler is
 
     function refundUser() public onlyRole(MANAGER_ROLE) {}
 
-    //TESTING - signer is checker!
-    function checkSignature(address signer, uint256 maxInvestableAmount, bytes memory signature) public view returns (bool) {
+    //TESTING
+    function checkSignature(address signer, address user, uint256 maxInvestableAmount, bytes memory signature) public view returns (bool) {
         return(
             SignatureCheckerUpgradeable.isValidSignatureNow(
                 signer,
-                ECDSAUpgradeable.toEthSignedMessageHash(keccak256(abi.encodePacked(signer, maxInvestableAmount))),
+                ECDSAUpgradeable.toEthSignedMessageHash(keccak256(abi.encodePacked(user, maxInvestableAmount))),
                 signature
             )
         );
     }
 
-    function getEthSignedMessageHash(address signer, uint256 maxInvestableAMount) public view returns (bytes32) {
-        return ECDSAUpgradeable.toEthSignedMessageHash(keccak256(abi.encodePacked(signer, maxInvestableAMount)));
-    }
-
-     
 }
