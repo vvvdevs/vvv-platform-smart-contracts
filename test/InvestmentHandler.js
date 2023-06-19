@@ -56,7 +56,7 @@ describe("InvestmentHandler", function () {
     const testProjectTokenAddress = mockProjectToken.address; //USDC
 
     const pledgeAmount = ethers.utils.parseEther("1000");
-    const depositAmount = ethers.utils.parseEther("0.00012746");
+    const depositAmount = ethers.utils.parseEther("0.000123");
     const testInvestmentUsdAlloc = ethers.utils.parseEther("1000");
     const testInvestmentTokensAlloc = ethers.utils.parseEther("1000");
     const testClaimAmount = ethers.utils.parseEther("1000");
@@ -103,7 +103,6 @@ describe("InvestmentHandler", function () {
         testProjectTokenAddress,
         testInvestmentTokensAlloc,
         testClaimAmount,
-        testPledgedAmount,
         testInvestmentStablecoin,
         testInvestmentUsdAlloc,
         mockUsdc,
@@ -132,13 +131,15 @@ describe("InvestmentHandler", function () {
 
       const invest_transaction = await investmentHandler
         .connect(user)
-        .invest(investmentId, testPledgedAmount, ethers.utils.parseEther("0.0123"), signature);
+        .invest(investmentId, pledgeAmount, depositAmount, signature);
       await invest_transaction.wait();
 
       /**
        * how is this??
        * 1000000000000000000000
        * 4000000000000000000000
+       * pledgeAmount:  BigNumber { value: "1000000000000000000000" }
+       * investmenthandler usdc balance after invest:  BigNumber { value: "492000000000000" }
        */
 
       console.log("pledgeAmount: ", pledgeAmount);
