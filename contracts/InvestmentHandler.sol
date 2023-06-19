@@ -25,11 +25,12 @@ import {MathUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/math/Ma
 import {ECDSAUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
 import {SignatureCheckerUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/SignatureCheckerUpgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 // import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 // import {SafeERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 // import {StringsUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
 
-contract InvestmentHandlerSingleFile is 
+contract InvestmentHandler is 
     Initializable, 
     AccessControlUpgradeable,
     PausableUpgradeable,
@@ -276,6 +277,21 @@ contract InvestmentHandlerSingleFile is
     function manualAddContribution() public onlyRole(MANAGER_ROLE) {}
 
     function refundUser() public onlyRole(MANAGER_ROLE) {}
+
+    //TESTING - signer is checker!
+    function checkSignature(address signer, uint256 maxInvestableAmount, bytes memory signature) public view returns (bool) {
+        return(
+            SignatureCheckerUpgradeable.isValidSignatureNow(
+                signer,
+                ECDSAUpgradeable.toEthSignedMessageHash(keccak256(abi.encodePacked(signer, maxInvestableAmount))),
+                signature
+            )
+        );
+    }
+
+    function getEthSignedMessageHash(address signer, uint256 maxInvestableAMount) public view returns (bytes32) {
+        return ECDSAUpgradeable.toEthSignedMessageHash(keccak256(abi.encodePacked(signer, maxInvestableAMount)));
+    }
 
      
 }
