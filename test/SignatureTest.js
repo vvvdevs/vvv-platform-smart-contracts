@@ -12,14 +12,15 @@ describe("InvestmentHandlerSignatureCheck", function () {
     const yourContract = await YourContract.deploy();
     await yourContract.deployed();
 
-    const userAddress = await wallet.getAddress();
+    const userAddress = "0x3bA45EFf20bF493b5d226EFadd2D7734d48Ad8a5"; //
+    const signerAddress = await wallet.getAddress();
     const depositAmount = ethers.utils.parseEther("1234");
 
     // Call the signDeposit function
     const signature = await signDeposit(userAddress, depositAmount, yourContract.address);
 
     // Call the checkSignature function
-    const isValid = await checkSignature(yourContract.address, signature, userAddress, depositAmount);
+    const isValid = await checkSignature(yourContract.address, signature, signerAddress, userAddress, depositAmount);
 
     expect(isValid).to.equal(true);
   });
@@ -30,36 +31,23 @@ describe("InvestmentHandlerSignatureCheck", function () {
 //============================================================
 
 async function signDeposit(userAddress, depositAmount, contractAddress) {
-  // Format the depositAmount as an ethers.js BigNumber
-  depositAmount = ethers.utils.parseEther(depositAmount.toString());
-
-  // Prepare the data to sign
-  const data = ethers.utils.solidityPack(["address", "uint256"], [userAddress, depositAmount]);
-
-  // Hash the data
-  const hash = ethers.utils.keccak256(data);
-  const messageHash = ethers.utils.hashMessage(ethers.utils.arrayify(hash));
+  // Prepare the hash to sign
+  const hash = ethers.utils.solidityKeccak256(["address", "uint256"], [userAddress, depositAmount]);
 
   // Sign the hash
-  const signature = await wallet.signMessage(ethers.utils.arrayify(messageHash));
+  const signature = await wallet.signMessage(ethers.utils.arrayify(hash));
   console.log("Signature from js: ", signature);
-
-  const contractArtifact = await ethers.getContractFactory("InvestmentHandler");
-  const contract = await contractArtifact.attach(contractAddress);
-
-  const solSignedMessageHash = await contract.getEthSignedMessageHash(userAddress, depositAmount);
-  console.log("Signature from solidity: ", solSignedMessageHash.toString());
 
   return signature;
 }
 
-async function checkSignature(contractAddress, signature, userAddress, depositAmount) {
+async function checkSignature(contractAddress, signature, signerAddress, userAddress, depositAmount) {
   // Create an instance of the contract
   const contractArtifact = await ethers.getContractFactory("InvestmentHandler");
   const contract = await contractArtifact.attach(contractAddress);
 
   // Call the isValidSignatureNow function
-  const isValid = await contract.checkSignature(userAddress, depositAmount, signature);
+  const isValid = await contract.checkSignature(signerAddress, userAddress, depositAmount, signature);
 
   return isValid;
 }
