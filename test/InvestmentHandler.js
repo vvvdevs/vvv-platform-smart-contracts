@@ -146,6 +146,7 @@ describe("InvestmentHandler", function () {
 
       const invest_transaction = await investmentHandler
         .connect(user)
+
         .invest(investmentId, pledgeAmount, depositAmount, userPhaseIndex, signature);
       await invest_transaction.wait();
 
