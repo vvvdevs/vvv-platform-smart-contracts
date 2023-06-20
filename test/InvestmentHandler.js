@@ -15,6 +15,8 @@ const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 const { expect } = require("chai");
 require("dotenv").config();
 
+const logging = true;
+
 describe("InvestmentHandler", function () {
   async function setupFixture() {
     const provider = new ethers.providers.JsonRpcProvider();
@@ -38,9 +40,6 @@ describe("InvestmentHandler", function () {
     const mockUsdc = await MockERC20.deploy([18]);
     await mockUsdc.deployed();
 
-    console.log("MockProjectToken deployed to:", mockProjectToken.address);
-    console.log("MockUsdc deployed to:", mockUsdc.address);
-
     let mint_usdc_to_user = await mockUsdc.connect(user).mint(user.address, ethers.utils.parseEther("10000"));
     await mint_usdc_to_user.wait();
 
@@ -49,7 +48,6 @@ describe("InvestmentHandler", function () {
     const investmentHandler = await upgrades.deployProxy(InvestmentHandler, [mockUsdc.address, mockUsdc.address], {
       initializer: "initialize",
     });
-
     await investmentHandler.deployed();
 
     const testInvestmentStablecoin = mockUsdc.address; //USDC
@@ -62,6 +60,14 @@ describe("InvestmentHandler", function () {
     const testClaimAmount = ethers.utils.parseEther("1000");
     const testPledgedAmount = ethers.utils.parseEther("1000");
     const approvalValue = ethers.utils.parseEther("10000");
+
+    const userPhaseIndex = 2; //0:closed, 1:whale, 2:shark, 3:fcfs
+
+    if (logging) {
+      console.log("MockProjectToken deployed to:", mockProjectToken.address);
+      console.log("MockUsdc deployed to:", mockUsdc.address);
+      console.log("InvestmentHandler deployed to:", investmentHandler.address);
+    }
 
     return {
       investmentHandler,
@@ -80,6 +86,7 @@ describe("InvestmentHandler", function () {
       testClaimAmount,
       testPledgedAmount,
       approvalValue,
+      userPhaseIndex,
     };
   }
 
@@ -108,6 +115,7 @@ describe("InvestmentHandler", function () {
         mockUsdc,
         mockProjectToken,
         approvalValue,
+        userPhaseIndex,
       } = await loadFixture(setupFixture);
 
       const add_investment = await investmentHandler
@@ -117,7 +125,12 @@ describe("InvestmentHandler", function () {
 
       const investmentId = await investmentHandler.investmentId();
 
-      const signature = await signDeposit(signer, user, pledgeAmount);
+      const set_phase_to_shark = await investmentHandler
+        .connect(manager)
+        .setInvestmentContributionPhase(investmentId, 2);
+      await set_phase_to_shark.wait();
+
+      const signature = await signDeposit(signer, user, pledgeAmount, userPhaseIndex);
 
       const approve_stablecoin_spending = await mockUsdc
         .connect(user)
@@ -133,7 +146,7 @@ describe("InvestmentHandler", function () {
 
       const invest_transaction = await investmentHandler
         .connect(user)
-        .invest(investmentId, pledgeAmount, depositAmount, signature);
+        .invest(investmentId, pledgeAmount, depositAmount, userPhaseIndex, signature);
       await invest_transaction.wait();
 
       /**
@@ -178,10 +191,28 @@ describe("InvestmentHandler", function () {
 
   describe("SignatureCheck", function () {
     it("Should return true when the signature is valid", async function () {
-      const { investmentHandler, pledgeAmount, user, signer } = await loadFixture(setupFixture);
-      const signature = await signDeposit(signer, user, pledgeAmount);
-      const isValid = await investmentHandler.checkSignature(signer.address, user.address, pledgeAmount, signature);
+      const { investmentHandler, pledgeAmount, user, signer, userPhaseIndex } = await loadFixture(setupFixture);
+      const signature = await signDeposit(signer, user, pledgeAmount, userPhaseIndex);
+      const isValid = await investmentHandler.checkSignature(
+        signer.address,
+        user.address,
+        pledgeAmount,
+        userPhaseIndex,
+        signature
+      );
       expect(isValid).to.equal(true);
+    });
+    it("should return false when the signature is invalid", async function () {
+      const { investmentHandler, pledgeAmount, user, signer, userPhaseIndex } = await loadFixture(setupFixture);
+      const signature = await signDeposit(signer, user, pledgeAmount, userPhaseIndex);
+      const isValid = await investmentHandler.checkSignature(
+        signer.address,
+        signer.address, //here is the change - wrong address, should be user.address
+        pledgeAmount,
+        userPhaseIndex,
+        signature
+      );
+      expect(isValid).to.equal(false);
     });
   });
 });
@@ -190,8 +221,11 @@ describe("InvestmentHandler", function () {
 // HELPERS
 //============================================================
 
-async function signDeposit(signerWallet, user, pledgeAmount) {
-  const hash = ethers.utils.solidityKeccak256(["address", "uint256"], [user.address, pledgeAmount]);
+async function signDeposit(signerWallet, user, pledgeAmount, phaseIndex) {
+  const hash = ethers.utils.solidityKeccak256(
+    ["address", "uint256", "uint8"],
+    [user.address, pledgeAmount, phaseIndex]
+  );
   const signature = await signerWallet.signMessage(ethers.utils.arrayify(hash));
   console.log("Signature from js: ", signature);
   return signature;

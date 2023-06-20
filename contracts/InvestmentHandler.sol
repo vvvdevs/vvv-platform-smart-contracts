@@ -161,24 +161,26 @@ contract InvestmentHandler is
             2. consider the case where user contributes initial allocation, then allocation is increased
             3. could track "pledge debt" as a metric of whether the user follows thru on pledges of X amount
      */
-    modifier investChecks(uint _investmentId, uint _maxInvestableAmount, uint _thisInvestmentAmount, bytes memory signature) {
-        if(_investmentIsOpen(_investmentId, investments[_investmentId].contributionPhase.phase)) {
-            _;
-        } else {
-            revert InvestmentIsNotOpen();
-        }        
-        
+    modifier investChecks(uint _investmentId, uint _maxInvestableAmount, uint _thisInvestmentAmount, Phase _userPhase, bytes memory signature) {
         if(
             SignatureCheckerUpgradeable.isValidSignatureNow(
                 investments[_investmentId].signer,
-                ECDSAUpgradeable.toEthSignedMessageHash(keccak256(abi.encodePacked(msg.sender, _maxInvestableAmount))),
+                ECDSAUpgradeable.toEthSignedMessageHash(keccak256(abi.encodePacked(msg.sender, _maxInvestableAmount, _userPhase))),
                 signature
             )
         ) {
             _;
         } else {
             revert InvalidSignature();
-        }
+        }        
+        
+        if(_investmentIsOpen(_investmentId, _userPhase)) {
+            _;
+        } else {
+            revert InvestmentIsNotOpen();
+        }        
+        
+
 
         if(
             investments[_investmentId].stablecoin.allowance(msg.sender, address(this)) >= _thisInvestmentAmount
@@ -234,11 +236,13 @@ contract InvestmentHandler is
         uint _investmentId,
         uint _maxInvestableAmount,
         uint _thisInvestmentAmount,
+        Phase _userPhase,
         bytes calldata signature
     ) public nonReentrant investChecks(
         _investmentId, 
         _maxInvestableAmount,
         _thisInvestmentAmount,
+        _userPhase,
         signature
     ) {
 
@@ -248,7 +252,7 @@ contract InvestmentHandler is
         userInvestment.totalInvestedUsd += _thisInvestmentAmount;
 
         // What to do here? in the case that _maxInvestableAmount changes, and user has already contributed
-        //likely will need different approach or helper function or something
+        // likely will need different approach or helper function or something
         userInvestment.pledgeDebt = _maxInvestableAmount - _thisInvestmentAmount;
 
         investment.totalInvestedUsd += _thisInvestmentAmount;
@@ -323,12 +327,12 @@ contract InvestmentHandler is
     // INVESTMENT READ FUNCTIONS (INVESTMENT IS OPEN)
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
 
-    function investmentIsOpne(uint _investmentId) external view returns (bool) {
-        return _investmentIsOpen(_investmentId, investments[_investmentId].contributionPhase.phase);
+    function investmentIsOpen(uint _investmentId, Phase _userPhase) external view returns (bool) {
+        return _investmentIsOpen(_investmentId, _userPhase);
     }
     
-    function _investmentIsOpen(uint _investmentId, Phase phase) private view returns (bool) {
-        return investments[_investmentId].contributionPhase.phase == phase;
+    function _investmentIsOpen(uint _investmentId, Phase _userPhase) private view returns (bool) {
+        return investments[_investmentId].contributionPhase.phase == _userPhase;
     }
 
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
@@ -339,7 +343,6 @@ contract InvestmentHandler is
     /**
         For now, assuming MANAGER_ROLE will handle this all, and can be given to multiple addresses/roles
         @dev this function will be used to add a new investment to the contract
-        
      */
 
     function addInvestment(
@@ -366,6 +369,10 @@ contract InvestmentHandler is
         emit InvestmentAdded(investmentId);
     }
 
+    function setInvestmentContributionPhase(uint _investmentId, Phase _investmentPhase) external onlyRole(MANAGER_ROLE) {
+        investments[_investmentId].contributionPhase.phase = _investmentPhase;
+    }
+
     function setInvestmentProjectTokenAddress(uint _investmentId, address projectTokenAddress) public onlyRole(MANAGER_ROLE) {
         investments[_investmentId].projectToken = IERC20(projectTokenAddress);
     }
@@ -388,11 +395,11 @@ contract InvestmentHandler is
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
     // TESTING - TO BE DELETED LATER
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
-    function checkSignature(address signer, address user, uint256 _maxInvestableAmount, bytes memory signature) public view returns (bool) {
+    function checkSignature(address signer, address _user, uint256 _maxInvestableAmount, Phase _userPhase, bytes memory signature) public view returns (bool) {
         return(
             SignatureCheckerUpgradeable.isValidSignatureNow(
                 signer,
-                ECDSAUpgradeable.toEthSignedMessageHash(keccak256(abi.encodePacked(user, _maxInvestableAmount))),
+                ECDSAUpgradeable.toEthSignedMessageHash(keccak256(abi.encodePacked(_user, _maxInvestableAmount, _userPhase))),
                 signature
             )
         );
