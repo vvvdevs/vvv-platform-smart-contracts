@@ -99,6 +99,16 @@ contract InvestmentHandler is
         uint[] tokenWithdrawalTimestamps;
     }
 
+    struct InvestCheckParams {
+        uint investmentId;
+        uint maxInvestableAmount;
+        uint thisInvestmentAmount;
+        Phase userPhase;
+        address user;
+        address signer;
+        bytes signature;
+    }
+
     /// @notice investmentId => investment
     mapping(uint => Investment) public investments;
 
@@ -162,39 +172,28 @@ contract InvestmentHandler is
             3. could track "pledge debt" as a metric of whether the user follows thru on pledges of X amount
      */
     modifier investChecks(uint _investmentId, uint _maxInvestableAmount, uint _thisInvestmentAmount, Phase _userPhase, bytes memory signature) {
-        if(
-            SignatureCheckerUpgradeable.isValidSignatureNow(
-                investments[_investmentId].signer,
-                ECDSAUpgradeable.toEthSignedMessageHash(keccak256(abi.encodePacked(msg.sender, _maxInvestableAmount, _userPhase))),
-                signature
-            )
-        ) {
-            _;
-        } else {
+        
+        InvestCheckParams memory params = InvestCheckParams({
+            investmentId: _investmentId,
+            maxInvestableAmount: _maxInvestableAmount,
+            thisInvestmentAmount: _thisInvestmentAmount,
+            userPhase: _userPhase,
+            user: msg.sender,
+            signer: investments[_investmentId].signer,
+            signature: signature
+        });
+
+        if(!_signatureCheck(params)) {
             revert InvalidSignature();
-        }        
-        
-        if(_investmentIsOpen(_investmentId, _userPhase)) {
-            _;
-        } else {
+        } else if(!_phaseCheck(params)) {
             revert InvestmentIsNotOpen();
-        }        
-        
-
-
-        if(
-            investments[_investmentId].stablecoin.allowance(msg.sender, address(this)) >= _thisInvestmentAmount
-        ) {
-            _;
-        } else {
+        } else if(!_stablecoinAllowanceCheck(params)) {
             revert InsufficientAllowance();
-        }
-
-        if(_thisInvestmentAmount + userInvestments[msg.sender][_investmentId].totalInvestedUsd <= _maxInvestableAmount) {
-            _;
-        } else {
+        } else if(!_contributionLimitCheck(params)) {
             revert InvestmentAmountExceedsMax();
         }
+
+        _;
     }
 
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
@@ -248,15 +247,11 @@ contract InvestmentHandler is
 
         UserInvestment storage userInvestment = userInvestments[msg.sender][_investmentId];
         Investment storage investment = investments[_investmentId];
-
         userInvestment.totalInvestedUsd += _thisInvestmentAmount;
-
         // What to do here? in the case that _maxInvestableAmount changes, and user has already contributed
         // likely will need different approach or helper function or something
         userInvestment.pledgeDebt = _maxInvestableAmount - _thisInvestmentAmount;
-
         investment.totalInvestedUsd += _thisInvestmentAmount;
-
         contractTotalInvestedUsd += _thisInvestmentAmount;
 
         investment.stablecoin.transferFrom(msg.sender, address(this), _thisInvestmentAmount);
@@ -333,6 +328,27 @@ contract InvestmentHandler is
     
     function _investmentIsOpen(uint _investmentId, Phase _userPhase) private view returns (bool) {
         return investments[_investmentId].contributionPhase.phase == _userPhase;
+    }
+
+    /// @dev private helpers for investChecks to avoid stack-too-deep errors...
+    function _signatureCheck(InvestCheckParams memory _params) private view returns (bool) {
+        return SignatureCheckerUpgradeable.isValidSignatureNow(
+                _params.signer,
+                ECDSAUpgradeable.toEthSignedMessageHash(keccak256(abi.encodePacked(_params.user, _params.maxInvestableAmount, _params.userPhase))),
+                _params.signature
+        );
+    }
+
+    function _phaseCheck(InvestCheckParams memory _params) private view returns (bool) {
+        return _investmentIsOpen(_params.investmentId, _params.userPhase);
+    }
+
+    function _stablecoinAllowanceCheck(InvestCheckParams memory _params) private view returns (bool) {
+        return investments[_params.investmentId].stablecoin.allowance(_params.user, address(this)) >= _params.thisInvestmentAmount;
+    }
+    
+    function _contributionLimitCheck(InvestCheckParams memory _params) private view returns (bool) {
+        return _params.thisInvestmentAmount + userInvestments[_params.user][_params.investmentId].totalInvestedUsd <= _params.maxInvestableAmount;
     }
 
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
