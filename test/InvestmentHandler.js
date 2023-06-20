@@ -129,6 +129,8 @@ describe("InvestmentHandler", function () {
         await mockUsdc.balanceOf(investmentHandler.address)
       );
 
+      console.log("deposit and pledge amounts: ", depositAmount, pledgeAmount);
+
       const invest_transaction = await investmentHandler
         .connect(user)
         .invest(investmentId, pledgeAmount, depositAmount, signature);

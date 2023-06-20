@@ -246,7 +246,11 @@ contract InvestmentHandler is
         Investment storage investment = investments[_investmentId];
 
         userInvestment.totalInvestedUsd += _thisInvestmentAmount;
+
+        // What to do here? in the case that _maxInvestableAmount changes, and user has already contributed
+        //likely will need different approach or helper function or something
         userInvestment.pledgeDebt = _maxInvestableAmount - _thisInvestmentAmount;
+
         investment.totalInvestedUsd += _thisInvestmentAmount;
 
         contractTotalInvestedUsd += _thisInvestmentAmount;
