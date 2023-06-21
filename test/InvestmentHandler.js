@@ -144,10 +144,17 @@ describe("InvestmentHandler", function () {
 
       console.log("deposit and pledge amounts: ", depositAmount, pledgeAmount);
 
-      const invest_transaction = await investmentHandler
-        .connect(user)
+      const userParams = {
+        investmentId: investmentId,
+        maxInvestableAmount: pledgeAmount,
+        thisInvestmentAmount: depositAmount,
+        userPhase: userPhaseIndex,
+        user: user.address,
+        signer: signer.address,
+        signature: signature,
+      };
 
-        .invest(investmentId, pledgeAmount, depositAmount, userPhaseIndex, signature);
+      const invest_transaction = await investmentHandler.connect(user).invest(userParams);
       await invest_transaction.wait();
 
       /**
@@ -160,7 +167,10 @@ describe("InvestmentHandler", function () {
 
       console.log("pledgeAmount: ", pledgeAmount);
       console.log("investmenthandler usdc balance after invest: ", await mockUsdc.balanceOf(investmentHandler.address));
-      console.log("contractTotalInvestedUsd after invest: ", await investmentHandler.contractTotalInvestedUsd());
+      console.log(
+        "contractTotalInvestedUsd after invest: ",
+        await investmentHandler.contractTotalInvestedPaymentToken()
+      );
 
       const set_project_token = await investmentHandler
         .connect(manager)
@@ -185,8 +195,8 @@ describe("InvestmentHandler", function () {
       // expect(await mockUsdc.balanceOf(investmentHandler.address)).to.equal(pledgeAmount);
 
       const investment = await investmentHandler.investments(investmentHandler.investmentId());
-      expect(investment.stablecoin).to.equal(testInvestmentStablecoin);
-      expect(investment.totalAllocatedUsd).to.equal(testInvestmentUsdAlloc);
+      expect(investment.paymentToken).to.equal(testInvestmentStablecoin);
+      expect(investment.totalAllocatedPaymentToken).to.equal(testInvestmentUsdAlloc);
     });
   });
 

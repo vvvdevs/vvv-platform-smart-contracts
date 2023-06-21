@@ -25,7 +25,7 @@ import {MathUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/math/Ma
 import {SafeMathUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import {ECDSAUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
 import {SignatureCheckerUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/SignatureCheckerUpgradeable.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol"; 
 
 // import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 // import {SafeERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
@@ -85,7 +85,7 @@ contract InvestmentHandler is
         IERC20 paymentToken;
         // string name;
         uint totalInvestedPaymentToken;
-        uint totalInvestedPaymentToken;
+        uint totalAllocatedPaymentToken;
         uint totalTokensClaimed;
         uint totalTokensAllocated;
     }
@@ -104,7 +104,7 @@ contract InvestmentHandler is
         uint[] tokenWithdrawalTimestamps;
     }
 
-    struct InvestCheckParams {
+    struct InvestParams {
         uint investmentId;
         uint maxInvestableAmount;
         uint thisInvestmentAmount;
@@ -119,8 +119,9 @@ contract InvestmentHandler is
 
     /// @notice user => investmentId => userInvestment
     mapping(address => mapping(uint => UserInvestment)) public userInvestments;
-
-    uint[48] __gap; // @curi0n-s reserve space for upgrade if needed?
+    
+    // @curi0n-s reserve space for upgrade if needed?
+    uint[48] __gap; 
 
     // Events
     event InvestmentAdded(uint indexed _investmentId);
@@ -176,25 +177,15 @@ contract InvestmentHandler is
             2. consider the case where user contributes initial allocation, then allocation is increased
             3. could track "pledge debt" as a metric of whether the user follows thru on pledges of X amount
      */
-    modifier investChecks(uint _investmentId, uint _maxInvestableAmount, uint _thisInvestmentAmount, Phase _userPhase, bytes memory signature) {
-        
-        InvestCheckParams memory params = InvestCheckParams({
-            investmentId: _investmentId,
-            maxInvestableAmount: _maxInvestableAmount,
-            thisInvestmentAmount: _thisInvestmentAmount,
-            userPhase: _userPhase,
-            user: msg.sender,
-            signer: investments[_investmentId].signer,
-            signature: signature
-        });
+    modifier investChecks(InvestParams memory _params) {
 
-        if(!_signatureCheck(params)) {
+        if(!_signatureCheck(_params)) {
             revert InvalidSignature();
-        } else if(!_phaseCheck(params)) {
+        } else if(!_phaseCheck(_params)) {
             revert InvestmentIsNotOpen();
-        } else if(!_paymentTokenAllowanceCheck(params)) {
+        } else if(!_paymentTokenAllowanceCheck(_params)) {
             revert InsufficientAllowance();
-        } else if(!_contributionLimitCheck(params)) {
+        } else if(!_contributionLimitCheck(_params)) {
             revert InvestmentAmountExceedsMax();
         }
 
@@ -227,42 +218,28 @@ contract InvestmentHandler is
 
     /**
         @dev this function will be called by the user to invest in the project
-        @param _investmentId the id of the investment the user is investing in
-        @param _maxInvestableAmount the max amount the user is allowed to invest in this investment
-        @param _thisInvestmentAmount the amount the user is investing in this investment
-        @param signature the signature of the user's address and max investable amount
+        @param _params the parameters for the investment as specified in InvestParams
         @notice adds to users total usd invested for investment + total usd in investment overall
-        @notice adjusts user's pledge debt (pledged - contributed)
+        @notice adjusts user's pledge debt (pledged - contributed
+
      */
 
-
     function invest(
-        uint _investmentId,
-        uint _maxInvestableAmount,
-        uint _thisInvestmentAmount,
-        Phase _userPhase,
-        bytes calldata signature
-    ) public nonReentrant investChecks(
-        _investmentId, 
-        _maxInvestableAmount,
-        _thisInvestmentAmount,
-        _userPhase,
-        signature
-    ) {
+        InvestParams memory _params
+    ) public nonReentrant investChecks(_params) {
 
-        UserInvestment storage userInvestment = userInvestments[msg.sender][_investmentId];
-        Investment storage investment = investments[_investmentId];
-        userInvestment.totalInvestedPaymentToken += _thisInvestmentAmount;
+        UserInvestment storage userInvestment = userInvestments[_params.user][_params.investmentId];
+        Investment storage investment = investments[_params.investmentId];
+        userInvestment.totalInvestedPaymentToken += _params.thisInvestmentAmount;
         // What to do here? in the case that _maxInvestableAmount changes, and user has already contributed
         // likely will need different approach or helper function or something
-        userInvestment.pledgeDebt = _maxInvestableAmount - _thisInvestmentAmount;
-        investment.totalInvestedPaymentToken += _thisInvestmentAmount;
-        contractTotalInvestedPaymentToken += _thisInvestmentAmount;
+        userInvestment.pledgeDebt = _params.maxInvestableAmount - _params.thisInvestmentAmount;
+        investment.totalInvestedPaymentToken += _params.thisInvestmentAmount;
+        contractTotalInvestedPaymentToken += _params.thisInvestmentAmount;
 
-        investment.paymentToken.safeTransferFrom(msg.sender, address(this), _thisInvestmentAmount);
+        investment.paymentToken.transferFrom(msg.sender, address(this), _params.thisInvestmentAmount);
 
-
-        emit UserContributionToInvestment(msg.sender, _investmentId, _thisInvestmentAmount);
+        emit UserContributionToInvestment(_params.user, _params.investmentId, _params.thisInvestmentAmount);
 
     }
 
@@ -337,7 +314,7 @@ contract InvestmentHandler is
     }
 
     /// @dev private helpers for investChecks to avoid stack-too-deep errors...
-    function _signatureCheck(InvestCheckParams memory _params) private view returns (bool) {
+    function _signatureCheck(InvestParams memory _params) private view returns (bool) {
         return SignatureCheckerUpgradeable.isValidSignatureNow(
                 _params.signer,
                 ECDSAUpgradeable.toEthSignedMessageHash(keccak256(abi.encodePacked(_params.user, _params.maxInvestableAmount, _params.userPhase))),
@@ -345,15 +322,15 @@ contract InvestmentHandler is
         );
     }
 
-    function _phaseCheck(InvestCheckParams memory _params) private view returns (bool) {
+    function _phaseCheck(InvestParams memory _params) private view returns (bool) {
         return _investmentIsOpen(_params.investmentId, _params.userPhase);
     }
 
-    function _paymentTokenAllowanceCheck(InvestCheckParams memory _params) private view returns (bool) {
+    function _paymentTokenAllowanceCheck(InvestParams memory _params) private view returns (bool) {
         return investments[_params.investmentId].paymentToken.allowance(_params.user, address(this)) >= _params.thisInvestmentAmount;
     }
     
-    function _contributionLimitCheck(InvestCheckParams memory _params) private view returns (bool) {
+    function _contributionLimitCheck(InvestParams memory _params) private view returns (bool) {
         return _params.thisInvestmentAmount + userInvestments[_params.user][_params.investmentId].totalInvestedPaymentToken <= _params.maxInvestableAmount;
     }
 
@@ -368,22 +345,22 @@ contract InvestmentHandler is
      */
 
     function addInvestment(
-        address signer,
-        IERC20 projectToken,
-        uint totalInvestedPaymentToken
+        address _signer,
+        IERC20 _projectToken,
+        uint _totalAllocatedPaymentToken
         // uint totalTokensAllocated
     ) public onlyRole(MANAGER_ROLE) {
         investments[++investmentId] = Investment({
-            signer: signer,
+            signer: _signer,
             contributionPhase: ContributionPhase({
                 phase: Phase.CLOSED,
                 startTime: 0,
                 endTime: 0
             }),
             projectToken: IERC20(address(0)),
-            paymentToken: projectToken,
+            paymentToken: _projectToken,
             totalInvestedPaymentToken: 0,
-            totalInvestedPaymentToken: totalInvestedPaymentToken,
+            totalAllocatedPaymentToken: _totalAllocatedPaymentToken,
             totalTokensClaimed: 0,
             totalTokensAllocated: 0
         });
