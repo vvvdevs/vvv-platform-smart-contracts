@@ -259,12 +259,8 @@ contract InvestmentHandler is
         investment.totalInvestedPaymentToken += _thisInvestmentAmount;
         contractTotalInvestedPaymentToken += _thisInvestmentAmount;
 
-<<<<<<< HEAD
-        investment.paymentToken.transferFrom(msg.sender, address(this), _thisInvestmentAmount);
-=======
-        investment.stablecoin.safeTransferFrom(msg.sender, address(this), _thisInvestmentAmount);
+        investment.paymentToken.safeTransferFrom(msg.sender, address(this), _thisInvestmentAmount);
 
->>>>>>> d9b07257695e31586b3552d7f46e4af5515b11f5
 
         emit UserContributionToInvestment(msg.sender, _investmentId, _thisInvestmentAmount);
 
