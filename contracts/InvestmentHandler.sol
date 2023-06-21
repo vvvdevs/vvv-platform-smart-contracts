@@ -254,7 +254,8 @@ contract InvestmentHandler is
         investment.totalInvestedUsd += _thisInvestmentAmount;
         contractTotalInvestedUsd += _thisInvestmentAmount;
 
-        investment.stablecoin.transferFrom(msg.sender, address(this), _thisInvestmentAmount);
+        investment.stablecoin.safeTransferFrom(msg.sender, address(this), _thisInvestmentAmount);
+
 
         emit UserContributionToInvestment(msg.sender, _investmentId, _thisInvestmentAmount);
 
