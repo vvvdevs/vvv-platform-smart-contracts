@@ -12,7 +12,6 @@
 
 1. Implement safeTransfer, safeERC20, etc. where possible.
 2. Always use upgradeable versions of OZ contracts in an upgradeable contract!
-   --> one question there: when to use IERC20 or IERC20Upgradeable when interacting with non-upgradeable contracts?
 
 ## Potential Pitfalls
 

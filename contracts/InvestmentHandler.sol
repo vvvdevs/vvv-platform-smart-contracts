@@ -48,9 +48,14 @@ contract InvestmentHandler is
 
     address public deployer;
     bytes32 public MANAGER_ROLE;
-    uint public investmentId; /// @dev global tracker for latest investment id
-    uint public contractTotalInvestedUsd; /// @dev global tracker for total invested in contract (TESTING!)
+    
+    /// @dev global tracker for latest investment id
+    uint public investmentId; 
+    
+    /// @dev global tracker for total invested in contract (TESTING!)
+    uint public contractTotalInvestedPaymentToken; 
 
+    /// @curi0n-s are enums extensible?
     enum Phase {
         CLOSED,
         WHALE,
@@ -77,10 +82,10 @@ contract InvestmentHandler is
         address signer; //or bytes32 root if using merkle tree
         ContributionPhase contributionPhase;
         IERC20 projectToken;
-        IERC20 stablecoin;
+        IERC20 paymentToken;
         // string name;
-        uint totalInvestedUsd;
-        uint totalAllocatedUsd;
+        uint totalInvestedPaymentToken;
+        uint totalInvestedPaymentToken;
         uint totalTokensClaimed;
         uint totalTokensAllocated;
     }
@@ -92,7 +97,7 @@ contract InvestmentHandler is
     }
 
     struct UserInvestment {
-        uint totalInvestedUsd;
+        uint totalInvestedPaymentToken;
         uint pledgeDebt;
         uint totalTokensClaimed;
         uint[] tokenWithdrawalAmounts; //@curi0n-s are arrays the move for recording withdrawal amounts and timestamps here?
@@ -164,7 +169,7 @@ contract InvestmentHandler is
         @dev checks to make sure user is able to investment the amount, at this time
             1. investment phase is open
             2. signature validates user max investable amount and address
-            3. user has approved spending of the investment amount in the desired stablecoin
+            3. user has approved spending of the investment amount in the desired paymentToken
             3. user investment amount + current proposed investment amount is less than max investable amount
         
             1. will users have to supply pledged amount in one txn? or can they contribute multiple times?
@@ -187,7 +192,7 @@ contract InvestmentHandler is
             revert InvalidSignature();
         } else if(!_phaseCheck(params)) {
             revert InvestmentIsNotOpen();
-        } else if(!_stablecoinAllowanceCheck(params)) {
+        } else if(!_paymentTokenAllowanceCheck(params)) {
             revert InsufficientAllowance();
         } else if(!_contributionLimitCheck(params)) {
             revert InvestmentAmountExceedsMax();
@@ -247,14 +252,14 @@ contract InvestmentHandler is
 
         UserInvestment storage userInvestment = userInvestments[msg.sender][_investmentId];
         Investment storage investment = investments[_investmentId];
-        userInvestment.totalInvestedUsd += _thisInvestmentAmount;
+        userInvestment.totalInvestedPaymentToken += _thisInvestmentAmount;
         // What to do here? in the case that _maxInvestableAmount changes, and user has already contributed
         // likely will need different approach or helper function or something
         userInvestment.pledgeDebt = _maxInvestableAmount - _thisInvestmentAmount;
-        investment.totalInvestedUsd += _thisInvestmentAmount;
-        contractTotalInvestedUsd += _thisInvestmentAmount;
+        investment.totalInvestedPaymentToken += _thisInvestmentAmount;
+        contractTotalInvestedPaymentToken += _thisInvestmentAmount;
 
-        investment.stablecoin.transferFrom(msg.sender, address(this), _thisInvestmentAmount);
+        investment.paymentToken.transferFrom(msg.sender, address(this), _thisInvestmentAmount);
 
         emit UserContributionToInvestment(msg.sender, _investmentId, _thisInvestmentAmount);
 
@@ -274,7 +279,7 @@ contract InvestmentHandler is
 
         assumes that since they could invest, no further signature validation of the pledge amount is needed
 
-        no checks for math yet, but this assumes that (totalTokensAllocated*userTotalInvestedUsd)/totalInvestedUsd
+        no checks for math yet, but this assumes that (totalTokensAllocated*userTotalInvestedPaymentToken)/totalInvestedPaymentToken
         will work, i.e. num >> denom, when assigning to userTotalClaimableTokens. if not, maybe will need to add 
         the case for num < denom. same thing for userContractBalanceClaimableTokens
      */
@@ -288,18 +293,18 @@ contract InvestmentHandler is
         /**
             project totals for invested usdc, total tokens allocated, user total invested usdc
          */
-        uint totalInvestedUsd = investments[_investmentId].totalInvestedUsd;
+        uint totalInvestedPaymentToken = investments[_investmentId].totalInvestedPaymentToken;
         uint totalTokensAllocated = investments[_investmentId].totalTokensAllocated;
-        uint userTotalInvestedUsd = userInvestments[sender][_investmentId].totalInvestedUsd;
+        uint userTotalInvestedPaymentToken = userInvestments[sender][_investmentId].totalInvestedPaymentToken;
         uint userTokensClaimed = userInvestments[sender][_investmentId].totalTokensClaimed;
 
         /**
-            totalInvestedUsdc/userInvestedUsdc = totalTokensAllocated/userTotalClaimableTokens
+            TotalInvestedPaymentTokenc/userInvestedUsdc = totalTokensAllocated/userTotalClaimableTokens
             below solves for this
 
             may not be neccessary, can be used to make sure user has not exceeded their total claimable amount
          */
-        uint userTotalClaimableTokens = MathUpgradeable.mulDiv(totalTokensAllocated, userTotalInvestedUsd, totalInvestedUsd);
+        uint userTotalClaimableTokens = MathUpgradeable.mulDiv(totalTokensAllocated, userTotalInvestedPaymentToken, totalInvestedPaymentToken);
         if(claimAmount + userTokensClaimed > userTotalClaimableTokens) {
             revert ClaimAmountExceedsTotalClaimable();
         }
@@ -308,7 +313,7 @@ contract InvestmentHandler is
             user claimable tokens for current total deposited
          */
         uint contractTokenBalance = investments[_investmentId].projectToken.balanceOf(address(this));
-        uint userContractBalanceClaimableTokens = MathUpgradeable.mulDiv(contractTokenBalance, userTotalInvestedUsd, totalInvestedUsd);
+        uint userContractBalanceClaimableTokens = MathUpgradeable.mulDiv(contractTokenBalance, userTotalInvestedPaymentToken, totalInvestedPaymentToken);
 
         /**
             user claimable tokens for current total deposited + claim amount
@@ -343,12 +348,12 @@ contract InvestmentHandler is
         return _investmentIsOpen(_params.investmentId, _params.userPhase);
     }
 
-    function _stablecoinAllowanceCheck(InvestCheckParams memory _params) private view returns (bool) {
-        return investments[_params.investmentId].stablecoin.allowance(_params.user, address(this)) >= _params.thisInvestmentAmount;
+    function _paymentTokenAllowanceCheck(InvestCheckParams memory _params) private view returns (bool) {
+        return investments[_params.investmentId].paymentToken.allowance(_params.user, address(this)) >= _params.thisInvestmentAmount;
     }
     
     function _contributionLimitCheck(InvestCheckParams memory _params) private view returns (bool) {
-        return _params.thisInvestmentAmount + userInvestments[_params.user][_params.investmentId].totalInvestedUsd <= _params.maxInvestableAmount;
+        return _params.thisInvestmentAmount + userInvestments[_params.user][_params.investmentId].totalInvestedPaymentToken <= _params.maxInvestableAmount;
     }
 
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
@@ -363,9 +368,8 @@ contract InvestmentHandler is
 
     function addInvestment(
         address signer,
-        // IERC20 projectToken,
-        bool isUsdc,
-        uint totalAllocatedUsd
+        IERC20 projectToken,
+        uint totalInvestedPaymentToken
         // uint totalTokensAllocated
     ) public onlyRole(MANAGER_ROLE) {
         investments[++investmentId] = Investment({
@@ -376,9 +380,9 @@ contract InvestmentHandler is
                 endTime: 0
             }),
             projectToken: IERC20(address(0)),
-            stablecoin: isUsdc ? USDC : USDT,
-            totalInvestedUsd: 0,
-            totalAllocatedUsd: totalAllocatedUsd,
+            paymentToken: projectToken,
+            totalInvestedPaymentToken: 0,
+            totalInvestedPaymentToken: totalInvestedPaymentToken,
             totalTokensClaimed: 0,
             totalTokensAllocated: 0
         });
