@@ -273,6 +273,7 @@ contract InvestmentHandler is
          */
         uint totalInvestedPaymentToken = investments[_investmentId].totalInvestedPaymentToken;
         uint totalTokensAllocated = investments[_investmentId].totalTokensAllocated;
+        uint totalTokensClaimed = investments[_investmentId].totalTokensClaimed;
         uint userTotalInvestedPaymentToken = userInvestments[sender][_investmentId].totalInvestedPaymentToken;
         uint userTokensClaimed = userInvestments[sender][_investmentId].totalTokensClaimed;
 
@@ -291,10 +292,19 @@ contract InvestmentHandler is
             user claimable tokens for current total deposited
          */
         uint contractTokenBalance = investments[_investmentId].projectToken.balanceOf(address(this));
-        uint userContractBalanceClaimableTokens = MathUpgradeable.mulDiv(contractTokenBalance, userTotalInvestedPaymentToken, totalInvestedPaymentToken);
+        uint userContractBalanceClaimableTokens = MathUpgradeable.mulDiv(contractTokenBalance+totalTokensClaimed, userTotalInvestedPaymentToken, totalInvestedPaymentToken);
 
         /**
-            user claimable tokens for current total deposited + claim amount
+            user claimable tokens, given the total tokens deposited, the total tokens claimed, and the user's tokens claimed
+         
+            ex:
+            1. 100 project tokens allocated. 10 project tokens deposited. balanceOf = 10, totalTokensClaimed = 0, userTokensClaimed = 0. user1 and 2 each have 10%
+            2. 10 project tokens deposited. user 1 claims 1. Now balanceOf = 9, totalTokensClaimed = 1, 
+            3. user 2 claims 1, now balanceOf = 8, totalTokensClaimed = 2
+
+            both users claim based on the 10 tokens deposited, order does not matter
+         
+         
          */
         uint userClaimableTokens = userContractBalanceClaimableTokens - userTokensClaimed;
         
