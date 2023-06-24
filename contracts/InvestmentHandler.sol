@@ -272,21 +272,9 @@ contract InvestmentHandler is
             project totals for invested usdc, total tokens allocated, user total invested usdc
          */
         uint totalInvestedPaymentToken = investments[_investmentId].totalInvestedPaymentToken;
-        uint totalTokensAllocated = investments[_investmentId].totalTokensAllocated;
         uint totalTokensClaimed = investments[_investmentId].totalTokensClaimed;
         uint userTotalInvestedPaymentToken = userInvestments[sender][_investmentId].totalInvestedPaymentToken;
         uint userTokensClaimed = userInvestments[sender][_investmentId].totalTokensClaimed;
-
-        /**
-            TotalInvestedPaymentTokenc/userInvestedUsdc = totalTokensAllocated/userTotalClaimableTokens
-            below solves for this
-
-            may not be neccessary, can be used to make sure user has not exceeded their total claimable amount
-         */
-        uint userTotalClaimableTokens = MathUpgradeable.mulDiv(totalTokensAllocated, userTotalInvestedPaymentToken, totalInvestedPaymentToken);
-        if(claimAmount + userTokensClaimed > userTotalClaimableTokens) {
-            revert ClaimAmountExceedsTotalClaimable();
-        }
 
         /**
             user claimable tokens for current total deposited
