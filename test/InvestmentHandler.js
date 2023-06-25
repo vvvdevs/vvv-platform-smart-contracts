@@ -45,7 +45,7 @@ describe("InvestmentHandler", function () {
 
     let InvestmentHandler = await ethers.getContractFactory("InvestmentHandler");
     InvestmentHandler = await InvestmentHandler.connect(manager);
-    const investmentHandler = await upgrades.deployProxy(InvestmentHandler, [mockUsdc.address, mockUsdc.address], {
+    const investmentHandler = await upgrades.deployProxy(InvestmentHandler, [], {
       initializer: "initialize",
     });
     await investmentHandler.deployed();
@@ -118,29 +118,20 @@ describe("InvestmentHandler", function () {
         userPhaseIndex,
       } = await loadFixture(setupFixture);
 
-      const add_investment = await investmentHandler
-        .connect(manager)
-        .addInvestment(signer.address, testInvestmentStablecoin, testInvestmentUsdAlloc);
+      const add_investment = await investmentHandler.connect(manager).addInvestment(signer.address, testInvestmentStablecoin, testInvestmentUsdAlloc);
       await add_investment.wait();
 
       const investmentId = await investmentHandler.investmentId();
 
-      const set_phase_to_shark = await investmentHandler
-        .connect(manager)
-        .setInvestmentContributionPhase(investmentId, 2);
+      const set_phase_to_shark = await investmentHandler.connect(manager).setInvestmentContributionPhase(investmentId, 2);
       await set_phase_to_shark.wait();
 
       const signature = await signDeposit(signer, user, pledgeAmount, userPhaseIndex);
 
-      const approve_stablecoin_spending = await mockUsdc
-        .connect(user)
-        .approve(investmentHandler.address, approvalValue);
+      const approve_stablecoin_spending = await mockUsdc.connect(user).approve(investmentHandler.address, approvalValue);
       await approve_stablecoin_spending.wait();
 
-      console.log(
-        "investmenthandler usdc balance before invest: ",
-        await mockUsdc.balanceOf(investmentHandler.address)
-      );
+      console.log("investmenthandler usdc balance before invest: ", await mockUsdc.balanceOf(investmentHandler.address));
 
       console.log("deposit and pledge amounts: ", depositAmount, pledgeAmount);
 
@@ -167,29 +158,20 @@ describe("InvestmentHandler", function () {
 
       console.log("pledgeAmount: ", pledgeAmount);
       console.log("investmenthandler usdc balance after invest: ", await mockUsdc.balanceOf(investmentHandler.address));
-      console.log(
-        "contractTotalInvestedUsd after invest: ",
-        await investmentHandler.contractTotalInvestedPaymentToken()
-      );
+      console.log("contractTotalInvestedUsd after invest: ", await investmentHandler.contractTotalInvestedPaymentToken());
 
-      const set_project_token = await investmentHandler
-        .connect(manager)
-        .setInvestmentProjectTokenAddress(investmentId, testProjectTokenAddress);
+      const set_project_token = await investmentHandler.connect(manager).setInvestmentProjectTokenAddress(investmentId, testProjectTokenAddress);
       await set_project_token.wait();
 
-      const set_project_token_allocation = await investmentHandler
-        .connect(manager)
-        .setInvestmentProjectTokenAllocation(investmentId, testInvestmentTokensAlloc);
+      const set_project_token_allocation = await investmentHandler.connect(manager).setInvestmentProjectTokenAllocation(investmentId, testInvestmentTokensAlloc);
       await set_project_token_allocation.wait();
 
-      const deposit_project_tokens = await mockProjectToken
-        .connect(manager)
-        .transfer(investmentHandler.address, testInvestmentTokensAlloc);
+      const deposit_project_tokens = await mockProjectToken.connect(manager).transfer(investmentHandler.address, testInvestmentTokensAlloc);
       await deposit_project_tokens.wait();
 
       // const claimable_tokens = await investmentHandler.connect(user).computeUserClaimableAllocationForInvestment(investmentId);
 
-      const user_claim_tokens = await investmentHandler.connect(user).claim(investmentId, testClaimAmount);
+      const user_claim_tokens = await investmentHandler.connect(user).claim(investmentId, testClaimAmount, user.address);
       await user_claim_tokens.wait();
 
       // expect(await mockUsdc.balanceOf(investmentHandler.address)).to.equal(pledgeAmount);
@@ -204,13 +186,7 @@ describe("InvestmentHandler", function () {
     it("Should return true when the signature is valid", async function () {
       const { investmentHandler, pledgeAmount, user, signer, userPhaseIndex } = await loadFixture(setupFixture);
       const signature = await signDeposit(signer, user, pledgeAmount, userPhaseIndex);
-      const isValid = await investmentHandler.checkSignature(
-        signer.address,
-        user.address,
-        pledgeAmount,
-        userPhaseIndex,
-        signature
-      );
+      const isValid = await investmentHandler.checkSignature(signer.address, user.address, pledgeAmount, userPhaseIndex, signature);
       expect(isValid).to.equal(true);
     });
     it("should return false when the signature is invalid", async function () {
@@ -233,10 +209,7 @@ describe("InvestmentHandler", function () {
 //============================================================
 
 async function signDeposit(signerWallet, user, pledgeAmount, phaseIndex) {
-  const hash = ethers.utils.solidityKeccak256(
-    ["address", "uint256", "uint8"],
-    [user.address, pledgeAmount, phaseIndex]
-  );
+  const hash = ethers.utils.solidityKeccak256(["address", "uint256", "uint8"], [user.address, pledgeAmount, phaseIndex]);
   const signature = await signerWallet.signMessage(ethers.utils.arrayify(hash));
   console.log("Signature from js: ", signature);
   return signature;
