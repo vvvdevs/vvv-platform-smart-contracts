@@ -9,4 +9,4 @@
 
 ## Potential Pitfalls
 
-1. Account for USDC/T decimals as we move to testnet!
+1. Account for USDC/T decimals as we move to testnet! Should be just accounted for in the amounts of investment themselves...maybe no invervention needed
