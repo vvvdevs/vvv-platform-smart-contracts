@@ -309,34 +309,22 @@ contract InvestmentHandler is
         return _computeUserClaimableAllocationForInvestment(sender, _investmentId);
     }
 
-    function _computeUserClaimableAllocationForInvestment(address sender, uint _investmentId) private view returns (uint) {
+    /**
+     * @dev private function to compute current amount claimable by user for an investment
+     * @param _sender the address of the user claiming
+     * @param _investmentId the id of the investment the user is claiming from
+     * @notice contractTokenBalnce + totalTokensClaimed is used to preserve user's claimable balance regardless of order
+     */
+
+    function _computeUserClaimableAllocationForInvestment(address _sender, uint _investmentId) private view returns (uint) {
         
-        /**
-            project totals for invested usdc, total tokens allocated, user total invested usdc
-         */
         uint totalInvestedPaymentToken = investments[_investmentId].totalInvestedPaymentToken;
         uint totalTokensClaimed = investments[_investmentId].totalTokensClaimed;
-        uint userTotalInvestedPaymentToken = userInvestments[sender][_investmentId].totalInvestedPaymentToken;
-        uint userTokensClaimed = userInvestments[sender][_investmentId].totalTokensClaimed;
+        uint userTotalInvestedPaymentToken = userInvestments[_sender][_investmentId].totalInvestedPaymentToken;
+        uint userTokensClaimed = userInvestments[_sender][_investmentId].totalTokensClaimed;
 
-        /**
-            user claimable tokens for current total deposited
-         */
         uint contractTokenBalance = investments[_investmentId].projectToken.balanceOf(address(this));
         uint userContractBalanceClaimableTokens = MathUpgradeable.mulDiv(contractTokenBalance+totalTokensClaimed, userTotalInvestedPaymentToken, totalInvestedPaymentToken);
-
-        /**
-            user claimable tokens, given the total tokens deposited, the total tokens claimed, and the user's tokens claimed
-         
-            ex:
-            1. 100 project tokens allocated. 10 project tokens deposited. balanceOf = 10, totalTokensClaimed = 0, userTokensClaimed = 0. user1 and 2 each have 10%
-            2. 10 project tokens deposited. user 1 claims 1. Now balanceOf = 9, totalTokensClaimed = 1, 
-            3. user 2 claims 1, now balanceOf = 8, totalTokensClaimed = 2
-
-            both users claim based on the 10 tokens deposited, order does not matter
-         
-         
-         */
         uint userClaimableTokens = userContractBalanceClaimableTokens - userTokensClaimed;
         
         return userClaimableTokens;
