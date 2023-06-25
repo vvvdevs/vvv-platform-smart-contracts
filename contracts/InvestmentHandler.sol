@@ -17,6 +17,14 @@ pragma solidity 0.8.19;
         upgradeable ERC20 tokens?
  */
 
+/**
+ * @title InvestmentHandler
+ * @author @vvvfund (@curi0n-s, @kcper, @c0dejax)
+ * @notice Handles the investment process for vVv allocations from contributing the payment token to claiming the project token
+ * @notice Any wallet can invest on behalf of a kyc wallet, but only "in-network" addresses can claim on behalf of a kyc wallet
+ * @dev This contract is upgradeable and pausable
+ */
+
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
@@ -43,10 +51,9 @@ contract InvestmentHandler is
     
     using SafeMathUpgradeable for uint;
 
-    IERC20 USDC;
-    IERC20 USDT;
-
     address public deployer;
+    
+    /// @dev role for adding and modifying investments
     bytes32 public MANAGER_ROLE;
     
     /// @dev global tracker for latest investment id
@@ -55,7 +62,7 @@ contract InvestmentHandler is
     /// @dev global tracker for total invested in contract (TESTING!)
     uint public contractTotalInvestedPaymentToken; 
 
-    /// @curi0n-s are enums extensible?
+    /// @dev enum for investment phases
     enum Phase {
         CLOSED,
         WHALE,
@@ -64,26 +71,21 @@ contract InvestmentHandler is
     } 
 
     /**
-        @curi0n-s adding everything discussed so far here,
-        likely we can remove what isn't needed later, 
-        so adding all options I can think of for now
-
-        investment IDs may not be necessary in the struct,
-        since this will be the index used to get the struct
-        in the first place
-
-        def open to new approaches on how to best structure this,
-        for example will we ID investments by uint, project token address, or other?
-
+     * @notice Investment struct
+     * @param signer address of the signer for this investment
+     * @param contributionPhase struct containing phase and start/end times
+     * @param projectToken address of the project token
+     * @param paymentToken address of the payment token
+     * @param totalInvestedPaymentToken total amount of payment token invested in this investment
+     * @param totalAllocatedPaymentToken total amount of payment token allocated to this investment
+     * @param totalTokensClaimed total amount of project token claimed from this investment
+     * @param totalTokensAllocated total amount of project token allocated to this investment
      */
-
     struct Investment {
-        // uint id;
-        address signer; //or bytes32 root if using merkle tree
+        address signer; 
         ContributionPhase contributionPhase;
         IERC20 projectToken;
         IERC20 paymentToken;
-        // string name;
         uint totalInvestedPaymentToken;
         uint totalAllocatedPaymentToken;
         uint totalTokensClaimed;
@@ -119,23 +121,29 @@ contract InvestmentHandler is
 
     /// @notice user => investmentId => userInvestment
     mapping(address => mapping(uint => UserInvestment)) public userInvestments;
+
+    /// @notice kyc address => in-network address => bool
+    mapping(address => mapping(address => bool)) public isInKycWalletNetwork;
+    mapping(address => address) public correspondingKycAddress;
     
     // @curi0n-s reserve space for upgrade if needed?
     uint[48] __gap; 
 
     // Events
-    event InvestmentAdded(uint indexed _investmentId);
+    event InvestmentAdded(uint indexed investmentId);
     event InvestmentRemoved();
     event InvestmentModified();
     event InvestmentPhaseSet();
-    event UserContributionToInvestment(address indexed user, uint indexed _investmentId, uint amount);
-    event UserTokenClaim(address indexed user, uint indexed _investmentId, uint amount);
+    event UserContributionToInvestment(address indexed sender, address indexed kycWallet, uint indexed investmentId, uint amount);
+    event UserTokenClaim(address indexed sender, address tokenRecipient, address indexed kycWallet, uint indexed investmentId, uint amount);
+    event WalletAddedToKycNetwork(address indexed kycWallet, address indexed wallet);
 
     error ClaimAmountExceedsTotalClaimable();
     error InsufficientAllowance();
     error InvestmentAmountExceedsMax();
     error InvestmentIsNotOpen();
     error InvalidSignature();
+    error NotInKycWalletNetwork();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -146,7 +154,7 @@ contract InvestmentHandler is
     // INITIALIZATION & MODIFIERS
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
     
-    function initialize(address _usdc, address _usdt) public initializer {
+    function initialize() public initializer {
         __AccessControl_init();
         __Pausable_init();
         __ReentrancyGuard_init();
@@ -157,12 +165,19 @@ contract InvestmentHandler is
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(MANAGER_ROLE, msg.sender);
         
-        USDC = IERC20(_usdc);//IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
-        USDT = IERC20(_usdt);//IERC20(0xdAC17F958D2ee523a2206206994597C13D831ec7);
     }
     
-    modifier claimChecks(uint _investmentId, uint thisClaimAmount) {
-        _computeUserClaimableAllocationForInvestment(msg.sender, _investmentId, thisClaimAmount);
+    modifier claimChecks(uint _investmentId, uint _thisClaimAmount, address _tokenRecipient, address _kycAddress) {        
+        uint claimableTokens = _computeUserClaimableAllocationForInvestment(_tokenRecipient, _investmentId);
+        
+        if(_thisClaimAmount > claimableTokens) {
+            revert ClaimAmountExceedsTotalClaimable();
+        }
+
+        if(!isInKycWalletNetwork[_kycAddress][msg.sender]){
+            revert NotInKycWalletNetwork();
+        }
+
         _;
     }
 
@@ -197,23 +212,34 @@ contract InvestmentHandler is
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
     
     /** 
-        @dev this function will be called by the user to claim their tokens
-        @param _investmentId the id of the investment the user is claiming from
-        @param claimAmount the amount the user is claiming from the investment
-        @notice adds to users total tokens claimed for investment
-        @notice adds to total tokens claimed for investment
+     * @dev this function will be called by the user to claim their tokens
+     * @param _investmentId the id of the investment the user is claiming from
+     * @param _claimAmount the amount of tokens the user is claiming
+     * @param _tokenRecipient the address the wallet which will receive the tokens
+     * @notice allows any in-network wallet to claim tokens to any wallet on behalf of the kyc wallet
+     * @notice UI can grab _kycWallet via correspondingKycAddress[msg.sender]
      */
     
-    function claim(uint _investmentId, uint claimAmount) public claimChecks(_investmentId, claimAmount) {
-        UserInvestment storage userInvestment = userInvestments[msg.sender][_investmentId];
+    function claim(
+        uint _investmentId, 
+        uint _claimAmount, 
+        address _tokenRecipient, 
+        address _kycAddress
+    ) public whenNotPaused() claimChecks(
+        _investmentId, 
+        _claimAmount, 
+        _tokenRecipient, 
+        _kycAddress
+    ) {
+        UserInvestment storage userInvestment = userInvestments[_tokenRecipient][_investmentId];
         Investment storage investment = investments[_investmentId];
 
-        userInvestment.totalTokensClaimed += claimAmount;
-        investment.totalTokensClaimed += claimAmount;
+        userInvestment.totalTokensClaimed += _claimAmount;
+        investment.totalTokensClaimed += _claimAmount;
 
-        investment.projectToken.transfer(msg.sender, claimAmount);
+        investment.projectToken.transfer(_tokenRecipient, _claimAmount);
 
-        emit UserTokenClaim(msg.sender, _investmentId, claimAmount);
+        emit UserTokenClaim(msg.sender, _tokenRecipient, _kycAddress, _investmentId, _claimAmount);
     }
 
     /**
@@ -226,21 +252,38 @@ contract InvestmentHandler is
 
     function invest(
         InvestParams memory _params
-    ) public nonReentrant investChecks(_params) {
+    ) public nonReentrant whenNotPaused() investChecks(_params) {
 
         UserInvestment storage userInvestment = userInvestments[_params.user][_params.investmentId];
         Investment storage investment = investments[_params.investmentId];
         userInvestment.totalInvestedPaymentToken += _params.thisInvestmentAmount;
-        // What to do here? in the case that _maxInvestableAmount changes, and user has already contributed
-        // likely will need different approach or helper function or something
-        userInvestment.pledgeDebt = _params.maxInvestableAmount - _params.thisInvestmentAmount;
+        
+        // [!] What to do here? in the case that _maxInvestableAmount changes, and user has already contributed
+        // maybe will need helper function, etc
+        // note that userInvestment.totalInvestedPaymentToken is incremented above so the below includes
+        // both the previously invested amount as well as the current proposed investment amount
+        userInvestment.pledgeDebt = _params.maxInvestableAmount - userInvestment.totalInvestedPaymentToken;
+        
         investment.totalInvestedPaymentToken += _params.thisInvestmentAmount;
         contractTotalInvestedPaymentToken += _params.thisInvestmentAmount;
 
         investment.paymentToken.transferFrom(msg.sender, address(this), _params.thisInvestmentAmount);
 
-        emit UserContributionToInvestment(_params.user, _params.investmentId, _params.thisInvestmentAmount);
+        emit UserContributionToInvestment(msg.sender, _params.user, _params.investmentId, _params.thisInvestmentAmount);
 
+    }
+
+    /**
+     * @dev this function will be called by a kyc'd wallet to add a wallet to its network
+     * @param _newWallet the address of the wallet to be added to the network
+     * @notice allows any wallet to add any other wallet to its network, but this is 
+     *         only is of use to wallets who are kyc'd and able to invest/claim
+     */
+
+    function addWalletToKycWalletNetwork(address _newWallet) external {
+        isInKycWalletNetwork[msg.sender][_newWallet] = true;
+        correspondingKycAddress[_newWallet] = msg.sender;
+        emit WalletAddedToKycNetwork(msg.sender, _newWallet);
     }
 
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
@@ -262,11 +305,11 @@ contract InvestmentHandler is
         the case for num < denom. same thing for userContractBalanceClaimableTokens
      */
 
-    function computeUserClaimableAllocationForInvestment(address sender, uint _investmentId, uint claimAmount) external view returns (uint) {
-        return _computeUserClaimableAllocationForInvestment(sender, _investmentId, claimAmount);
+    function computeUserClaimableAllocationForInvestment(address sender, uint _investmentId) external view returns (uint) {
+        return _computeUserClaimableAllocationForInvestment(sender, _investmentId);
     }
 
-    function _computeUserClaimableAllocationForInvestment(address sender, uint _investmentId, uint claimAmount) private view returns (uint) {
+    function _computeUserClaimableAllocationForInvestment(address sender, uint _investmentId) private view returns (uint) {
         
         /**
             project totals for invested usdc, total tokens allocated, user total invested usdc
