@@ -174,7 +174,7 @@ contract InvestmentHandler is
             revert ClaimAmountExceedsTotalClaimable();
         }
 
-        if(!isInKycWalletNetwork[_kycAddress][msg.sender]){
+        if(!isInKycWalletNetwork[_kycAddress][_tokenRecipient] && _tokenRecipient != _kycAddress ){
             revert NotInKycWalletNetwork();
         }
 

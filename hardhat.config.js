@@ -25,15 +25,15 @@ module.exports = {
       url: process.env.ETH_GOERLI_TESTNET_URL || "",
       accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
-    // for mainnet
-    optimism: {
-      url: "https://mainnet.optimism.io",
-      accounts: [dev_wallet_key],
+    sepolia: {
+      chainId: 11155111,
+      url: process.env.ETH_SEPOLIA_TESTNET_URL || "",
+      accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
-    // for testnet
-    "optimism-kovan": {
-      url: "https://kovan.optimism.io",
-      accounts: [dev_wallet_key],
+    mainnet: {
+      chainId: 1,
+      url: process.env.ETH_MAINNET_TESTNET_URL || "",
+      accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
     // for the local dev environment
     localhost: {
