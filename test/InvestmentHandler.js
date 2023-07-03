@@ -171,7 +171,7 @@ describe("InvestmentHandler", function () {
 
       // const claimable_tokens = await investmentHandler.connect(user).computeUserClaimableAllocationForInvestment(investmentId);
 
-      const user_claim_tokens = await investmentHandler.connect(user).claim(investmentId, testClaimAmount, user.address);
+      const user_claim_tokens = await investmentHandler.connect(user).claim(investmentId, testClaimAmount, user.address, user.address);
       await user_claim_tokens.wait();
 
       // expect(await mockUsdc.balanceOf(investmentHandler.address)).to.equal(pledgeAmount);
