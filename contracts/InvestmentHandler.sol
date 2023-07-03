@@ -2,24 +2,8 @@
 pragma solidity 0.8.19;
 
 /**
-@title InvestmentHandler
-@author @vvvfund (@c0dejax, @kcper, @curi0n-s)
-
-@notice InvestmentHandler is a contract that handles the investment process for a given project. It is responsible for:
-    1. Allowing users to invest in a project
-    2. Allowing users to claim their allocation
-    3. Allowing admins to add/remove/modify investments
-    4. Allowing admins to set the investment phase
-
-    ???
-    1. is IERC20Upgradeable the interface we should use for all IERC20 interfacing,
-        because it's done in an upgradeable contract, or is it an interface to 
-        upgradeable ERC20 tokens?
- */
-
-/**
  * @title InvestmentHandler
- * @author @vvvfund (@curi0n-s, @kcper, @c0dejax)
+ * @author @vvvfund (@curi0n-s + @kcper + @c0dejax)
  * @notice Handles the investment process for vVv allocations from contributing the payment token to claiming the project token
  * @notice Any wallet can invest on behalf of a kyc wallet, but only "in-network" addresses can claim on behalf of a kyc wallet
  * @dev This contract is upgradeable and pausable
@@ -33,11 +17,11 @@ import {MathUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/math/Ma
 import {SafeMathUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import {ECDSAUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
 import {SignatureCheckerUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/SignatureCheckerUpgradeable.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol"; 
+import {SafeERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
-// import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-// import {SafeERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 // import {StringsUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
+// import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol"; 
 
 contract InvestmentHandler is 
     Initializable, 
@@ -50,6 +34,7 @@ contract InvestmentHandler is
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
     
     using SafeMathUpgradeable for uint;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     address public deployer;
     
@@ -84,8 +69,8 @@ contract InvestmentHandler is
     struct Investment {
         address signer; 
         ContributionPhase contributionPhase;
-        IERC20 projectToken;
-        IERC20 paymentToken;
+        IERC20Upgradeable projectToken;
+        IERC20Upgradeable paymentToken;
         uint totalInvestedPaymentToken;
         uint totalAllocatedPaymentToken;
         uint totalTokensClaimed;
@@ -145,14 +130,16 @@ contract InvestmentHandler is
     error InvalidSignature();
     error NotInKycWalletNetwork();
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
-    }
+
 
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
     // INITIALIZATION & MODIFIERS
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
+    
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }    
     
     function initialize() public initializer {
         __AccessControl_init();
@@ -168,7 +155,7 @@ contract InvestmentHandler is
     }
     
     modifier claimChecks(uint _investmentId, uint _thisClaimAmount, address _tokenRecipient, address _kycAddress) {        
-        uint claimableTokens = _computeUserClaimableAllocationForInvestment(_tokenRecipient, _investmentId);
+        uint claimableTokens = computeUserClaimableAllocationForInvestment(_tokenRecipient, _investmentId);
         
         if(_thisClaimAmount > claimableTokens) {
             revert ClaimAmountExceedsTotalClaimable();
@@ -182,7 +169,7 @@ contract InvestmentHandler is
     }
 
     /**
-        @dev checks to make sure user is able to investment the amount, at this time
+     * @dev checks to make sure user is able to investment the amount, at this time
             1. investment phase is open
             2. signature validates user max investable amount and address
             3. user has approved spending of the investment amount in the desired paymentToken
@@ -237,37 +224,35 @@ contract InvestmentHandler is
         userInvestment.totalTokensClaimed += _claimAmount;
         investment.totalTokensClaimed += _claimAmount;
 
-        investment.projectToken.transfer(_tokenRecipient, _claimAmount);
+        investment.projectToken.safeTransfer(_tokenRecipient, _claimAmount);
 
         emit UserTokenClaim(msg.sender, _tokenRecipient, _kycAddress, _investmentId, _claimAmount);
     }
 
     /**
-        @dev this function will be called by the user to invest in the project
-        @param _params the parameters for the investment as specified in InvestParams
-        @notice adds to users total usd invested for investment + total usd in investment overall
-        @notice adjusts user's pledge debt (pledged - contributed
-
+     * @dev this function will be called by the user to invest in the project
+     * @param _params the parameters for the investment as specified in InvestParams
+     * @notice adds to users total usd invested for investment + total usd in investment overall
+     * @notice adjusts user's pledge debt (pledged - contributed)
      */
 
     function invest(
         InvestParams memory _params
-    ) public nonReentrant whenNotPaused() investChecks(_params) {
+    ) public nonReentrant whenNotPaused investChecks(_params) {
 
         UserInvestment storage userInvestment = userInvestments[_params.user][_params.investmentId];
         Investment storage investment = investments[_params.investmentId];
         userInvestment.totalInvestedPaymentToken += _params.thisInvestmentAmount;
         
-        // [!] What to do here? in the case that _maxInvestableAmount changes, and user has already contributed
-        // maybe will need helper function, etc
-        // note that userInvestment.totalInvestedPaymentToken is incremented above so the below includes
-        // both the previously invested amount as well as the current proposed investment amount
+        /// @curi0n-s [!] Confirm things will work in the case that _maxInvestableAmount changes, and user has already contributed
+        /// note that userInvestment.totalInvestedPaymentToken is incremented above so the below includes
+        /// both the previously invested amount as well as the current proposed investment amount
         userInvestment.pledgeDebt = _params.maxInvestableAmount - userInvestment.totalInvestedPaymentToken;
         
         investment.totalInvestedPaymentToken += _params.thisInvestmentAmount;
         contractTotalInvestedPaymentToken += _params.thisInvestmentAmount;
 
-        investment.paymentToken.transferFrom(msg.sender, address(this), _params.thisInvestmentAmount);
+        investment.paymentToken.safeTransferFrom(msg.sender, address(this), _params.thisInvestmentAmount);
 
         emit UserContributionToInvestment(msg.sender, _params.user, _params.investmentId, _params.thisInvestmentAmount);
 
@@ -293,30 +278,32 @@ contract InvestmentHandler is
     function getUserInvestmentIds() public view returns (uint[] memory) {}
     function getTotalClaimedForInvestment() public view returns (uint) {}
     function computeUserTotalAllocationForInvesment() public view returns (uint) {}
-    
-    /**
-        this will be a bit spicy - this will calculate claimable tokens, 
-        based on users % share of allocation
 
-        assumes that since they could invest, no further signature validation of the pledge amount is needed
-
-        no checks for math yet, but this assumes that (totalTokensAllocated*userTotalInvestedPaymentToken)/totalInvestedPaymentToken
-        will work, i.e. num >> denom, when assigning to userTotalClaimableTokens. if not, maybe will need to add 
-        the case for num < denom. same thing for userContractBalanceClaimableTokens
-     */
-
-    function computeUserClaimableAllocationForInvestment(address sender, uint _investmentId) external view returns (uint) {
-        return _computeUserClaimableAllocationForInvestment(sender, _investmentId);
-    }
 
     /**
-     * @dev private function to compute current amount claimable by user for an investment
+     * @dev function to compute current amount claimable by user for an investment
      * @param _sender the address of the user claiming
      * @param _investmentId the id of the investment the user is claiming from
      * @notice contractTokenBalnce + totalTokensClaimed is used to preserve user's claimable balance regardless of order
      */
 
-    function _computeUserClaimableAllocationForInvestment(address _sender, uint _investmentId) private view returns (uint) {
+    /**
+        NOTES:
+        this will be a bit spicy - this will calculate claimable tokens, 
+        based on users % share of allocation
+
+        assumes that since they could invest, no further signature validation of the pledge amount is needed
+
+        confirm that math works out regardless of claim timing and frequency!
+
+        no checks for math yet, but this assumes that (totalTokensAllocated*userTotalInvestedPaymentToken)/totalInvestedPaymentToken
+        will work, i.e. num >> denom, when assigning to userTotalClaimableTokens. if not, maybe will need to add 
+        the case for num < denom. same thing for userContractBalanceClaimableTokens
+
+        i.e. consider that we get 1 Investment Token for 1000 Payment Tokens (both 18 decimals), will rounding/truncation errors get significant?
+     */
+
+    function computeUserClaimableAllocationForInvestment(address _sender, uint _investmentId) public view returns (uint) {
         
         uint totalInvestedPaymentToken = investments[_investmentId].totalInvestedPaymentToken;
         uint totalTokensClaimed = investments[_investmentId].totalTokensClaimed;
@@ -369,13 +356,13 @@ contract InvestmentHandler is
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
 
     /**
-        For now, assuming MANAGER_ROLE will handle this all, and can be given to multiple addresses/roles
-        @dev this function will be used to add a new investment to the contract
+     * For now, assuming MANAGER_ROLE will handle this all, and can be given to multiple addresses/roles
+     * @dev this function will be used to add a new investment to the contract
      */
 
     function addInvestment(
         address _signer,
-        IERC20 _projectToken,
+        IERC20Upgradeable _projectToken,
         uint _totalAllocatedPaymentToken
         // uint totalTokensAllocated
     ) public onlyRole(MANAGER_ROLE) {
@@ -386,7 +373,7 @@ contract InvestmentHandler is
                 startTime: 0,
                 endTime: 0
             }),
-            projectToken: IERC20(address(0)),
+            projectToken: IERC20Upgradeable(address(0)),
             paymentToken: _projectToken,
             totalInvestedPaymentToken: 0,
             totalAllocatedPaymentToken: _totalAllocatedPaymentToken,
@@ -401,7 +388,7 @@ contract InvestmentHandler is
     }
 
     function setInvestmentProjectTokenAddress(uint _investmentId, address projectTokenAddress) public onlyRole(MANAGER_ROLE) {
-        investments[_investmentId].projectToken = IERC20(projectTokenAddress);
+        investments[_investmentId].projectToken = IERC20Upgradeable(projectTokenAddress);
     }
 
     function setInvestmentProjectTokenAllocation(uint _investmentId, uint totalTokensAllocated) public onlyRole(MANAGER_ROLE) {
@@ -413,14 +400,14 @@ contract InvestmentHandler is
     function setInvestmentPhase() public onlyRole(MANAGER_ROLE) {}
 
     /**
-        @dev this function will be used to manually add contributions to an investment
+     * @dev this function will be used to manually add contributions to an investment
      */
     function manualAddContribution() public onlyRole(MANAGER_ROLE) {}
 
     function refundUser() public onlyRole(MANAGER_ROLE) {}
 
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
-    // TESTING - TO BE DELETED LATER
+    // TESTING - TO BE DELETED LATER?
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
     function checkSignature(address signer, address _user, uint256 _maxInvestableAmount, Phase _userPhase, bytes memory signature) public view returns (bool) {
         return(
