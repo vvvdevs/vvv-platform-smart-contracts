@@ -148,6 +148,11 @@ contract InvestmentHandler is
         _setupRole(MANAGER_ROLE, msg.sender);
         
     }
+
+    /**
+     * @dev modifier to check addresses involved in claim
+     * @dev msg.sender and _tokenRecipient must be in network of _kycAddress
+     */
     
     modifier claimChecks(uint _investmentId, uint _thisClaimAmount, address _tokenRecipient, address _kycAddress) {        
         uint claimableTokens = computeUserClaimableAllocationForInvestment(_tokenRecipient, _investmentId);
@@ -156,7 +161,11 @@ contract InvestmentHandler is
             revert ClaimAmountExceedsTotalClaimable();
         }
 
-        if(!isInKycWalletNetwork[_kycAddress][_tokenRecipient] && _tokenRecipient != _kycAddress ){
+        if(
+            !isInKycWalletNetwork[_kycAddress][msg.sender] &&  
+            !isInKycWalletNetwork[_kycAddress][_tokenRecipient] &&
+            _tokenRecipient != _kycAddress
+        ){
             revert NotInKycWalletNetwork();
         }
 
