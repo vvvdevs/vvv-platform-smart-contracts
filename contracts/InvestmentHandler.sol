@@ -162,9 +162,13 @@ contract InvestmentHandler is
         }
 
         if(
-            !isInKycWalletNetwork[_kycAddress][msg.sender] &&  
-            !isInKycWalletNetwork[_kycAddress][_tokenRecipient] &&
-            _tokenRecipient != _kycAddress
+            (
+                !isInKycWalletNetwork[_kycAddress][_tokenRecipient] &&
+                _tokenRecipient != _kycAddress
+            ) || (
+                !isInKycWalletNetwork[_kycAddress][msg.sender] &&
+                msg.sender != _kycAddress
+            )
         ){
             revert NotInKycWalletNetwork();
         }
