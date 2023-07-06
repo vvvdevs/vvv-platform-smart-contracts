@@ -127,8 +127,6 @@ contract InvestmentHandler is
     error InvalidSignature();
     error NotInKycWalletNetwork();
 
-
-
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
     // INITIALIZATION & MODIFIERS
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
@@ -317,12 +315,8 @@ contract InvestmentHandler is
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
     // INVESTMENT READ FUNCTIONS (INVESTMENT IS OPEN)
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
-
-    function investmentIsOpen(uint _investmentId, Phase _userPhase) external view returns (bool) {
-        return _investmentIsOpen(_investmentId, _userPhase);
-    }
     
-    function _investmentIsOpen(uint _investmentId, Phase _userPhase) private view returns (bool) {
+    function investmentIsOpen(uint _investmentId, Phase _userPhase) private view returns (bool) {
         return investments[_investmentId].contributionPhase.phase == _userPhase;
     }
 
@@ -336,7 +330,7 @@ contract InvestmentHandler is
     }
 
     function _phaseCheck(InvestParams memory _params) private view returns (bool) {
-        return _investmentIsOpen(_params.investmentId, _params.userPhase);
+        return investmentIsOpen(_params.investmentId, _params.userPhase);
     }
 
     function _paymentTokenAllowanceCheck(InvestParams memory _params) private view returns (bool) {
