@@ -93,7 +93,7 @@ contract InvestmentHandler is
         uint maxInvestableAmount;
         uint thisInvestmentAmount;
         Phase userPhase;
-        address user;
+        address kycAddress;
         address signer;
         bytes signature;
     }
@@ -248,7 +248,7 @@ contract InvestmentHandler is
         InvestParams memory _params
     ) public nonReentrant whenNotPaused investChecks(_params) {
 
-        UserInvestment storage userInvestment = userInvestments[_params.user][_params.investmentId];
+        UserInvestment storage userInvestment = userInvestments[_params.kycAddress][_params.investmentId];
         Investment storage investment = investments[_params.investmentId];
         userInvestment.totalInvestedPaymentToken += _params.thisInvestmentAmount;
         
@@ -262,7 +262,7 @@ contract InvestmentHandler is
 
         investment.paymentToken.safeTransferFrom(msg.sender, address(this), _params.thisInvestmentAmount);
 
-        emit UserContributionToInvestment(msg.sender, _params.user, _params.investmentId, _params.thisInvestmentAmount);
+        emit UserContributionToInvestment(msg.sender, _params.kycAddress, _params.investmentId, _params.thisInvestmentAmount);
 
     }
 
@@ -311,12 +311,12 @@ contract InvestmentHandler is
         i.e. consider that we get 1 Investment Token for 1000 Payment Tokens (both 18 decimals), will rounding/truncation errors get significant?
      */
 
-    function computeUserClaimableAllocationForInvestment(address _sender, uint _investmentId) public view returns (uint) {
+    function computeUserClaimableAllocationForInvestment(address _kycAddress, uint _investmentId) public view returns (uint) {
         
         uint totalInvestedPaymentToken = investments[_investmentId].totalInvestedPaymentToken;
         uint totalTokensClaimed = investments[_investmentId].totalTokensClaimed;
-        uint userTotalInvestedPaymentToken = userInvestments[_sender][_investmentId].totalInvestedPaymentToken;
-        uint userTokensClaimed = userInvestments[_sender][_investmentId].totalTokensClaimed;
+        uint userTotalInvestedPaymentToken = userInvestments[_kycAddress][_investmentId].totalInvestedPaymentToken;
+        uint userTokensClaimed = userInvestments[_kycAddress][_investmentId].totalTokensClaimed;
 
         uint contractTokenBalance = investments[_investmentId].projectToken.balanceOf(address(this));
         uint userContractBalanceClaimableTokens = MathUpgradeable.mulDiv(contractTokenBalance+totalTokensClaimed, userTotalInvestedPaymentToken, totalInvestedPaymentToken);
