@@ -337,7 +337,7 @@ contract InvestmentHandler is
     function _signatureCheck(InvestParams memory _params) private view returns (bool) {
         return SignatureCheckerUpgradeable.isValidSignatureNow(
                 _params.signer,
-                ECDSAUpgradeable.toEthSignedMessageHash(keccak256(abi.encodePacked(_params.user, _params.maxInvestableAmount, _params.userPhase))),
+                ECDSAUpgradeable.toEthSignedMessageHash(keccak256(abi.encodePacked(_params.kycAddress, _params.maxInvestableAmount, _params.userPhase))),
                 _params.signature
         );
     }
@@ -347,11 +347,11 @@ contract InvestmentHandler is
     }
 
     function _paymentTokenAllowanceCheck(InvestParams memory _params) private view returns (bool) {
-        return investments[_params.investmentId].paymentToken.allowance(_params.user, address(this)) >= _params.thisInvestmentAmount;
+        return investments[_params.investmentId].paymentToken.allowance(_params.kycAddress, address(this)) >= _params.thisInvestmentAmount;
     }
     
     function _contributionLimitCheck(InvestParams memory _params) private view returns (bool) {
-        return _params.thisInvestmentAmount + userInvestments[_params.user][_params.investmentId].totalInvestedPaymentToken <= _params.maxInvestableAmount;
+        return _params.thisInvestmentAmount + userInvestments[_params.kycAddress][_params.investmentId].totalInvestedPaymentToken <= _params.maxInvestableAmount;
     }
 
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
