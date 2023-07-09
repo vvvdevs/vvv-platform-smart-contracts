@@ -40,9 +40,6 @@ contract InvestmentHandler is
     
     /// @dev global tracker for latest investment id
     uint public latestInvestmentId; 
-    
-    /// @dev global tracker for total invested in contract (TESTING!)
-    uint public contractTotalInvestedPaymentToken; 
 
     /// @dev enum for investment phases
     enum Phase {
@@ -115,7 +112,7 @@ contract InvestmentHandler is
     event InvestmentAdded(uint indexed investmentId);
     event InvestmentRemoved();
     event InvestmentModified();
-    event InvestmentPhaseSet();
+    event InvestmentPhaseSet(uint indexed investmentId, Phase indexed phase);
     event UserContributionToInvestment(address indexed sender, address indexed kycWallet, uint indexed investmentId, uint amount);
     event UserTokenClaim(address indexed sender, address tokenRecipient, address indexed kycWallet, uint indexed investmentId, uint amount);
     event WalletAddedToKycNetwork(address indexed kycWallet, address indexed wallet);
@@ -258,7 +255,6 @@ contract InvestmentHandler is
         userInvestment.pledgeDebt = _params.maxInvestableAmount - userInvestment.totalInvestedPaymentToken;
         
         investment.totalInvestedPaymentToken += _params.thisInvestmentAmount;
-        contractTotalInvestedPaymentToken += _params.thisInvestmentAmount;
 
         investment.paymentToken.safeTransferFrom(msg.sender, address(this), _params.thisInvestmentAmount);
 
@@ -283,7 +279,23 @@ contract InvestmentHandler is
     // USER READ FUNCTIONS (USER INVESTMENTS, USER CLAIMABLE ALLOCATION, USER TOTAL ALLOCATION)
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
     
-    function getUserInvestmentIds() public view returns (uint[] memory) {}
+    /**
+     * @dev function to return all investment ids for a user
+     */
+    function getUserInvestmentIds(address _kycAddress) public view returns (uint[] memory) {
+        uint j;
+        uint[] memory investmentIds;
+
+        for(uint i = 0; i<latestInvestmentId; ++i){
+            if(userInvestments[_kycAddress][i].totalInvestedPaymentToken > 0){
+                investmentIds[j] = i;
+                ++j;
+            }
+        }
+
+        return investmentIds;
+    }
+
     function getTotalClaimedForInvestment() public view returns (uint) {}
     function computeUserTotalAllocationForInvesment() public view returns (uint) {}
 
@@ -304,9 +316,11 @@ contract InvestmentHandler is
 
         confirm that math works out regardless of claim timing and frequency!
 
+        [confirm] contract balance of token + total tokens claimed is used to preserve user's claimable balance regardless of order
+
         no checks for math yet, but this assumes that (totalTokensAllocated*userTotalInvestedPaymentToken)/totalInvestedPaymentToken
         will work, i.e. num >> denom, when assigning to userTotalClaimableTokens. if not, maybe will need to add 
-        the case for num < denom. same thing for userContractBalanceClaimableTokens
+        the case for num < denom. same thing for userBaseClaimableTokens
 
         i.e. consider that we get 1 Investment Token for 1000 Payment Tokens (both 18 decimals), will rounding/truncation errors get significant?
      */
@@ -319,8 +333,8 @@ contract InvestmentHandler is
         uint userTokensClaimed = userInvestments[_kycAddress][_investmentId].totalTokensClaimed;
 
         uint contractTokenBalance = investments[_investmentId].projectToken.balanceOf(address(this));
-        uint userContractBalanceClaimableTokens = MathUpgradeable.mulDiv(contractTokenBalance+totalTokensClaimed, userTotalInvestedPaymentToken, totalInvestedPaymentToken);
-        uint userClaimableTokens = userContractBalanceClaimableTokens - userTokensClaimed;
+        uint userBaseClaimableTokens = MathUpgradeable.mulDiv(contractTokenBalance+totalTokensClaimed, userTotalInvestedPaymentToken, totalInvestedPaymentToken);
+        uint userClaimableTokens = userBaseClaimableTokens - userTokensClaimed;
         
         return userClaimableTokens;
     }
@@ -329,7 +343,7 @@ contract InvestmentHandler is
     // INVESTMENT READ FUNCTIONS (INVESTMENT IS OPEN)
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
     
-    function investmentIsOpen(uint _investmentId, Phase _userPhase) private view returns (bool) {
+    function investmentIsOpen(uint _investmentId, Phase _userPhase) public view returns (bool) {
         return investments[_investmentId].contributionPhase.phase == _userPhase;
     }
 
@@ -366,9 +380,8 @@ contract InvestmentHandler is
 
     function addInvestment(
         address _signer,
-        IERC20Upgradeable _projectToken,
+        IERC20Upgradeable _paymentToken,
         uint _totalAllocatedPaymentToken
-        // uint totalTokensAllocated
     ) public onlyRole(MANAGER_ROLE) {
         investments[++latestInvestmentId] = Investment({
             signer: _signer,
@@ -378,7 +391,7 @@ contract InvestmentHandler is
                 endTime: 0
             }),
             projectToken: IERC20Upgradeable(address(0)),
-            paymentToken: _projectToken,
+            paymentToken: _paymentToken,
             totalInvestedPaymentToken: 0,
             totalAllocatedPaymentToken: _totalAllocatedPaymentToken,
             totalTokensClaimed: 0,
@@ -389,6 +402,7 @@ contract InvestmentHandler is
 
     function setInvestmentContributionPhase(uint _investmentId, Phase _investmentPhase) external onlyRole(MANAGER_ROLE) {
         investments[_investmentId].contributionPhase.phase = _investmentPhase;
+        emit InvestmentPhaseSet(_investmentId, _investmentPhase);
     }
 
     function setInvestmentProjectTokenAddress(uint _investmentId, address projectTokenAddress) public onlyRole(MANAGER_ROLE) {
