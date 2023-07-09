@@ -39,7 +39,7 @@ contract InvestmentHandler is
     bytes32 public MANAGER_ROLE;
     
     /// @dev global tracker for latest investment id
-    uint public investmentId; 
+    uint public latestInvestmentId; 
     
     /// @dev global tracker for total invested in contract (TESTING!)
     uint public contractTotalInvestedPaymentToken; 
@@ -370,7 +370,7 @@ contract InvestmentHandler is
         uint _totalAllocatedPaymentToken
         // uint totalTokensAllocated
     ) public onlyRole(MANAGER_ROLE) {
-        investments[++investmentId] = Investment({
+        investments[++latestInvestmentId] = Investment({
             signer: _signer,
             contributionPhase: ContributionPhase({
                 phase: Phase.CLOSED,
@@ -384,7 +384,7 @@ contract InvestmentHandler is
             totalTokensClaimed: 0,
             totalTokensAllocated: 0
         });
-        emit InvestmentAdded(investmentId);
+        emit InvestmentAdded(latestInvestmentId);
     }
 
     function setInvestmentContributionPhase(uint _investmentId, Phase _investmentPhase) external onlyRole(MANAGER_ROLE) {
