@@ -140,7 +140,7 @@ describe("InvestmentHandler", function () {
                 maxInvestableAmount: pledgeAmount,
                 thisInvestmentAmount: depositAmount,
                 userPhase: userPhaseIndex,
-                user: user.address,
+                kycAddress: user.address,
                 signer: signer.address,
                 signature: signature,
             };
@@ -158,7 +158,6 @@ describe("InvestmentHandler", function () {
 
             console.log("pledgeAmount: ", pledgeAmount);
             console.log("investmenthandler usdc balance after invest: ", await mockUsdc.balanceOf(investmentHandler.address));
-            console.log("contractTotalInvestedUsd after invest: ", await investmentHandler.contractTotalInvestedPaymentToken());
 
             const set_project_token = await investmentHandler.connect(manager).setInvestmentProjectTokenAddress(investmentId, testProjectTokenAddress);
             await set_project_token.wait();

@@ -110,9 +110,9 @@ contract InvestmentHandler is
 
     // Events
     event InvestmentAdded(uint indexed investmentId);
-    event InvestmentRemoved();
-    event InvestmentModified();
     event InvestmentPhaseSet(uint indexed investmentId, Phase indexed phase);
+    event InvestmentProjectTokenAddressSet(uint indexed investmentId, address indexed projectToken);
+    event InvestmentProjectTokenAllocationSet(uint indexed investmentId, uint indexed amount);
     event UserContributionToInvestment(address indexed sender, address indexed kycWallet, uint indexed investmentId, uint amount);
     event UserTokenClaim(address indexed sender, address tokenRecipient, address indexed kycWallet, uint indexed investmentId, uint amount);
     event WalletAddedToKycNetwork(address indexed kycWallet, address indexed wallet);
@@ -407,15 +407,13 @@ contract InvestmentHandler is
 
     function setInvestmentProjectTokenAddress(uint _investmentId, address projectTokenAddress) public onlyRole(MANAGER_ROLE) {
         investments[_investmentId].projectToken = IERC20Upgradeable(projectTokenAddress);
+        emit InvestmentProjectTokenAddressSet(_investmentId, projectTokenAddress);
     }
 
     function setInvestmentProjectTokenAllocation(uint _investmentId, uint totalTokensAllocated) public onlyRole(MANAGER_ROLE) {
         investments[_investmentId].totalTokensAllocated = totalTokensAllocated;
+        emit InvestmentProjectTokenAllocationSet(_investmentId, totalTokensAllocated);
     }
-
-    function modifyInvestment() public onlyRole(MANAGER_ROLE) {}
-    
-    function setInvestmentPhase() public onlyRole(MANAGER_ROLE) {}
 
     /**
      * @dev this function will be used to manually add contributions to an investment
