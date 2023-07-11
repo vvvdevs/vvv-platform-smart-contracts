@@ -352,9 +352,8 @@ contract InvestmentHandler is
 
         uint contractTokenBalance = investments[_investmentId].projectToken.balanceOf(address(this));
         uint userBaseClaimableTokens = MathUpgradeable.mulDiv(contractTokenBalance+totalTokensClaimed, userTotalInvestedPaymentToken, totalInvestedPaymentToken);
-        uint userClaimableTokens = userBaseClaimableTokens - userTokensClaimed;
         
-        return userClaimableTokens;
+        return userBaseClaimableTokens - userTokensClaimed;
     }
 
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
