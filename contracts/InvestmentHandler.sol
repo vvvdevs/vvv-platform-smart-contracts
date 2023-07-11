@@ -71,6 +71,7 @@ contract InvestmentHandler is
         uint totalTokensAllocated;
     }
 
+    /// @curi0n-s will start/end times have use still? 
     struct ContributionPhase {
         Phase phase;
         uint startTime;
@@ -81,7 +82,7 @@ contract InvestmentHandler is
         uint totalInvestedPaymentToken;
         uint pledgeDebt;
         uint totalTokensClaimed;
-        uint[] tokenWithdrawalAmounts; //@curi0n-s are arrays the move for recording withdrawal amounts and timestamps here?
+        uint[] tokenWithdrawalAmounts;
         uint[] tokenWithdrawalTimestamps;
     }
 
@@ -105,7 +106,7 @@ contract InvestmentHandler is
     mapping(address => mapping(address => bool)) public isInKycWalletNetwork;
     mapping(address => address) public correspondingKycAddress;
     
-    // @curi0n-s reserve space for upgrade if needed?
+    // @curi0n-s reserve space for upgrade if needed
     uint[48] __gap; 
 
     // Events
@@ -116,6 +117,7 @@ contract InvestmentHandler is
     event UserContributionToInvestment(address indexed sender, address indexed kycWallet, uint indexed investmentId, uint amount);
     event UserTokenClaim(address indexed sender, address tokenRecipient, address indexed kycWallet, uint indexed investmentId, uint amount);
     event WalletAddedToKycNetwork(address indexed kycWallet, address indexed wallet);
+    event UserRefunded(address indexed sender, address indexed kycWallet, uint indexed investmentId, uint amount);
 
     error ClaimAmountExceedsTotalClaimable();
     error InsufficientAllowance();
@@ -123,6 +125,7 @@ contract InvestmentHandler is
     error InvestmentIsNotOpen();
     error InvalidSignature();
     error NotInKycWalletNetwork();
+    error RefundAmountExceedsUserBalance();
 
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
     // INITIALIZATION & MODIFIERS
@@ -175,14 +178,14 @@ contract InvestmentHandler is
 
     /**
      * @dev checks to make sure user is able to investment the amount, at this time
-            1. investment phase is open
-            2. signature validates user max investable amount and address
-            3. user has approved spending of the investment amount in the desired paymentToken
-            3. user investment amount + current proposed investment amount is less than max investable amount
-        
-            1. will users have to supply pledged amount in one txn? or can they contribute multiple times?
-            2. consider the case where user contributes initial allocation, then allocation is increased
-            3. could track "pledge debt" as a metric of whether the user follows thru on pledges of X amount
+     *      1. investment phase is open
+     *      2. signature validates user max investable amount and address
+     *      3. user has approved spending of the investment amount in the desired paymentToken
+     *      4. user investment amount + current proposed investment amount is less than max investable amount
+     *  
+     *      1. will users have to supply pledged amount in one txn? or can they contribute multiple times? --> Multiple is OK
+     *      2. consider the case where user contributes initial allocation, then allocation is increased --> No problem, just new pledge debt.
+     *      3. could track "pledge debt" as a metric of whether the user follows thru on pledges of X amount --> include.
      */
     modifier investChecks(InvestParams memory _params) {
 
@@ -228,6 +231,9 @@ contract InvestmentHandler is
 
         userInvestment.totalTokensClaimed += _claimAmount;
         investment.totalTokensClaimed += _claimAmount;
+
+        userInvestment.tokenWithdrawalAmounts.push(_claimAmount);
+        userInvestment.tokenWithdrawalTimestamps.push(block.timestamp);
 
         investment.projectToken.safeTransfer(_tokenRecipient, _claimAmount);
 
@@ -296,8 +302,20 @@ contract InvestmentHandler is
         return investmentIds;
     }
 
-    function getTotalClaimedForInvestment() public view returns (uint) {}
-    function computeUserTotalAllocationForInvesment() public view returns (uint) {}
+    function getTotalClaimedForInvestment(address _kycAddress, uint _investmentId) public view returns (uint) {
+        return userInvestments[_kycAddress][_investmentId].totalTokensClaimed;
+    }
+
+    function computeUserTotalAllocationForInvesment(address _kycAddress, uint _investmentId) public view returns (uint) {
+        UserInvestment storage userInvestment = userInvestments[_kycAddress][_investmentId];
+        Investment storage investment = investments[_investmentId];
+
+        uint totalTokenAllocated = investment.totalTokensAllocated;
+        uint userTotalInvestedPaymentToken = userInvestment.totalInvestedPaymentToken;
+        uint totalInvestedPaymentToken = investment.totalInvestedPaymentToken;
+
+        return MathUpgradeable.mulDiv(totalTokenAllocated, userTotalInvestedPaymentToken, totalInvestedPaymentToken);
+    }
 
 
     /**
@@ -416,11 +434,33 @@ contract InvestmentHandler is
     }
 
     /**
-     * @dev this function will be used to manually add contributions to an investment
+     * @dev this function will be used to manually add contributions to an investment, assuming paymentTokens were provided outside of the contract
+     * @param _kycAddress address of user to add contribution to
+     * @param _investmentId id of investment to add contribution to
+     * @param _paymentTokenAmount amount of payment tokens to add to user's contribution
      */
-    function manualAddContribution() public onlyRole(MANAGER_ROLE) {}
+    function manualAddContribution(address _kycAddress, uint _investmentId, uint _paymentTokenAmount) public onlyRole(MANAGER_ROLE) {
+        userInvestments[_kycAddress][_investmentId].totalInvestedPaymentToken += _paymentTokenAmount;
+        investments[_investmentId].totalInvestedPaymentToken += _paymentTokenAmount;
+        emit UserContributionToInvestment(msg.sender, _kycAddress, _investmentId, _paymentTokenAmount);
+    }
 
-    function refundUser() public onlyRole(MANAGER_ROLE) {}
+
+    /**
+     * @dev manually refunds user
+     * @param _kycAddress address of user to refund
+     * @param _investmentId id of investment to refund from
+     * @param _paymentTokenAmount amount of payment tokens to refund
+     */
+    function refundUser(address _kycAddress, uint _investmentId, uint _paymentTokenAmount) public onlyRole(MANAGER_ROLE) {
+        if(userInvestments[_kycAddress][_investmentId].totalInvestedPaymentToken < _paymentTokenAmount){
+            revert RefundAmountExceedsUserBalance();
+        }        
+        userInvestments[_kycAddress][_investmentId].totalInvestedPaymentToken -= _paymentTokenAmount;
+        investments[_investmentId].totalInvestedPaymentToken -= _paymentTokenAmount;
+        investments[_investmentId].paymentToken.safeTransfer(_kycAddress, _paymentTokenAmount);
+        emit UserRefunded(msg.sender, _kycAddress, _investmentId, _paymentTokenAmount);
+    }
 
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
     // TESTING - TO BE DELETED LATER?
