@@ -167,7 +167,6 @@ describe("InvestmentHandler", function () {
             const user_claim_tokens = await investmentHandler.connect(user).claim(investmentId, testClaimAmount, user.address, user.address);
             await user_claim_tokens.wait();
 
-            // expect(await mockUsdc.balanceOf(investmentHandler.address)).to.equal(pledgeAmount);
 
             const investment = await investmentHandler.investments(investmentHandler.latestInvestmentId());
             expect(investment.paymentToken).to.equal(testInvestmentStablecoin);
