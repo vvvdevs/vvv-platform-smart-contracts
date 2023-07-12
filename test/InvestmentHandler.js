@@ -163,7 +163,6 @@ describe("InvestmentHandler", function () {
             const deposit_project_tokens = await mockProjectToken.connect(manager).transfer(investmentHandler.address, testInvestmentTokensAlloc);
             await deposit_project_tokens.wait();
 
-            // const claimable_tokens = await investmentHandler.connect(user).computeUserClaimableAllocationForInvestment(investmentId);
 
             const user_claim_tokens = await investmentHandler.connect(user).claim(investmentId, testClaimAmount, user.address, user.address);
             await user_claim_tokens.wait();
