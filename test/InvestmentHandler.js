@@ -21,11 +21,6 @@ describe("InvestmentHandler", function () {
     async function setupFixture() {
         const provider = new ethers.providers.JsonRpcProvider();
 
-        // const manager = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
-        // const manager.address = await manager.getAddress();
-
-        // const user = new ethers.Wallet(process.env.PRIVATE_KEY_2, provider);
-        // const user.address = await user.getAddress();
 
         const signerPre = ethers.Wallet.createRandom();
         const spk = signerPre.privateKey;
@@ -168,12 +163,10 @@ describe("InvestmentHandler", function () {
             const deposit_project_tokens = await mockProjectToken.connect(manager).transfer(investmentHandler.address, testInvestmentTokensAlloc);
             await deposit_project_tokens.wait();
 
-            // const claimable_tokens = await investmentHandler.connect(user).computeUserClaimableAllocationForInvestment(investmentId);
 
             const user_claim_tokens = await investmentHandler.connect(user).claim(investmentId, testClaimAmount, user.address, user.address);
             await user_claim_tokens.wait();
 
-            // expect(await mockUsdc.balanceOf(investmentHandler.address)).to.equal(pledgeAmount);
 
             const investment = await investmentHandler.investments(investmentHandler.latestInvestmentId());
             expect(investment.paymentToken).to.equal(testInvestmentStablecoin);

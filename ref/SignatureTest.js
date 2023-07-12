@@ -21,11 +21,6 @@ describe("InvestmentHandler", function () {
     async function setupFixture() {
         const provider = new ethers.providers.JsonRpcProvider();
 
-        // const manager = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
-        // const manager.address = await manager.getAddress();
-
-        // const user = new ethers.Wallet(process.env.PRIVATE_KEY_2, provider);
-        // const user.address = await user.getAddress();
 
         const signerPre = ethers.Wallet.createRandom();
         const spk = signerPre.privateKey;
