@@ -1,0 +1,70 @@
+
+investments:{
+  0xsaft_wallet:{
+    name: auki, (just for reference)
+    total_dollar: 100000,
+    total_tokens: 500000,  (just for reference)
+    total_tokens_received: 50000,
+    total_claimed: 10000,  (just for reference)
+  }
+}
+ 
+users:{
+  0xkyc_address_1:{
+    investments:{
+      0xsaft_wallet:{
+        total_dollar: 2000,
+        total_tokens_claimed: 1000,
+        destination: 0xdest,
+        claims:{
+          12345678(block#): 1000 (token amount)
+        }
+      }
+    }
+  },
+  0xkyc_address_2:{
+    investments:{
+      0xsaft_wallet:{
+        total_dollar: 2000,
+        total_tokens_claimed: 0,
+        destination: 0xdest,
+        claims:{
+        }
+      }
+    }
+  }
+}
+
+similar to already coded
+
+------------------------------------------------------------------------------------------------------------------------
+receiving tokens:
+
+  when the contracts 0xsaft_wallet receives tokens it updates investments.0xsaft_wallet.total_received 
+
+in terms of what makes sense contract wise, it's more like:
+1. tokens are deposited
+2. at time of claim, user claimable balance is checked based on tokens deposited to saft wallet between timestamp A and B,
+representing one month
+
+------------------------------------------------------------------------------------------------------------------------
+
+claiming function: (0xsaft_wallet, amount)
+ 
+ user_percentage = ((100 / investments.0xsaft_wallet.total_dollar) * users.0xkyc_address.investments.0xsaft_wallet.total_dollar)
+ total_available = ((investments.0xsaft_wallet.total_tokens_received / 100) * user_percentage) - users.0xkyc_address.investments.0xsaft_wallet.total_tokens_claimed
+ 
+ if (total_available < amount) error
+ 
+ update users.0xkyc_address.investments.0xsaft_wallet.total_tokens_claimed before withdraw to avoid race condition
+ withdraw amount to destination wallet
+   then
+     if sucessful {
+       add entry to users.0xkyc_address.investments.0xsaft_wallet.claims with current block number and token amount
+       increment investments.0xsaft_wallet.total_claimed with token amount
+     }
+     else {
+       revert users.0xkyc_address.investments.0xsaft_wallet.total_tokens_claimed on failed claim
+     }
+
+
