@@ -3,6 +3,12 @@ require("@nomicfoundation/hardhat-foundry");
 require("@openzeppelin/hardhat-upgrades");
 require("dotenv").config();
 
+// Potentially not needed...
+// require("@nomiclabs/hardhat-ethers");
+// require("@nomiclabs/hardhat-waffle");
+// require("@nomiclabs/hardhat-etherscan");
+// require('hardhat-deploy');
+
 const dev_wallet_key = process.env.PRIVATE_KEY;
 const etherscan_api_key = process.env.ETHERSCAN_API_KEY;
 
@@ -19,15 +25,15 @@ module.exports = {
       url: process.env.ETH_GOERLI_TESTNET_URL || "",
       accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
-    // for mainnet
-    optimism: {
-      url: "https://mainnet.optimism.io",
-      accounts: [dev_wallet_key],
+    sepolia: {
+      chainId: 11155111,
+      url: process.env.ETH_SEPOLIA_TESTNET_URL || "",
+      accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
-    // for testnet
-    "optimism-kovan": {
-      url: "https://kovan.optimism.io",
-      accounts: [dev_wallet_key],
+    mainnet: {
+      chainId: 1,
+      url: process.env.ETH_MAINNET_TESTNET_URL || "",
+      accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
     // for the local dev environment
     localhost: {
