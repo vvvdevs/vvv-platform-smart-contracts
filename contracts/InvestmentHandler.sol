@@ -82,8 +82,6 @@ contract InvestmentHandler is
         uint totalInvestedPaymentToken;
         uint pledgeDebt;
         uint totalTokensClaimed;
-        uint[] tokenWithdrawalAmounts;
-        uint[] tokenWithdrawalTimestamps;
     }
 
     struct InvestParams {
@@ -111,6 +109,7 @@ contract InvestmentHandler is
 
     // Events
     event InvestmentAdded(uint indexed investmentId);
+    event InvestmentPaymentTokenAddressSet(uint indexed investmentId, address indexed paymentToken);
     event InvestmentPhaseSet(uint indexed investmentId, Phase indexed phase);
     event InvestmentProjectTokenAddressSet(uint indexed investmentId, address indexed projectToken);
     event InvestmentProjectTokenAllocationSet(uint indexed investmentId, uint indexed amount);
@@ -122,10 +121,11 @@ contract InvestmentHandler is
     error ClaimAmountExceedsTotalClaimable();
     error WalletAlreadyInKycNetwork();
     error WalletNotInKycNetwork();
+    error InvalidSignature();
     error InsufficientAllowance();
     error InvestmentAmountExceedsMax();
     error InvestmentIsNotOpen();
-    error InvalidSignature();
+    error InvestmentTokenAlreadyDeposited();
     error NotInKycWalletNetwork();
     error RefundAmountExceedsUserBalance();
 
@@ -227,14 +227,11 @@ contract InvestmentHandler is
         _tokenRecipient, 
         _kycAddress
     ) {
-        UserInvestment storage userInvestment = userInvestments[_tokenRecipient][_investmentId];
+        UserInvestment storage userInvestment = userInvestments[_kycAddress][_investmentId];
         Investment storage investment = investments[_investmentId];
 
         userInvestment.totalTokensClaimed += _claimAmount;
         investment.totalTokensClaimed += _claimAmount;
-
-        userInvestment.tokenWithdrawalAmounts.push(_claimAmount);
-        userInvestment.tokenWithdrawalTimestamps.push(block.timestamp);
 
         investment.projectToken.safeTransfer(_tokenRecipient, _claimAmount);
 
@@ -404,7 +401,7 @@ contract InvestmentHandler is
     }
 
     function _paymentTokenAllowanceCheck(InvestParams memory _params) private view returns (bool) {
-        return investments[_params.investmentId].paymentToken.allowance(_params.kycAddress, address(this)) >= _params.thisInvestmentAmount;
+        return investments[_params.investmentId].paymentToken.allowance(msg.sender, address(this)) >= _params.thisInvestmentAmount;
     }
     
     function _contributionLimitCheck(InvestParams memory _params) private view returns (bool) {
@@ -446,6 +443,15 @@ contract InvestmentHandler is
     function setInvestmentContributionPhase(uint _investmentId, Phase _investmentPhase) external onlyRole(MANAGER_ROLE) {
         investments[_investmentId].contributionPhase.phase = _investmentPhase;
         emit InvestmentPhaseSet(_investmentId, _investmentPhase);
+    }
+
+    function setInvestmentPaymentTokenAddress(uint _investmentId, address _paymentTokenAddress) public onlyRole(MANAGER_ROLE) {
+        if(investments[_investmentId].totalInvestedPaymentToken != 0){
+            revert InvestmentTokenAlreadyDeposited();
+        }
+        
+        investments[_investmentId].paymentToken = IERC20Upgradeable(_paymentTokenAddress);
+        emit InvestmentPaymentTokenAddressSet(_investmentId, _paymentTokenAddress);
     }
 
     function setInvestmentProjectTokenAddress(uint _investmentId, address projectTokenAddress) public onlyRole(MANAGER_ROLE) {
