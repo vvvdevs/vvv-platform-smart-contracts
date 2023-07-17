@@ -120,6 +120,8 @@ contract InvestmentHandler is
     event UserRefunded(address indexed sender, address indexed kycWallet, uint indexed investmentId, uint amount);
 
     error ClaimAmountExceedsTotalClaimable();
+    error WalletAlreadyInKycNetwork();
+    error WalletNotInKycNetwork();
     error InsufficientAllowance();
     error InvestmentAmountExceedsMax();
     error InvestmentIsNotOpen();
@@ -214,7 +216,6 @@ contract InvestmentHandler is
      * @notice allows any in-network wallet to claim tokens to any wallet on behalf of the kyc wallet
      * @notice UI can grab _kycWallet via correspondingKycAddress[msg.sender]
      */
-    
     function claim(
         uint _investmentId, 
         uint _claimAmount, 
@@ -275,9 +276,30 @@ contract InvestmentHandler is
      */
 
     function addWalletToKycWalletNetwork(address _newWallet) external {
+        if(correspondingKycAddress[_newWallet] != address(0)) {
+            revert WalletAlreadyInKycNetwork();
+        }
+
         isInKycWalletNetwork[msg.sender][_newWallet] = true;
         correspondingKycAddress[_newWallet] = msg.sender;
+
         emit WalletAddedToKycNetwork(msg.sender, _newWallet);
+    }
+
+    /**
+     * @dev this function will be called by a kyc'd wallet to remove a wallet from its network
+     * @param _networkWallet the address of the wallet to be removed from the network, must be
+     *                       in the network of the calling kyc wallet
+     * @notice allows any wallet to remove any other wallet from its network, but this is
+     *         only is of use to wallets who are kyc'd and able to invest/claim
+     */
+    function removeWalletFromKycWalletNetwork(address _networkWallet) external {
+        if(correspondingKycAddress[_networkWallet] != msg.sender) {
+            revert WalletNotInKycNetwork();
+        }
+
+        isInKycWalletNetwork[msg.sender][_networkWallet] = false;
+        delete correspondingKycAddress[_networkWallet];
     }
 
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
