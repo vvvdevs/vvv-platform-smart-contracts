@@ -156,7 +156,6 @@ contract InvestmentHandler is
      * @dev modifier to check addresses involved in claim
      * @dev msg.sender and _tokenRecipient must be in network of _kycAddress
      */
-    
     modifier claimChecks(uint _investmentId, uint _thisClaimAmount, address _tokenRecipient, address _kycAddress) {        
         uint claimableTokens = computeUserClaimableAllocationForInvestment(_tokenRecipient, _investmentId);
         
@@ -321,10 +320,16 @@ contract InvestmentHandler is
         return investmentIds;
     }
 
+    /**
+     * @dev returns user's total claimed project tokens for an investment
+     */
     function getTotalClaimedForInvestment(address _kycAddress, uint _investmentId) public view returns (uint) {
         return userInvestments[_kycAddress][_investmentId].totalTokensClaimed;
     }
 
+    /**
+     * @dev for frontend - returns the total amount of project tokens a user can claim for an investment
+     */
     function computeUserTotalAllocationForInvesment(address _kycAddress, uint _investmentId) public view returns (uint) {
         UserInvestment storage userInvestment = userInvestments[_kycAddress][_investmentId];
         Investment storage investment = investments[_investmentId];
@@ -379,6 +384,9 @@ contract InvestmentHandler is
     // INVESTMENT READ FUNCTIONS (INVESTMENT IS OPEN)
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
     
+    /**
+     * @dev returns true if investment is open for a user based on their assigned phase
+     */
     function investmentIsOpen(uint _investmentId, uint _userPhase) public view returns (bool) {
         return investments[_investmentId].contributionPhase.phase == _userPhase;
     }
@@ -397,14 +405,23 @@ contract InvestmentHandler is
         );
     }
 
+    /**
+     * @dev confirms the user's phase is open for the investment while calling invest function
+     */
     function _phaseCheck(InvestParams memory _params) private view returns (bool) {
         return investmentIsOpen(_params.investmentId, _params.userPhase);
     }
 
+    /**
+     * @dev confirms the calling wallet's payment token allocation is sufficient for the amount they're trying to invest
+     */
     function _paymentTokenAllowanceCheck(InvestParams memory _params) private view returns (bool) {
         return investments[_params.investmentId].paymentToken.allowance(msg.sender, address(this)) >= _params.thisInvestmentAmount;
     }
     
+    /**
+     * @dev confirms the calling wallet's payment token allocation is sufficient for the amount they're trying to invest
+     */
     function _contributionLimitCheck(InvestParams memory _params) private view returns (bool) {
         return _params.thisInvestmentAmount + userInvestments[_params.kycAddress][_params.investmentId].totalInvestedPaymentToken <= _params.maxInvestableAmount;
     }
@@ -417,8 +434,9 @@ contract InvestmentHandler is
     /**
      * For now, assuming MANAGER_ROLE will handle this all, and can be given to multiple addresses/roles
      * @dev this function will be used to add a new investment to the contract
+     * @notice signer, payment token, and total allocated payment token are set at the time of investment creation, 
+     *         rest are default amounts to be added before claim is opened (phase=closed=0, everything else 0's)
      */
-
     function addInvestment(
         address _signer,
         IERC20Upgradeable _paymentToken,
@@ -427,7 +445,7 @@ contract InvestmentHandler is
         investments[++latestInvestmentId] = Investment({
             signer: _signer,
             contributionPhase: ContributionPhase({
-                phase: 0, //closed
+                phase: 0,
                 startTime: 0,
                 endTime: 0
             }),
@@ -441,11 +459,19 @@ contract InvestmentHandler is
         emit InvestmentAdded(latestInvestmentId);
     }
 
+
+    /**
+     * @dev sets the current phase of the investment. phases can be 0-max uintN value, but
+     *      0=closed, 1=whales, 2=sharks, 3=fcfs, so 4-max uintN can be used for custom phases    
+     */
     function setInvestmentContributionPhase(uint _investmentId, uint _investmentPhase) external onlyRole(MANAGER_ROLE) {
         investments[_investmentId].contributionPhase.phase = _investmentPhase;
         emit InvestmentPhaseSet(_investmentId, _investmentPhase);
     }
-
+    /**
+     * @dev sets the token address of the payment token for the investment
+     * @notice this function can only be called before any investment funds are deposited for the investment
+     */
     function setInvestmentPaymentTokenAddress(uint _investmentId, address _paymentTokenAddress) public onlyRole(MANAGER_ROLE) {
         if(investments[_investmentId].totalInvestedPaymentToken != 0){
             revert InvestmentTokenAlreadyDeposited();
@@ -455,11 +481,17 @@ contract InvestmentHandler is
         emit InvestmentPaymentTokenAddressSet(_investmentId, _paymentTokenAddress);
     }
 
+    /**
+     * @dev caller is admin, sets project token address for an investment
+     */
     function setInvestmentProjectTokenAddress(uint _investmentId, address projectTokenAddress) public onlyRole(MANAGER_ROLE) {
         investments[_investmentId].projectToken = IERC20Upgradeable(projectTokenAddress);
         emit InvestmentProjectTokenAddressSet(_investmentId, projectTokenAddress);
     }
 
+    /**
+     * @dev sets the amount of project token allocated for the investent - used in computeUserTotalAllocationForInvesment
+     */
     function setInvestmentProjectTokenAllocation(uint _investmentId, uint totalTokensAllocated) public onlyRole(MANAGER_ROLE) {
         investments[_investmentId].totalTokensAllocated = totalTokensAllocated;
         emit InvestmentProjectTokenAllocationSet(_investmentId, totalTokensAllocated);
