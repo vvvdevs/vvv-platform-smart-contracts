@@ -72,8 +72,9 @@ contract InvestmentHandler is
     }
 
     /// @curi0n-s will start/end times have use still? 
+    /// @dev struct for contribution phase, timings. phase -> 0=closed, 1=whale, 2=shark, 3=fcfs
     struct ContributionPhase {
-        Phase phase;
+        uint phase;
         uint startTime;
         uint endTime;
     }
@@ -88,7 +89,7 @@ contract InvestmentHandler is
         uint investmentId;
         uint maxInvestableAmount;
         uint thisInvestmentAmount;
-        Phase userPhase;
+        uint userPhase;
         address kycAddress;
         address signer;
         bytes signature;
@@ -110,7 +111,7 @@ contract InvestmentHandler is
     // Events
     event InvestmentAdded(uint indexed investmentId);
     event InvestmentPaymentTokenAddressSet(uint indexed investmentId, address indexed paymentToken);
-    event InvestmentPhaseSet(uint indexed investmentId, Phase indexed phase);
+    event InvestmentPhaseSet(uint indexed investmentId, uint indexed phase);
     event InvestmentProjectTokenAddressSet(uint indexed investmentId, address indexed projectToken);
     event InvestmentProjectTokenAllocationSet(uint indexed investmentId, uint indexed amount);
     event UserContributionToInvestment(address indexed sender, address indexed kycWallet, uint indexed investmentId, uint amount);
@@ -378,7 +379,7 @@ contract InvestmentHandler is
     // INVESTMENT READ FUNCTIONS (INVESTMENT IS OPEN)
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
     
-    function investmentIsOpen(uint _investmentId, Phase _userPhase) public view returns (bool) {
+    function investmentIsOpen(uint _investmentId, uint _userPhase) public view returns (bool) {
         return investments[_investmentId].contributionPhase.phase == _userPhase;
     }
 
@@ -426,7 +427,7 @@ contract InvestmentHandler is
         investments[++latestInvestmentId] = Investment({
             signer: _signer,
             contributionPhase: ContributionPhase({
-                phase: Phase.CLOSED,
+                phase: 0, //closed
                 startTime: 0,
                 endTime: 0
             }),
@@ -440,7 +441,7 @@ contract InvestmentHandler is
         emit InvestmentAdded(latestInvestmentId);
     }
 
-    function setInvestmentContributionPhase(uint _investmentId, Phase _investmentPhase) external onlyRole(MANAGER_ROLE) {
+    function setInvestmentContributionPhase(uint _investmentId, uint _investmentPhase) external onlyRole(MANAGER_ROLE) {
         investments[_investmentId].contributionPhase.phase = _investmentPhase;
         emit InvestmentPhaseSet(_investmentId, _investmentPhase);
     }
