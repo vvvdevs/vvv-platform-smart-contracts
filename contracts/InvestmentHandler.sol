@@ -246,7 +246,6 @@ contract InvestmentHandler is
      * @notice adds to users total usd invested for investment + total usd in investment overall
      * @notice adjusts user's pledge debt (pledged - contributed)
      */
-
     function invest(
         InvestParams memory _params
     ) public nonReentrant whenNotPaused investChecks(_params) {
@@ -364,10 +363,15 @@ contract InvestmentHandler is
         return investments[_investmentId].contributionPhase.phase == _userPhase;
     }
 
-    /// @dev private helpers for investChecks to avoid stack-too-deep errors...
+    /**
+     * @dev private helpers for investChecks to avoid stack-too-deep errors
+     * @notice ensures signature is valid for the investment id specified in _params
+     */
     function _signatureCheck(InvestParams memory _params) private view returns (bool) {
+        address _signer = investments[_params.investmentId].signer;
+        
         return SignatureCheckerUpgradeable.isValidSignatureNow(
-                _params.signer,
+                _signer,
                 ECDSAUpgradeable.toEthSignedMessageHash(keccak256(abi.encodePacked(_params.kycAddress, _params.maxInvestableAmount, _params.userPhase))),
                 _params.signature
         );
