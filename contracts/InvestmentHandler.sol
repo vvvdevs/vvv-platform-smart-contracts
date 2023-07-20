@@ -188,7 +188,6 @@ contract InvestmentHandler is
      *      3. could track "pledge debt" as a metric of whether the user follows thru on pledges of X amount --> include.
      */
     modifier investChecks(InvestParams memory _params) {
-
         if(!_signatureCheck(_params)) {
             revert InvalidSignature();
         } else if(!_phaseCheck(_params)) {
@@ -250,7 +249,6 @@ contract InvestmentHandler is
     function invest(
         InvestParams memory _params
     ) public nonReentrant whenNotPaused investChecks(_params) {
-
         UserInvestment storage userInvestment = userInvestments[_params.kycAddress][_params.investmentId];
         Investment storage investment = investments[_params.investmentId];
         userInvestment.totalInvestedPaymentToken += _params.thisInvestmentAmount;
@@ -288,7 +286,7 @@ contract InvestmentHandler is
     /**
      * @dev function to return all investment ids for a user
      */
-    function getUserInvestmentIds(address _kycAddress) public view returns (uint[] memory) {
+    function getUserInvestmentIds(address _kycAddress) external view returns (uint[] memory) {
         uint j;
         uint[] memory investmentIds;
 
@@ -344,7 +342,6 @@ contract InvestmentHandler is
      */
 
     function computeUserClaimableAllocationForInvestment(address _kycAddress, uint _investmentId) public view returns (uint) {
-        
         uint totalInvestedPaymentToken = investments[_investmentId].totalInvestedPaymentToken;
         uint totalTokensClaimed = investments[_investmentId].totalTokensClaimed;
         uint userTotalInvestedPaymentToken = userInvestments[_kycAddress][_investmentId].totalInvestedPaymentToken;
