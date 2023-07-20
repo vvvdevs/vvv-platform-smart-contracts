@@ -423,6 +423,14 @@ contract InvestmentHandler is
         emit InvestmentProjectTokenAllocationSet(_investmentId, totalTokensAllocated);
     }
 
+    function pause() external onlyRole(MANAGER_ROLE) {
+        _pause();
+    }
+
+    function unPause() external onlyRole(MANAGER_ROLE) {
+        _unpause();
+    }
+
     /**
      * @dev this function will be used to manually add contributions to an investment, assuming paymentTokens were provided outside of the contract
      * @param _kycAddress address of user to add contribution to
