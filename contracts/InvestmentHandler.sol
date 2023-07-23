@@ -153,7 +153,6 @@ contract InvestmentHandler is
      * @dev modifier to check addresses involved in claim
      * @dev msg.sender and _tokenRecipient must be in network of _kycAddress
      */
-    
     modifier claimChecks(uint _investmentId, uint _thisClaimAmount, address _tokenRecipient, address _kycAddress) {        
         uint claimableTokens = computeUserClaimableAllocationForInvestment(_tokenRecipient, _investmentId);
         
@@ -188,7 +187,6 @@ contract InvestmentHandler is
      *      3. could track "pledge debt" as a metric of whether the user follows thru on pledges of X amount --> include.
      */
     modifier investChecks(InvestParams memory _params) {
-
         if(!_signatureCheck(_params)) {
             revert InvalidSignature();
         } else if(!_phaseCheck(_params)) {
@@ -214,7 +212,6 @@ contract InvestmentHandler is
      * @notice allows any in-network wallet to claim tokens to any wallet on behalf of the kyc wallet
      * @notice UI can grab _kycWallet via correspondingKycAddress[msg.sender]
      */
-    
     function claim(
         uint _investmentId, 
         uint _claimAmount, 
@@ -246,11 +243,9 @@ contract InvestmentHandler is
      * @notice adds to users total usd invested for investment + total usd in investment overall
      * @notice adjusts user's pledge debt (pledged - contributed)
      */
-
     function invest(
         InvestParams memory _params
     ) public nonReentrant whenNotPaused investChecks(_params) {
-
         UserInvestment storage userInvestment = userInvestments[_params.kycAddress][_params.investmentId];
         Investment storage investment = investments[_params.investmentId];
         userInvestment.totalInvestedPaymentToken += _params.thisInvestmentAmount;
@@ -274,7 +269,6 @@ contract InvestmentHandler is
      * @notice allows any wallet to add any other wallet to its network, but this is 
      *         only is of use to wallets who are kyc'd and able to invest/claim
      */
-
     function addWalletToKycWalletNetwork(address _newWallet) external {
         isInKycWalletNetwork[msg.sender][_newWallet] = true;
         correspondingKycAddress[_newWallet] = msg.sender;
@@ -288,7 +282,7 @@ contract InvestmentHandler is
     /**
      * @dev function to return all investment ids for a user
      */
-    function getUserInvestmentIds(address _kycAddress) public view returns (uint[] memory) {
+    function getUserInvestmentIds(address _kycAddress) external view returns (uint[] memory) {
         uint j;
         uint[] memory investmentIds;
 
@@ -342,9 +336,7 @@ contract InvestmentHandler is
 
         i.e. consider that we get 1 Investment Token for 1000 Payment Tokens (both 18 decimals), will rounding/truncation errors get significant?
      */
-
     function computeUserClaimableAllocationForInvestment(address _kycAddress, uint _investmentId) public view returns (uint) {
-        
         uint totalInvestedPaymentToken = investments[_investmentId].totalInvestedPaymentToken;
         uint totalTokensClaimed = investments[_investmentId].totalTokensClaimed;
         uint userTotalInvestedPaymentToken = userInvestments[_kycAddress][_investmentId].totalInvestedPaymentToken;
@@ -394,7 +386,6 @@ contract InvestmentHandler is
      * For now, assuming MANAGER_ROLE will handle this all, and can be given to multiple addresses/roles
      * @dev this function will be used to add a new investment to the contract
      */
-
     function addInvestment(
         address _signer,
         IERC20Upgradeable _paymentToken,
@@ -430,6 +421,14 @@ contract InvestmentHandler is
     function setInvestmentProjectTokenAllocation(uint _investmentId, uint totalTokensAllocated) public onlyRole(MANAGER_ROLE) {
         investments[_investmentId].totalTokensAllocated = totalTokensAllocated;
         emit InvestmentProjectTokenAllocationSet(_investmentId, totalTokensAllocated);
+    }
+
+    function pause() external onlyRole(MANAGER_ROLE) {
+        _pause();
+    }
+
+    function unPause() external onlyRole(MANAGER_ROLE) {
+        _unpause();
     }
 
     /**
