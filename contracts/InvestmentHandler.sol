@@ -41,14 +41,6 @@ contract InvestmentHandler is
     /// @dev global tracker for latest investment id
     uint public latestInvestmentId; 
 
-    /// @dev enum for investment phases
-    enum Phase {
-        CLOSED,
-        WHALE,
-        SHARK,
-        FCFS
-    } 
-
     /**
      * @notice Investment struct
      * @param signer address of the signer for this investment
@@ -62,36 +54,42 @@ contract InvestmentHandler is
      */
     struct Investment {
         address signer; 
-        ContributionPhase contributionPhase;
         IERC20Upgradeable projectToken;
         IERC20Upgradeable paymentToken;
+        uint contributionPhase;
         uint totalInvestedPaymentToken;
         uint totalAllocatedPaymentToken;
         uint totalTokensClaimed;
         uint totalTokensAllocated;
     }
 
-    /// @curi0n-s will start/end times have use still? 
-    /// @dev struct for contribution phase, timings. phase -> 0=closed, 1=whale, 2=shark, 3=fcfs
-    struct ContributionPhase {
-        uint phase;
-        uint startTime;
-        uint endTime;
-    }
-
+    /**
+     * @dev struct for a single user's activity for one investment
+     * @param totalInvestedPaymentToken total amount of payment token invested by user in this investment
+     * @param pledgeDebt = pledgedAmount - totalInvestedPaymentToken for this investment
+     * @param totalTokensClaimed total amount of project token claimed by user from this investment
+     */
     struct UserInvestment {
         uint totalInvestedPaymentToken;
         uint pledgeDebt;
         uint totalTokensClaimed;
     }
 
+    /**
+     * @dev struct for the parameters for each investment
+     * @param investmentId id of the investment
+     * @param maxInvestableAmount max amount of payment token the user can invest in this investment
+     * @param thisInvestmentAmount amount of payment token the user is investing in this transaction
+     * @param userPhase phase the user is investing in
+     * @param kycAddress address of the user's in-network kyc'd wallet
+     * @param signature signature of the user's kyc'd wallet
+     */
     struct InvestParams {
         uint investmentId;
         uint maxInvestableAmount;
         uint thisInvestmentAmount;
         uint userPhase;
         address kycAddress;
-        address signer;
         bytes signature;
     }
 
@@ -388,7 +386,7 @@ contract InvestmentHandler is
      * @dev returns true if investment is open for a user based on their assigned phase
      */
     function investmentIsOpen(uint _investmentId, uint _userPhase) public view returns (bool) {
-        return investments[_investmentId].contributionPhase.phase == _userPhase;
+        return investments[_investmentId].contributionPhase == _userPhase;
     }
 
     /**
@@ -444,13 +442,9 @@ contract InvestmentHandler is
     ) public onlyRole(MANAGER_ROLE) {
         investments[++latestInvestmentId] = Investment({
             signer: _signer,
-            contributionPhase: ContributionPhase({
-                phase: 0,
-                startTime: 0,
-                endTime: 0
-            }),
             projectToken: IERC20Upgradeable(address(0)),
             paymentToken: _paymentToken,
+            contributionPhase: 0,
             totalInvestedPaymentToken: 0,
             totalAllocatedPaymentToken: _totalAllocatedPaymentToken,
             totalTokensClaimed: 0,
@@ -465,7 +459,7 @@ contract InvestmentHandler is
      *      0=closed, 1=whales, 2=sharks, 3=fcfs, so 4-max uintN can be used for custom phases    
      */
     function setInvestmentContributionPhase(uint _investmentId, uint _investmentPhase) external onlyRole(MANAGER_ROLE) {
-        investments[_investmentId].contributionPhase.phase = _investmentPhase;
+        investments[_investmentId].contributionPhase = _investmentPhase;
         emit InvestmentPhaseSet(_investmentId, _investmentPhase);
     }
     /**
@@ -529,7 +523,7 @@ contract InvestmentHandler is
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
     // TESTING - TO BE DELETED LATER?
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
-    function checkSignature(address signer, address _user, uint256 _maxInvestableAmount, Phase _userPhase, bytes memory signature) public view returns (bool) {
+    function checkSignature(address signer, address _user, uint256 _maxInvestableAmount, uint _userPhase, bytes memory signature) public view returns (bool) {
         return(
             SignatureCheckerUpgradeable.isValidSignatureNow(
                 signer,
