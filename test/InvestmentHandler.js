@@ -21,7 +21,6 @@ describe("InvestmentHandler", function () {
     async function setupFixture() {
         const provider = new ethers.providers.JsonRpcProvider();
 
-
         const signerPre = ethers.Wallet.createRandom();
         const spk = signerPre.privateKey;
         const signer = new ethers.Wallet(spk, provider);
@@ -136,7 +135,6 @@ describe("InvestmentHandler", function () {
                 thisInvestmentAmount: depositAmount,
                 userPhase: userPhaseIndex,
                 kycAddress: user.address,
-                signer: signer.address,
                 signature: signature,
             };
 
@@ -163,10 +161,8 @@ describe("InvestmentHandler", function () {
             const deposit_project_tokens = await mockProjectToken.connect(manager).transfer(investmentHandler.address, testInvestmentTokensAlloc);
             await deposit_project_tokens.wait();
 
-
             const user_claim_tokens = await investmentHandler.connect(user).claim(investmentId, testClaimAmount, user.address, user.address);
             await user_claim_tokens.wait();
-
 
             const investment = await investmentHandler.investments(investmentHandler.latestInvestmentId());
             expect(investment.paymentToken).to.equal(testInvestmentStablecoin);
