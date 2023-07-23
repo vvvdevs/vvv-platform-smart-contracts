@@ -197,7 +197,7 @@ describe("InvestmentHandler", function () {
 //============================================================
 
 async function signDeposit(signerWallet, user, pledgeAmount, phaseIndex) {
-    const hash = ethers.utils.solidityKeccak256(["address", "uint256", "uint8"], [user.address, pledgeAmount, phaseIndex]);
+    const hash = ethers.utils.solidityKeccak256(["address", "uint", "uint"], [user.address, pledgeAmount, phaseIndex]);
     const signature = await signerWallet.signMessage(ethers.utils.arrayify(hash));
     console.log("Signature from js: ", signature);
     return signature;
