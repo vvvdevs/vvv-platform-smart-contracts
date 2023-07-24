@@ -114,7 +114,8 @@ contract InvestmentHandler is
     event InvestmentProjectTokenAllocationSet(uint indexed investmentId, uint indexed amount);
     event UserContributionToInvestment(address indexed sender, address indexed kycWallet, uint indexed investmentId, uint amount);
     event UserTokenClaim(address indexed sender, address tokenRecipient, address indexed kycWallet, uint indexed investmentId, uint amount);
-    event WalletAddedToKycNetwork(address indexed kycWallet, address indexed wallet);
+    event WalletAddedToKycWalletNetwork(address indexed kycWallet, address indexed wallet);
+    event WalletRemovedFromKycWalletNetwork(address indexed kycWallet, address indexed wallet);
     event UserRefunded(address indexed sender, address indexed kycWallet, uint indexed investmentId, uint amount);
 
     error ClaimAmountExceedsTotalClaimable();
@@ -155,7 +156,7 @@ contract InvestmentHandler is
      * @dev msg.sender and _tokenRecipient must be in network of _kycAddress
      */
     modifier claimChecks(uint _investmentId, uint _thisClaimAmount, address _tokenRecipient, address _kycAddress) {        
-        uint claimableTokens = computeUserClaimableAllocationForInvestment(_tokenRecipient, _investmentId);
+        uint claimableTokens = computeUserClaimableAllocationForInvestment(_kycAddress, _investmentId);
         
         if(_thisClaimAmount > claimableTokens) {
             revert ClaimAmountExceedsTotalClaimable();
@@ -213,6 +214,8 @@ contract InvestmentHandler is
      * @param _tokenRecipient the address the wallet which will receive the tokens
      * @notice allows any in-network wallet to claim tokens to any wallet on behalf of the kyc wallet
      * @notice UI can grab _kycWallet via correspondingKycAddress[msg.sender]
+     * @notice both msg.sender and _tokenRecipient must be in network of _kycAddress, and msg.sender 
+     *  can be the same as _tokenRecipient
      */
     function claim(
         uint _investmentId, 
@@ -248,15 +251,15 @@ contract InvestmentHandler is
 
         UserInvestment storage userInvestment = userInvestments[_params.kycAddress][_params.investmentId];
         Investment storage investment = investments[_params.investmentId];
+    
         userInvestment.totalInvestedPaymentToken += _params.thisInvestmentAmount;
+        investment.totalInvestedPaymentToken += _params.thisInvestmentAmount;
         
         /// @curi0n-s [!] Confirm things will work in the case that _maxInvestableAmount changes, and user has already contributed
         /// note that userInvestment.totalInvestedPaymentToken is incremented above so the below includes
         /// both the previously invested amount as well as the current proposed investment amount
         userInvestment.pledgeDebt = _params.maxInvestableAmount - userInvestment.totalInvestedPaymentToken;
-        
-        investment.totalInvestedPaymentToken += _params.thisInvestmentAmount;
-
+    
         investment.paymentToken.safeTransferFrom(msg.sender, address(this), _params.thisInvestmentAmount);
 
         emit UserContributionToInvestment(msg.sender, _params.kycAddress, _params.investmentId, _params.thisInvestmentAmount);
@@ -270,7 +273,7 @@ contract InvestmentHandler is
      *         only is of use to wallets who are kyc'd and able to invest/claim
      */
 
-    function addWalletToKycWalletNetwork(address _newWallet) external {
+    function addWalletToKycWalletNetwork(address _newWallet) public {
         if(correspondingKycAddress[_newWallet] != address(0)) {
             revert WalletAlreadyInKycNetwork();
         }
@@ -278,7 +281,7 @@ contract InvestmentHandler is
         isInKycWalletNetwork[msg.sender][_newWallet] = true;
         correspondingKycAddress[_newWallet] = msg.sender;
 
-        emit WalletAddedToKycNetwork(msg.sender, _newWallet);
+        emit WalletAddedToKycWalletNetwork(msg.sender, _newWallet);
     }
 
     /**
@@ -288,13 +291,15 @@ contract InvestmentHandler is
      * @notice allows any wallet to remove any other wallet from its network, but this is
      *         only is of use to wallets who are kyc'd and able to invest/claim
      */
-    function removeWalletFromKycWalletNetwork(address _networkWallet) external {
+    function removeWalletFromKycWalletNetwork(address _networkWallet) public {
         if(correspondingKycAddress[_networkWallet] != msg.sender) {
             revert WalletNotInKycNetwork();
         }
 
         isInKycWalletNetwork[msg.sender][_networkWallet] = false;
         delete correspondingKycAddress[_networkWallet];
+
+        emit WalletRemovedFromKycWalletNetwork(msg.sender, _networkWallet);
     }
 
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
@@ -303,13 +308,20 @@ contract InvestmentHandler is
     
     /**
      * @dev function to return all investment ids for a user
+     * @notice starts at 1, as investment ids start at 1 (see addInvestment)
      */
     function getUserInvestmentIds(address _kycAddress) public view returns (uint[] memory) {
-        uint j;
-        uint[] memory investmentIds;
+        uint count = 0;
+        for(uint i = 1; i <= latestInvestmentId; ++i) {
+            if(userInvestments[_kycAddress][i].totalInvestedPaymentToken > 0) {
+                ++count;
+            }
+        }
 
-        for(uint i = 0; i<latestInvestmentId; ++i){
-            if(userInvestments[_kycAddress][i].totalInvestedPaymentToken > 0){
+        uint[] memory investmentIds = new uint[](count);
+        uint j = 0;
+        for(uint i = 1; i <= latestInvestmentId; ++i) {
+            if(userInvestments[_kycAddress][i].totalInvestedPaymentToken > 0) {
                 investmentIds[j] = i;
                 ++j;
             }
@@ -317,6 +329,7 @@ contract InvestmentHandler is
 
         return investmentIds;
     }
+
 
     /**
      * @dev returns user's total claimed project tokens for an investment
@@ -458,7 +471,7 @@ contract InvestmentHandler is
      * @dev sets the current phase of the investment. phases can be 0-max uintN value, but
      *      0=closed, 1=whales, 2=sharks, 3=fcfs, so 4-max uintN can be used for custom phases    
      */
-    function setInvestmentContributionPhase(uint _investmentId, uint _investmentPhase) external onlyRole(MANAGER_ROLE) {
+    function setInvestmentContributionPhase(uint _investmentId, uint _investmentPhase) public onlyRole(MANAGER_ROLE) {
         investments[_investmentId].contributionPhase = _investmentPhase;
         emit InvestmentPhaseSet(_investmentId, _investmentPhase);
     }
