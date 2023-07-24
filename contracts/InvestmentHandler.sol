@@ -189,7 +189,6 @@ contract InvestmentHandler is
      *      3. could track "pledge debt" as a metric of whether the user follows thru on pledges of X amount --> include.
      */
     modifier investChecks(InvestParams memory _params) {
-
         if(!_signatureCheck(_params)) {
             revert InvalidSignature();
         } else if(!_phaseCheck(_params)) {
@@ -248,7 +247,6 @@ contract InvestmentHandler is
     function invest(
         InvestParams memory _params
     ) public nonReentrant whenNotPaused investChecks(_params) {
-
         UserInvestment storage userInvestment = userInvestments[_params.kycAddress][_params.investmentId];
         Investment storage investment = investments[_params.investmentId];
     
@@ -272,12 +270,10 @@ contract InvestmentHandler is
      * @notice allows any wallet to add any other wallet to its network, but this is 
      *         only is of use to wallets who are kyc'd and able to invest/claim
      */
-
     function addWalletToKycWalletNetwork(address _newWallet) public {
         if(correspondingKycAddress[_newWallet] != address(0)) {
             revert WalletAlreadyInKycNetwork();
         }
-
         isInKycWalletNetwork[msg.sender][_newWallet] = true;
         correspondingKycAddress[_newWallet] = msg.sender;
 
@@ -377,9 +373,7 @@ contract InvestmentHandler is
 
         i.e. consider that we get 1 Investment Token for 1000 Payment Tokens (both 18 decimals), will rounding/truncation errors get significant?
      */
-
     function computeUserClaimableAllocationForInvestment(address _kycAddress, uint _investmentId) public view returns (uint) {
-        
         uint totalInvestedPaymentToken = investments[_investmentId].totalInvestedPaymentToken;
         uint totalTokensClaimed = investments[_investmentId].totalTokensClaimed;
         uint userTotalInvestedPaymentToken = userInvestments[_kycAddress][_investmentId].totalInvestedPaymentToken;
@@ -502,6 +496,14 @@ contract InvestmentHandler is
     function setInvestmentProjectTokenAllocation(uint _investmentId, uint totalTokensAllocated) public onlyRole(MANAGER_ROLE) {
         investments[_investmentId].totalTokensAllocated = totalTokensAllocated;
         emit InvestmentProjectTokenAllocationSet(_investmentId, totalTokensAllocated);
+    }
+
+    function pause() external onlyRole(MANAGER_ROLE) {
+        _pause();
+    }
+
+    function unPause() external onlyRole(MANAGER_ROLE) {
+        _unpause();
     }
 
     /**
