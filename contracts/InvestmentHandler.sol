@@ -98,6 +98,7 @@ contract InvestmentHandler is
 
     /// @notice user => investmentId => userInvestment
     mapping(address => mapping(uint => UserInvestment)) public userInvestments;
+    mapping(address => uint[]) public userInvestmentIds;
 
     /// @notice kyc address => in-network address => bool
     mapping(address => mapping(address => bool)) public isInKycAddressNetwork;
@@ -261,7 +262,8 @@ contract InvestmentHandler is
         /// note that userInvestment.totalInvestedPaymentToken is incremented above so the below includes
         /// both the previously invested amount as well as the current proposed investment amount
         userInvestment.pledgeDebt = _params.maxInvestableAmount - userInvestment.totalInvestedPaymentToken;
-    
+        userInvestmentIds[_params.kycAddress].push(_params.investmentId);
+
         investment.paymentToken.safeTransferFrom(msg.sender, address(this), _params.thisInvestmentAmount);
 
         emit UserInvestmentContribution(msg.sender, _params.kycAddress, _params.investmentId, _params.thisInvestmentAmount);
@@ -306,31 +308,6 @@ contract InvestmentHandler is
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
     // USER READ FUNCTIONS (USER INVESTMENTS, USER CLAIMABLE ALLOCATION, USER TOTAL ALLOCATION)
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
-    
-    /**
-     * @dev function to return all investment ids for a user
-     * @notice starts at 1, as investment ids start at 1 (see addInvestment)
-     */
-    function getUserInvestmentIds(address _kycAddress) public view returns (uint[] memory) {
-        uint count = 0;
-        for(uint i = 1; i <= latestInvestmentId; ++i) {
-            if(userInvestments[_kycAddress][i].totalInvestedPaymentToken > 0) {
-                ++count;
-            }
-        }
-
-        uint[] memory investmentIds = new uint[](count);
-        uint j = 0;
-        for(uint i = 1; i <= latestInvestmentId; ++i) {
-            if(userInvestments[_kycAddress][i].totalInvestedPaymentToken > 0) {
-                investmentIds[j] = i;
-                ++j;
-            }
-        }
-
-        return investmentIds;
-    }
-
 
     /**
      * @dev returns user's total claimed project tokens for an investment
@@ -449,13 +426,13 @@ contract InvestmentHandler is
      */
     function addInvestment(
         address _signer,
-        IERC20Upgradeable _paymentToken,
+        address _paymentToken,
         uint _totalAllocatedPaymentToken
     ) public nonReentrant onlyRole(MANAGER_ROLE) {
         investments[++latestInvestmentId] = Investment({
             signer: _signer,
             projectToken: IERC20Upgradeable(address(0)),
-            paymentToken: _paymentToken,
+            paymentToken: IERC20Upgradeable(_paymentToken),
             contributionPhase: 0,
             totalInvestedPaymentToken: 0,
             totalAllocatedPaymentToken: _totalAllocatedPaymentToken,
@@ -464,7 +441,6 @@ contract InvestmentHandler is
         });
         emit InvestmentAdded(latestInvestmentId);
     }
-
 
     /**
      * @dev sets the current phase of the investment. phases can be 0-max uintN value, but
@@ -504,6 +480,10 @@ contract InvestmentHandler is
         emit InvestmentProjectTokenAllocationSet(_investmentId, totalTokensAllocated);
     }
 
+
+    /**
+     * @dev admin-only for pausing/unpausing all public functions
+     */
     function pause() external onlyRole(MANAGER_ROLE) {
         _pause();
     }
@@ -523,34 +503,7 @@ contract InvestmentHandler is
         investments[_investmentId].totalInvestedPaymentToken += _paymentTokenAmount;
         emit UserInvestmentContribution(msg.sender, _kycAddress, _investmentId, _paymentTokenAmount);
     }
-
-    /**
-     * @dev for 'OTC' trades among platform users, transfers user's investment to another KYC'd address ()
-     * @param _investmentId the id of the investment the user is transferring from
-     * @param _newKycAddress the address of the new kyc'd address to transfer the investment to
-     * @notice user must not have claimed any project tokens yet in order to sell their investment
-     * @notice assumes payment for this investment is handled outside of the contract
-     */
-    function transferInvestment(uint _investmentId, address _oldKycAddress, address _newKycAddress) public nonReentrant onlyRole(MANAGER_ROLE) {
-        UserInvestment storage userInvestment = userInvestments[_oldKycAddress][_investmentId];
-        UserInvestment storage newKycUserInvestment = userInvestments[_newKycAddress][_investmentId];
-        
-        if(userInvestment.totalInvestedPaymentToken == 0) {
-            revert RefundAmountExceedsUserBalance();
-        }
-
-        if(userInvestment.totalTokensClaimed > 0) {
-            revert UserAlreadyClaimedTokens();
-        }
-
-        newKycUserInvestment.totalInvestedPaymentToken += userInvestment.totalInvestedPaymentToken;
-        userInvestment.totalInvestedPaymentToken = 0;
-        userInvestment.pledgeDebt = 0;
-
-        emit UserInvestmentTransfer(msg.sender, _oldKycAddress, _newKycAddress, _investmentId, userInvestment.totalInvestedPaymentToken);
-    }
-
-
+    
     /**
      * @dev manually refunds user
      * @param _kycAddress address of user to refund
