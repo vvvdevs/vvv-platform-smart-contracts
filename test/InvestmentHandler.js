@@ -574,7 +574,6 @@ describe("InvestmentHandler", function () {
 
             //check that the investment is now owned by user2
             const investment = await investmentHandler.userInvestments(user2.address, investmentId);
-            console.log("invested", investment.totalInvestedPaymentToken.toString());
             expect(investment.totalInvestedPaymentToken).to.equal(depositAmount);
         });
     });
@@ -887,15 +886,86 @@ describe("InvestmentHandler", function () {
             expect(user2_claimable_amount4).to.equal(0);
         });
 
-        it("Should compute correct allocation for user claiming before and after all tokens have been deposited, with others claiming between claims and attempting re-entrancy or other tricks", async function () {
-            let error_on_call = false;
-            expect(error_on_call).to.equal(true);
-        });
-
-        it("Should show repeatability of allocation calculation", async function () {
+        it("Should show repeatability of allocation calculation, no significant/cumulative rounding errors", async function () {
             //add 100, user with 100% can claim another 100, repeatably
-            let error_on_call = false;
-            expect(error_on_call).to.equal(true);
+            const {
+                investmentHandler,
+                signer,
+                manager,
+                pledgeAmount,
+                depositAmount,
+                user,
+                testProjectTokenAddress,
+                testInvestmentTokensAlloc,
+                testInvestmentStablecoin,
+                testInvestmentUsdAlloc,
+                mockUsdc,
+                mockProjectToken,
+                approvalValue,
+                userPhaseIndex,
+            } = await loadFixture(setupFixture);
+
+            const add_investment = await investmentHandler.connect(manager).addInvestment(signer.address, testInvestmentStablecoin, testInvestmentUsdAlloc);
+            await add_investment.wait();
+
+            const investmentId = await investmentHandler.latestInvestmentId();
+
+            const set_phase_to_shark = await investmentHandler.connect(manager).setInvestmentContributionPhase(investmentId, 2);
+            await set_phase_to_shark.wait();
+
+            const signature1 = await signDeposit(signer, user, pledgeAmount, userPhaseIndex);
+
+            const approve_stablecoin_spending = await mockUsdc.connect(user).approve(investmentHandler.address, approvalValue);
+            await approve_stablecoin_spending.wait();
+
+            if (logging) {
+                console.log("investmenthandler usdc balance before invest: ", await mockUsdc.balanceOf(investmentHandler.address));
+                console.log("deposit and pledge amounts: ", depositAmount, pledgeAmount);
+            }
+
+            const userParams1 = {
+                investmentId: investmentId,
+                maxInvestableAmount: pledgeAmount,
+                thisInvestmentAmount: depositAmount,
+                userPhase: userPhaseIndex,
+                kycAddress: user.address,
+                signature: signature1,
+            };
+
+            const invest_transaction1 = await investmentHandler.connect(user).invest(userParams1);
+            await invest_transaction1.wait();
+
+            if (logging) {
+                console.log("pledgeAmount: ", pledgeAmount);
+                console.log("investmenthandler usdc balance after invest: ", await mockUsdc.balanceOf(investmentHandler.address));
+            }
+
+            const set_project_token = await investmentHandler.connect(manager).setInvestmentProjectTokenAddress(investmentId, testProjectTokenAddress);
+            await set_project_token.wait();
+
+            const set_project_token_allocation = await investmentHandler.connect(manager).setInvestmentProjectTokenAllocation(investmentId, testInvestmentTokensAlloc);
+            await set_project_token_allocation.wait();
+
+            const deposit_project_tokens = await mockProjectToken.connect(manager).transfer(investmentHandler.address, testInvestmentTokensAlloc.div(3));
+            await deposit_project_tokens.wait();
+
+            let totalDeposits = 1000;
+            for (let i = 1; i <= totalDeposits; i++) {
+                const deposit_project_tokens = await mockProjectToken.connect(manager).transfer(investmentHandler.address, testInvestmentTokensAlloc.div(totalDeposits));
+                await deposit_project_tokens.wait();
+
+                const user1_claimable_amount = await investmentHandler.connect(user).computeUserClaimableAllocationForInvestment(user.address, investmentId);
+                expect(user1_claimable_amount).to.be.greaterThan(testInvestmentTokensAlloc.mul(i).div(totalDeposits).mul(99999).div(100000));
+            }
+
+            totalDeposits = 5;
+            for (let i = 1; i <= totalDeposits; i++) {
+                const deposit_project_tokens = await mockProjectToken.connect(manager).transfer(investmentHandler.address, testInvestmentTokensAlloc.div(totalDeposits));
+                await deposit_project_tokens.wait();
+
+                const user1_claimable_amount = await investmentHandler.connect(user).computeUserClaimableAllocationForInvestment(user.address, investmentId);
+                expect(user1_claimable_amount).to.be.greaterThan(testInvestmentTokensAlloc.mul(i).div(totalDeposits).mul(99999).div(100000));
+            }
         });
     });
 
