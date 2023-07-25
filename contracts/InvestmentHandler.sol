@@ -5,7 +5,7 @@ pragma solidity 0.8.19;
  * @title InvestmentHandler
  * @author @vvvfund (@curi0n-s + @kcper + @c0dejax)
  * @notice Handles the investment process for vVv allocations from contributing the payment token to claiming the project token
- * @notice Any wallet can invest on behalf of a kyc wallet, but only "in-network" addresses can claim on behalf of a kyc wallet
+ * @notice Any address can invest on behalf of a kyc address, but only "in-network" addresses can claim on behalf of a kyc address
  * @dev This contract is upgradeable and pausable
  */
 
@@ -81,8 +81,8 @@ contract InvestmentHandler is
      * @param maxInvestableAmount max amount of payment token the user can invest in this investment
      * @param thisInvestmentAmount amount of payment token the user is investing in this transaction
      * @param userPhase phase the user is investing in
-     * @param kycAddress address of the user's in-network kyc'd wallet
-     * @param signature signature of the user's kyc'd wallet
+     * @param kycAddress address of the user's in-network kyc'd address
+     * @param signature signature of the user's kyc'd address
      */
     struct InvestParams {
         uint investmentId;
@@ -100,7 +100,7 @@ contract InvestmentHandler is
     mapping(address => mapping(uint => UserInvestment)) public userInvestments;
 
     /// @notice kyc address => in-network address => bool
-    mapping(address => mapping(address => bool)) public isInKycWalletNetwork;
+    mapping(address => mapping(address => bool)) public isInKycAddressNetwork;
     mapping(address => address) public correspondingKycAddress;
     
     // @curi0n-s reserve space for upgrade if needed
@@ -112,22 +112,26 @@ contract InvestmentHandler is
     event InvestmentPhaseSet(uint indexed investmentId, uint indexed phase);
     event InvestmentProjectTokenAddressSet(uint indexed investmentId, address indexed projectToken);
     event InvestmentProjectTokenAllocationSet(uint indexed investmentId, uint indexed amount);
-    event UserContributionToInvestment(address indexed sender, address indexed kycWallet, uint indexed investmentId, uint amount);
-    event UserTokenClaim(address indexed sender, address tokenRecipient, address indexed kycWallet, uint indexed investmentId, uint amount);
-    event WalletAddedToKycWalletNetwork(address indexed kycWallet, address indexed wallet);
-    event WalletRemovedFromKycWalletNetwork(address indexed kycWallet, address indexed wallet);
-    event UserRefunded(address indexed sender, address indexed kycWallet, uint indexed investmentId, uint amount);
-
+    event UserInvestmentContribution(address indexed sender, address indexed kycAddress, uint indexed investmentId, uint amount);
+    event UserInvestmentTransfer(address sender, address indexed oldKycAddress, address indexed newKycAddress, uint indexed investmentId, uint amount);
+    event UserTokenClaim(address indexed sender, address tokenRecipient, address indexed kycAddress, uint indexed investmentId, uint amount);
+    event UserRefunded(address indexed sender, address indexed kycAddress, uint indexed investmentId, uint amount);
+    event AddressAddedToKycAddressNetwork(address indexed kycAddress, address indexed addedAddress);
+    event AddressRemovedFromKycAddressNetwork(address indexed kycAddress, address indexed removedAddress);
+    
+    error AddressAlreadyInKycNetwork();
+    error AddressNotInKycNetwork();
     error ClaimAmountExceedsTotalClaimable();
-    error WalletAlreadyInKycNetwork();
-    error WalletNotInKycNetwork();
     error InvalidSignature();
     error InsufficientAllowance();
     error InvestmentAmountExceedsMax();
     error InvestmentIsNotOpen();
     error InvestmentTokenAlreadyDeposited();
-    error NotInKycWalletNetwork();
+    error NotInKycAddressNetwork();
+    error NotKycAddress();
     error RefundAmountExceedsUserBalance();
+    error UserAlreadyClaimedTokens();
+
 
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
     // INITIALIZATION & MODIFIERS
@@ -164,14 +168,14 @@ contract InvestmentHandler is
 
         if(
             (
-                !isInKycWalletNetwork[_kycAddress][_tokenRecipient] &&
+                !isInKycAddressNetwork[_kycAddress][_tokenRecipient] &&
                 _tokenRecipient != _kycAddress
             ) || (
-                !isInKycWalletNetwork[_kycAddress][msg.sender] &&
+                !isInKycAddressNetwork[_kycAddress][msg.sender] &&
                 msg.sender != _kycAddress
             )
         ){
-            revert NotInKycWalletNetwork();
+            revert NotInKycAddressNetwork();
         }
 
         _;
@@ -211,9 +215,9 @@ contract InvestmentHandler is
      * @dev this function will be called by the user to claim their tokens
      * @param _investmentId the id of the investment the user is claiming from
      * @param _claimAmount the amount of tokens the user is claiming
-     * @param _tokenRecipient the address the wallet which will receive the tokens
-     * @notice allows any in-network wallet to claim tokens to any wallet on behalf of the kyc wallet
-     * @notice UI can grab _kycWallet via correspondingKycAddress[msg.sender]
+     * @param _tokenRecipient the address the address which will receive the tokens
+     * @notice allows any in-network address to claim tokens to any address on behalf of the kyc address
+     * @notice UI can grab _kycAddress via correspondingKycAddress[msg.sender]
      * @notice both msg.sender and _tokenRecipient must be in network of _kycAddress, and msg.sender 
      *  can be the same as _tokenRecipient
      */
@@ -262,44 +266,43 @@ contract InvestmentHandler is
     
         investment.paymentToken.safeTransferFrom(msg.sender, address(this), _params.thisInvestmentAmount);
 
-        emit UserContributionToInvestment(msg.sender, _params.kycAddress, _params.investmentId, _params.thisInvestmentAmount);
+        emit UserInvestmentContribution(msg.sender, _params.kycAddress, _params.investmentId, _params.thisInvestmentAmount);
 
     }
 
     /**
-     * @dev this function will be called by a kyc'd wallet to add a wallet to its network
-     * @param _newWallet the address of the wallet to be added to the network
-     * @notice allows any wallet to add any other wallet to its network, but this is 
-     *         only is of use to wallets who are kyc'd and able to invest/claim
+     * @dev this function will be called by a kyc'd address to add a address to its network
+     * @param _newAddress the address of the address to be added to the network
+     * @notice allows any address to add any other address to its network, but this is 
+     *         only is of use to addresss who are kyc'd and able to invest/claim
      */
-
-    function addWalletToKycWalletNetwork(address _newWallet) public {
-        if(correspondingKycAddress[_newWallet] != address(0)) {
-            revert WalletAlreadyInKycNetwork();
+    function addAddressToKycAddressNetwork(address _newAddress) public {
+        if(correspondingKycAddress[_newAddress] != address(0)) {
+            revert AddressAlreadyInKycNetwork();
         }
 
-        isInKycWalletNetwork[msg.sender][_newWallet] = true;
-        correspondingKycAddress[_newWallet] = msg.sender;
+        isInKycAddressNetwork[msg.sender][_newAddress] = true;
+        correspondingKycAddress[_newAddress] = msg.sender;
 
-        emit WalletAddedToKycWalletNetwork(msg.sender, _newWallet);
+        emit AddressAddedToKycAddressNetwork(msg.sender, _newAddress);
     }
 
     /**
-     * @dev this function will be called by a kyc'd wallet to remove a wallet from its network
-     * @param _networkWallet the address of the wallet to be removed from the network, must be
-     *                       in the network of the calling kyc wallet
-     * @notice allows any wallet to remove any other wallet from its network, but this is
-     *         only is of use to wallets who are kyc'd and able to invest/claim
+     * @dev this function will be called by a kyc'd address to remove a address from its network
+     * @param _networkAddress the address of the address to be removed from the network, must be
+     *                       in the network of the calling kyc address
+     * @notice allows any address to remove any other address from its network, but this is
+     *         only is of use to addresss who are kyc'd and able to invest/claim
      */
-    function removeWalletFromKycWalletNetwork(address _networkWallet) public {
-        if(correspondingKycAddress[_networkWallet] != msg.sender) {
-            revert WalletNotInKycNetwork();
+    function removeAddressFromKycAddressNetwork(address _networkAddress) public {
+        if(correspondingKycAddress[_networkAddress] != msg.sender) {
+            revert AddressNotInKycNetwork();
         }
 
-        isInKycWalletNetwork[msg.sender][_networkWallet] = false;
-        delete correspondingKycAddress[_networkWallet];
+        isInKycAddressNetwork[msg.sender][_networkAddress] = false;
+        delete correspondingKycAddress[_networkAddress];
 
-        emit WalletRemovedFromKycWalletNetwork(msg.sender, _networkWallet);
+        emit AddressRemovedFromKycAddressNetwork(msg.sender, _networkAddress);
     }
 
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
@@ -424,14 +427,14 @@ contract InvestmentHandler is
     }
 
     /**
-     * @dev confirms the calling wallet's payment token allocation is sufficient for the amount they're trying to invest
+     * @dev confirms the calling address's payment token allocation is sufficient for the amount they're trying to invest
      */
     function _paymentTokenAllowanceCheck(InvestParams memory _params) private view returns (bool) {
         return investments[_params.investmentId].paymentToken.allowance(msg.sender, address(this)) >= _params.thisInvestmentAmount;
     }
     
     /**
-     * @dev confirms the calling wallet's payment token allocation is sufficient for the amount they're trying to invest
+     * @dev confirms the calling address's payment token allocation is sufficient for the amount they're trying to invest
      */
     function _contributionLimitCheck(InvestParams memory _params) private view returns (bool) {
         return _params.thisInvestmentAmount + userInvestments[_params.kycAddress][_params.investmentId].totalInvestedPaymentToken <= _params.maxInvestableAmount;
@@ -452,7 +455,7 @@ contract InvestmentHandler is
         address _signer,
         IERC20Upgradeable _paymentToken,
         uint _totalAllocatedPaymentToken
-    ) public onlyRole(MANAGER_ROLE) {
+    ) public nonReentrant onlyRole(MANAGER_ROLE) {
         investments[++latestInvestmentId] = Investment({
             signer: _signer,
             projectToken: IERC20Upgradeable(address(0)),
@@ -475,6 +478,7 @@ contract InvestmentHandler is
         investments[_investmentId].contributionPhase = _investmentPhase;
         emit InvestmentPhaseSet(_investmentId, _investmentPhase);
     }
+
     /**
      * @dev sets the token address of the payment token for the investment
      * @notice this function can only be called before any investment funds are deposited for the investment
@@ -510,10 +514,36 @@ contract InvestmentHandler is
      * @param _investmentId id of investment to add contribution to
      * @param _paymentTokenAmount amount of payment tokens to add to user's contribution
      */
-    function manualAddContribution(address _kycAddress, uint _investmentId, uint _paymentTokenAmount) public onlyRole(MANAGER_ROLE) {
+    function manualAddContribution(address _kycAddress, uint _investmentId, uint _paymentTokenAmount) public nonReentrant onlyRole(MANAGER_ROLE) {
         userInvestments[_kycAddress][_investmentId].totalInvestedPaymentToken += _paymentTokenAmount;
         investments[_investmentId].totalInvestedPaymentToken += _paymentTokenAmount;
-        emit UserContributionToInvestment(msg.sender, _kycAddress, _investmentId, _paymentTokenAmount);
+        emit UserInvestmentContribution(msg.sender, _kycAddress, _investmentId, _paymentTokenAmount);
+    }
+
+    /**
+     * @dev for 'OTC' trades among platform users, transfers user's investment to another KYC'd address ()
+     * @param _investmentId the id of the investment the user is transferring from
+     * @param _newKycAddress the address of the new kyc'd address to transfer the investment to
+     * @notice user must not have claimed any project tokens yet in order to sell their investment
+     * @notice assumes payment for this investment is handled outside of the contract
+     */
+    function transferInvestment(uint _investmentId, address _oldKycAddress, address _newKycAddress) public nonReentrant onlyRole(MANAGER_ROLE) {
+        UserInvestment storage userInvestment = userInvestments[_oldKycAddress][_investmentId];
+        UserInvestment storage newKycUserInvestment = userInvestments[_newKycAddress][_investmentId];
+        
+        if(userInvestment.totalInvestedPaymentToken == 0) {
+            revert RefundAmountExceedsUserBalance();
+        }
+
+        if(userInvestment.totalTokensClaimed > 0) {
+            revert UserAlreadyClaimedTokens();
+        }
+
+        newKycUserInvestment.totalInvestedPaymentToken += userInvestment.totalInvestedPaymentToken;
+        userInvestment.totalInvestedPaymentToken = 0;
+        userInvestment.pledgeDebt = 0;
+
+        emit UserInvestmentTransfer(msg.sender, _oldKycAddress, _newKycAddress, _investmentId, userInvestment.totalInvestedPaymentToken);
     }
 
 
@@ -523,7 +553,7 @@ contract InvestmentHandler is
      * @param _investmentId id of investment to refund from
      * @param _paymentTokenAmount amount of payment tokens to refund
      */
-    function refundUser(address _kycAddress, uint _investmentId, uint _paymentTokenAmount) public onlyRole(MANAGER_ROLE) {
+    function refundUser(address _kycAddress, uint _investmentId, uint _paymentTokenAmount) public nonReentrant onlyRole(MANAGER_ROLE) {
         if(userInvestments[_kycAddress][_investmentId].totalInvestedPaymentToken < _paymentTokenAmount){
             revert RefundAmountExceedsUserBalance();
         }        

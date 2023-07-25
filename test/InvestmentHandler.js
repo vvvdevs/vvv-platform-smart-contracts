@@ -24,7 +24,7 @@ describe("InvestmentHandler", function () {
         const spk = signerPre.privateKey;
         const signer = new ethers.Wallet(spk, provider);
 
-        const [manager, user, user2, depositNetworkWallet, claimCallerNetworkWallet, claimRecipientNetworkWallet] = await ethers.getSigners();
+        const [manager, user, user2, depositNetworkAddress, claimCallerNetworkAddress, claimRecipientNetworkAddress] = await ethers.getSigners();
 
         let MockERC20 = await ethers.getContractFactory("MockERC20");
         MockERC20 = await MockERC20.connect(manager);
@@ -39,11 +39,11 @@ describe("InvestmentHandler", function () {
         let mint_usdc_to_user2 = await mockUsdc.connect(user2).mint(user2.address, ethers.utils.parseEther("10000"));
         await mint_usdc_to_user2.wait();
 
-        let mint_usdc_to_depositNetworkWallet = await mockUsdc.connect(depositNetworkWallet).mint(depositNetworkWallet.address, ethers.utils.parseEther("10000"));
-        await mint_usdc_to_depositNetworkWallet.wait();
+        let mint_usdc_to_depositNetworkAddress = await mockUsdc.connect(depositNetworkAddress).mint(depositNetworkAddress.address, ethers.utils.parseEther("10000"));
+        await mint_usdc_to_depositNetworkAddress.wait();
 
-        let mint_usdc_to_claimNetworkWallet = await mockUsdc.connect(claimCallerNetworkWallet).mint(claimCallerNetworkWallet.address, ethers.utils.parseEther("10000"));
-        await mint_usdc_to_claimNetworkWallet.wait();
+        let mint_usdc_to_claimNetworkAddress = await mockUsdc.connect(claimCallerNetworkAddress).mint(claimCallerNetworkAddress.address, ethers.utils.parseEther("10000"));
+        await mint_usdc_to_claimNetworkAddress.wait();
 
         let InvestmentHandler = await ethers.getContractFactory("InvestmentHandler");
         InvestmentHandler = await InvestmentHandler.connect(manager);
@@ -79,9 +79,9 @@ describe("InvestmentHandler", function () {
             manager,
             user,
             user2,
-            depositNetworkWallet,
-            claimCallerNetworkWallet,
-            claimRecipientNetworkWallet,
+            depositNetworkAddress,
+            claimCallerNetworkAddress,
+            claimRecipientNetworkAddress,
             provider,
             pledgeAmount,
             depositAmount,
@@ -103,25 +103,25 @@ describe("InvestmentHandler", function () {
         });
     });
 
-    describe("Add/Remove Address To/From KYC Wallet Network", function () {
+    describe("Add/Remove Address To/From KYC Address Network", function () {
         it("should add a new address to the KYC wallet network", async function () {
-            const { investmentHandler, user, depositNetworkWallet } = await loadFixture(setupFixture);
-            const add_address = await investmentHandler.connect(user).addWalletToKycWalletNetwork(depositNetworkWallet.address);
-            expect(add_address).to.emit(investmentHandler, "WalletAddedToKycWalletNetwork").withArgs(user.address, depositNetworkWallet.address);
-            expect(await investmentHandler.isInKycWalletNetwork(user.address, depositNetworkWallet.address)).to.equal(true);
-            expect(await investmentHandler.correspondingKycAddress(depositNetworkWallet.address)).to.equal(user.address);
+            const { investmentHandler, user, depositNetworkAddress } = await loadFixture(setupFixture);
+            const add_address = await investmentHandler.connect(user).addAddressToKycAddressNetwork(depositNetworkAddress.address);
+            expect(add_address).to.emit(investmentHandler, "AddressAddedToKycAddressNetwork").withArgs(user.address, depositNetworkAddress.address);
+            expect(await investmentHandler.isInKycAddressNetwork(user.address, depositNetworkAddress.address)).to.equal(true);
+            expect(await investmentHandler.correspondingKycAddress(depositNetworkAddress.address)).to.equal(user.address);
         });
         it("should remove an address from the KYC wallet network", async function () {
-            const { investmentHandler, user, depositNetworkWallet } = await loadFixture(setupFixture);
-            const add_address = await investmentHandler.connect(user).addWalletToKycWalletNetwork(depositNetworkWallet.address);
-            expect(add_address).to.emit(investmentHandler, "WalletAddedToKycWalletNetwork").withArgs(user.address, depositNetworkWallet.address);
-            expect(await investmentHandler.isInKycWalletNetwork(user.address, depositNetworkWallet.address)).to.equal(true);
-            expect(await investmentHandler.correspondingKycAddress(depositNetworkWallet.address)).to.equal(user.address);
+            const { investmentHandler, user, depositNetworkAddress } = await loadFixture(setupFixture);
+            const add_address = await investmentHandler.connect(user).addAddressToKycAddressNetwork(depositNetworkAddress.address);
+            expect(add_address).to.emit(investmentHandler, "AddressAddedToKycAddressNetwork").withArgs(user.address, depositNetworkAddress.address);
+            expect(await investmentHandler.isInKycAddressNetwork(user.address, depositNetworkAddress.address)).to.equal(true);
+            expect(await investmentHandler.correspondingKycAddress(depositNetworkAddress.address)).to.equal(user.address);
 
-            const remove_address = await investmentHandler.connect(user).removeWalletFromKycWalletNetwork(depositNetworkWallet.address);
-            expect(remove_address).to.emit(investmentHandler, "WalletRemovedFromKycWalletNetwork").withArgs(user.address, depositNetworkWallet.address);
-            expect(await investmentHandler.isInKycWalletNetwork(user.address, depositNetworkWallet.address)).to.equal(false);
-            expect(await investmentHandler.correspondingKycAddress(depositNetworkWallet.address)).to.equal(ethers.constants.AddressZero);
+            const remove_address = await investmentHandler.connect(user).removeAddressFromKycAddressNetwork(depositNetworkAddress.address);
+            expect(remove_address).to.emit(investmentHandler, "AddressRemovedFromKycAddressNetwork").withArgs(user.address, depositNetworkAddress.address);
+            expect(await investmentHandler.isInKycAddressNetwork(user.address, depositNetworkAddress.address)).to.equal(false);
+            expect(await investmentHandler.correspondingKycAddress(depositNetworkAddress.address)).to.equal(ethers.constants.AddressZero);
         });
     });
 
@@ -212,9 +212,9 @@ describe("InvestmentHandler", function () {
                 pledgeAmount,
                 depositAmount,
                 user,
-                depositNetworkWallet,
-                claimCallerNetworkWallet,
-                claimRecipientNetworkWallet,
+                depositNetworkAddress,
+                claimCallerNetworkAddress,
+                claimRecipientNetworkAddress,
                 testProjectTokenAddress,
                 testInvestmentTokensAlloc,
                 testClaimAmount,
@@ -236,16 +236,16 @@ describe("InvestmentHandler", function () {
 
             const signature = await signDeposit(signer, user, pledgeAmount, userPhaseIndex);
 
-            const approve_stablecoin_spending = await mockUsdc.connect(depositNetworkWallet).approve(investmentHandler.address, approvalValue);
+            const approve_stablecoin_spending = await mockUsdc.connect(depositNetworkAddress).approve(investmentHandler.address, approvalValue);
             await approve_stablecoin_spending.wait();
 
             //add deposit and claim wallets to network
-            const add_depositWallet = await investmentHandler.connect(user).addWalletToKycWalletNetwork(depositNetworkWallet.address);
-            await add_depositWallet.wait();
-            const add_claimWallet = await investmentHandler.connect(user).addWalletToKycWalletNetwork(claimCallerNetworkWallet.address);
-            await add_claimWallet.wait();
-            const add_claimRecipientWallet = await investmentHandler.connect(user).addWalletToKycWalletNetwork(claimRecipientNetworkWallet.address);
-            await add_claimRecipientWallet.wait();
+            const add_depositAddress = await investmentHandler.connect(user).addAddressToKycAddressNetwork(depositNetworkAddress.address);
+            await add_depositAddress.wait();
+            const add_claimAddress = await investmentHandler.connect(user).addAddressToKycAddressNetwork(claimCallerNetworkAddress.address);
+            await add_claimAddress.wait();
+            const add_claimRecipientAddress = await investmentHandler.connect(user).addAddressToKycAddressNetwork(claimRecipientNetworkAddress.address);
+            await add_claimRecipientAddress.wait();
 
             if (logging) {
                 console.log("investmenthandler usdc balance before invest: ", await mockUsdc.balanceOf(investmentHandler.address));
@@ -261,7 +261,7 @@ describe("InvestmentHandler", function () {
                 signature: signature,
             };
 
-            const invest_transaction = await investmentHandler.connect(depositNetworkWallet).invest(userParams);
+            const invest_transaction = await investmentHandler.connect(depositNetworkAddress).invest(userParams);
             await invest_transaction.wait();
 
             if (logging) {
@@ -278,7 +278,7 @@ describe("InvestmentHandler", function () {
             const deposit_project_tokens = await mockProjectToken.connect(manager).transfer(investmentHandler.address, testInvestmentTokensAlloc);
             await deposit_project_tokens.wait();
 
-            const user_claim_tokens = await investmentHandler.connect(claimCallerNetworkWallet).claim(investmentId, testClaimAmount, claimRecipientNetworkWallet.address, user.address);
+            const user_claim_tokens = await investmentHandler.connect(claimCallerNetworkAddress).claim(investmentId, testClaimAmount, claimRecipientNetworkAddress.address, user.address);
             await user_claim_tokens.wait();
 
             if (logging) {
@@ -293,7 +293,7 @@ describe("InvestmentHandler", function () {
         });
 
         it("Should Should add investment, then revert on investment because sender is trying to invest in wrong phase", async function () {
-            const { investmentHandler, signer, manager, pledgeAmount, depositAmount, user, depositNetworkWallet, testInvestmentStablecoin, testInvestmentUsdAlloc, mockUsdc, approvalValue, userPhaseIndex } = await loadFixture(setupFixture);
+            const { investmentHandler, signer, manager, pledgeAmount, depositAmount, user, depositNetworkAddress, testInvestmentStablecoin, testInvestmentUsdAlloc, mockUsdc, approvalValue, userPhaseIndex } = await loadFixture(setupFixture);
 
             const add_investment = await investmentHandler.connect(manager).addInvestment(signer.address, testInvestmentStablecoin, testInvestmentUsdAlloc);
             await add_investment.wait();
@@ -306,7 +306,7 @@ describe("InvestmentHandler", function () {
 
             const signature = await signDeposit(signer, user, pledgeAmount, userPhaseIndex);
 
-            const approve_stablecoin_spending = await mockUsdc.connect(depositNetworkWallet).approve(investmentHandler.address, approvalValue);
+            const approve_stablecoin_spending = await mockUsdc.connect(depositNetworkAddress).approve(investmentHandler.address, approvalValue);
             await approve_stablecoin_spending.wait();
 
             if (logging) {
@@ -325,7 +325,7 @@ describe("InvestmentHandler", function () {
 
             let invest_transaction;
             try {
-                invest_transaction = await investmentHandler.connect(depositNetworkWallet).invest(userParams);
+                invest_transaction = await investmentHandler.connect(depositNetworkAddress).invest(userParams);
                 await invest_transaction.wait();
             } catch (err) {
                 expect(err.message).to.include("InvestmentIsNotOpen()");
@@ -341,9 +341,9 @@ describe("InvestmentHandler", function () {
                 pledgeAmount,
                 depositAmount,
                 user,
-                depositNetworkWallet,
-                claimCallerNetworkWallet,
-                claimRecipientNetworkWallet,
+                depositNetworkAddress,
+                claimCallerNetworkAddress,
+                claimRecipientNetworkAddress,
                 testProjectTokenAddress,
                 testInvestmentTokensAlloc,
                 testClaimAmount,
@@ -365,16 +365,16 @@ describe("InvestmentHandler", function () {
 
             const signature = await signDeposit(signer, user, pledgeAmount, userPhaseIndex);
 
-            const approve_stablecoin_spending = await mockUsdc.connect(depositNetworkWallet).approve(investmentHandler.address, approvalValue);
+            const approve_stablecoin_spending = await mockUsdc.connect(depositNetworkAddress).approve(investmentHandler.address, approvalValue);
             await approve_stablecoin_spending.wait();
 
             //add deposit and claim wallets to network
-            const add_depositWallet = await investmentHandler.connect(user).addWalletToKycWalletNetwork(depositNetworkWallet.address);
-            await add_depositWallet.wait();
-            // const add_claimWallet = await investmentHandler.connect(user).addWalletToKycWalletNetwork(claimCallerNetworkWallet.address);
-            // await add_claimWallet.wait();
-            const add_claimRecipientWallet = await investmentHandler.connect(user).addWalletToKycWalletNetwork(claimRecipientNetworkWallet.address);
-            await add_claimRecipientWallet.wait();
+            const add_depositAddress = await investmentHandler.connect(user).addAddressToKycAddressNetwork(depositNetworkAddress.address);
+            await add_depositAddress.wait();
+            // const add_claimAddress = await investmentHandler.connect(user).addAddressToKycAddressNetwork(claimCallerNetworkAddress.address);
+            // await add_claimAddress.wait();
+            const add_claimRecipientAddress = await investmentHandler.connect(user).addAddressToKycAddressNetwork(claimRecipientNetworkAddress.address);
+            await add_claimRecipientAddress.wait();
 
             if (logging) {
                 console.log("investmenthandler usdc balance before invest: ", await mockUsdc.balanceOf(investmentHandler.address));
@@ -390,7 +390,7 @@ describe("InvestmentHandler", function () {
                 signature: signature,
             };
 
-            const invest_transaction = await investmentHandler.connect(depositNetworkWallet).invest(userParams);
+            const invest_transaction = await investmentHandler.connect(depositNetworkAddress).invest(userParams);
             await invest_transaction.wait();
 
             if (logging) {
@@ -410,10 +410,10 @@ describe("InvestmentHandler", function () {
             let user_claim_tokens;
             let error_on_call = false;
             try {
-                user_claim_tokens = await investmentHandler.connect(claimCallerNetworkWallet).claim(investmentId, testClaimAmount, claimRecipientNetworkWallet.address, user.address);
+                user_claim_tokens = await investmentHandler.connect(claimCallerNetworkAddress).claim(investmentId, testClaimAmount, claimRecipientNetworkAddress.address, user.address);
                 await user_claim_tokens.wait();
             } catch (err) {
-                expect(err.message).to.include("NotInKycWalletNetwork()");
+                expect(err.message).to.include("NotInKycAddressNetwork()");
                 error_on_call = true;
             }
             expect(error_on_call).to.equal(true);
@@ -427,9 +427,9 @@ describe("InvestmentHandler", function () {
                 pledgeAmount,
                 depositAmount,
                 user,
-                depositNetworkWallet,
-                claimCallerNetworkWallet,
-                claimRecipientNetworkWallet,
+                depositNetworkAddress,
+                claimCallerNetworkAddress,
+                claimRecipientNetworkAddress,
                 testProjectTokenAddress,
                 testInvestmentTokensAlloc,
                 testClaimAmount,
@@ -451,16 +451,16 @@ describe("InvestmentHandler", function () {
 
             const signature = await signDeposit(signer, user, pledgeAmount, userPhaseIndex);
 
-            const approve_stablecoin_spending = await mockUsdc.connect(depositNetworkWallet).approve(investmentHandler.address, approvalValue);
+            const approve_stablecoin_spending = await mockUsdc.connect(depositNetworkAddress).approve(investmentHandler.address, approvalValue);
             await approve_stablecoin_spending.wait();
 
             //add deposit and claim wallets to network
-            const add_depositWallet = await investmentHandler.connect(user).addWalletToKycWalletNetwork(depositNetworkWallet.address);
-            await add_depositWallet.wait();
-            const add_claimWallet = await investmentHandler.connect(user).addWalletToKycWalletNetwork(claimCallerNetworkWallet.address);
-            await add_claimWallet.wait();
-            // const add_claimRecipientWallet = await investmentHandler.connect(user).addWalletToKycWalletNetwork(claimRecipientNetworkWallet.address);
-            // await add_claimRecipientWallet.wait();
+            const add_depositAddress = await investmentHandler.connect(user).addAddressToKycAddressNetwork(depositNetworkAddress.address);
+            await add_depositAddress.wait();
+            const add_claimAddress = await investmentHandler.connect(user).addAddressToKycAddressNetwork(claimCallerNetworkAddress.address);
+            await add_claimAddress.wait();
+            // const add_claimRecipientAddress = await investmentHandler.connect(user).addAddressToKycAddressNetwork(claimRecipientNetworkAddress.address);
+            // await add_claimRecipientAddress.wait();
 
             if (logging) {
                 console.log("investmenthandler usdc balance before invest: ", await mockUsdc.balanceOf(investmentHandler.address));
@@ -476,7 +476,7 @@ describe("InvestmentHandler", function () {
                 signature: signature,
             };
 
-            const invest_transaction = await investmentHandler.connect(depositNetworkWallet).invest(userParams);
+            const invest_transaction = await investmentHandler.connect(depositNetworkAddress).invest(userParams);
             await invest_transaction.wait();
 
             if (logging) {
@@ -496,13 +496,86 @@ describe("InvestmentHandler", function () {
             let user_claim_tokens;
             let error_on_call = false;
             try {
-                user_claim_tokens = await investmentHandler.connect(claimCallerNetworkWallet).claim(investmentId, testClaimAmount, claimRecipientNetworkWallet.address, user.address);
+                user_claim_tokens = await investmentHandler.connect(claimCallerNetworkAddress).claim(investmentId, testClaimAmount, claimRecipientNetworkAddress.address, user.address);
                 await user_claim_tokens.wait();
             } catch (err) {
-                expect(err.message).to.include("NotInKycWalletNetwork()");
+                expect(err.message).to.include("NotInKycAddressNetwork()");
                 error_on_call = true;
             }
             expect(error_on_call).to.equal(true);
+        });
+
+        it("should transfer investment from one user to another, called from an admin", async function () {
+            const {
+                investmentHandler,
+                signer,
+                manager,
+                pledgeAmount,
+                depositAmount,
+                user,
+                user2,
+                testProjectTokenAddress,
+                testInvestmentTokensAlloc,
+                testInvestmentStablecoin,
+                testInvestmentUsdAlloc,
+                mockUsdc,
+                mockProjectToken,
+                approvalValue,
+                userPhaseIndex,
+            } = await loadFixture(setupFixture);
+
+            const add_investment = await investmentHandler.connect(manager).addInvestment(signer.address, testInvestmentStablecoin, testInvestmentUsdAlloc);
+            await add_investment.wait();
+
+            const investmentId = await investmentHandler.latestInvestmentId();
+
+            const set_phase_to_shark = await investmentHandler.connect(manager).setInvestmentContributionPhase(investmentId, 2);
+            await set_phase_to_shark.wait();
+
+            const signature = await signDeposit(signer, user, pledgeAmount, userPhaseIndex);
+
+            const approve_stablecoin_spending = await mockUsdc.connect(user).approve(investmentHandler.address, approvalValue);
+            await approve_stablecoin_spending.wait();
+
+            if (logging) {
+                console.log("investmenthandler usdc balance before invest: ", await mockUsdc.balanceOf(investmentHandler.address));
+                console.log("deposit and pledge amounts: ", depositAmount, pledgeAmount);
+            }
+
+            const userParams = {
+                investmentId: investmentId,
+                maxInvestableAmount: pledgeAmount,
+                thisInvestmentAmount: depositAmount,
+                userPhase: userPhaseIndex,
+                kycAddress: user.address,
+                signature: signature,
+            };
+
+            const invest_transaction = await investmentHandler.connect(user).invest(userParams);
+            await invest_transaction.wait();
+
+            if (logging) {
+                console.log("pledgeAmount: ", pledgeAmount);
+                console.log("investmenthandler usdc balance after invest: ", await mockUsdc.balanceOf(investmentHandler.address));
+            }
+
+            const set_project_token = await investmentHandler.connect(manager).setInvestmentProjectTokenAddress(investmentId, testProjectTokenAddress);
+            await set_project_token.wait();
+
+            const set_project_token_allocation = await investmentHandler.connect(manager).setInvestmentProjectTokenAllocation(investmentId, testInvestmentTokensAlloc);
+            await set_project_token_allocation.wait();
+
+            const deposit_project_tokens = await mockProjectToken.connect(manager).transfer(investmentHandler.address, testInvestmentTokensAlloc);
+            await deposit_project_tokens.wait();
+
+            //now transfer the investment to another kyc address (user -> user2)
+            const transfer_investment = await investmentHandler.connect(manager).transferInvestment(investmentId, user.address, user2.address);
+            await transfer_investment.wait();
+
+            //check that the investment is now owned by user2
+            const investment = await investmentHandler.userInvestments(user2.address, investmentId);
+            console.log("invested", investment.totalInvestedPaymentToken.toString());
+            expect(investment.totalInvestedPaymentToken).to.equal(depositAmount);
         });
     });
 
@@ -852,9 +925,9 @@ describe("InvestmentHandler", function () {
 // HELPERS
 //============================================================
 
-async function signDeposit(signerWallet, user, pledgeAmount, phaseIndex) {
+async function signDeposit(signerAddress, user, pledgeAmount, phaseIndex) {
     const hash = ethers.utils.solidityKeccak256(["address", "uint", "uint"], [user.address, pledgeAmount, phaseIndex]);
-    const signature = await signerWallet.signMessage(ethers.utils.arrayify(hash));
+    const signature = await signerAddress.signMessage(ethers.utils.arrayify(hash));
     if (logging) console.log("Signature from js: ", signature);
     return signature;
 }
