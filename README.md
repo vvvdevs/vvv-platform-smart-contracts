@@ -1,6 +1,6 @@
 ## VVV Allocation Contracts
 
-Branch for url(VVV-21)[https://linear.app/vvvfund/issue/VVV-21/remove-upgradability-form-the-contract]: Remove upgradeability from the contract
+Branch for [VVV-21](https://linear.app/vvvfund/issue/VVV-21/remove-upgradability-form-the-contract): Remove upgradeability from the contract
 
 ### Patched Exploits
 
