@@ -44,7 +44,7 @@ contract InvestmentHandler is
     /**
      * @notice Investment struct
      * @param signer address of the signer for this investment
-     * @param contributionPhase struct containing phase and start/end times
+     * @param contributionPhase phase index (0 = closed, 1 = whales, etc.)
      * @param projectToken address of the project token
      * @param paymentToken address of the payment token
      * @param totalInvestedPaymentToken total amount of payment token invested in this investment
