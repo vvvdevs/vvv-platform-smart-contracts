@@ -6,34 +6,29 @@ pragma solidity 0.8.19;
  * @author @vvvfund (@curi0n-s + @kcper + @c0dejax)
  * @notice Handles the investment process for vVv allocations from contributing the payment token to claiming the project token
  * @notice Any address can invest on behalf of a kyc address, but only "in-network" addresses can claim on behalf of a kyc address
- * @dev This contract is upgradeable and pausable
  */
 
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import {MathUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
-import {SafeMathUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
-import {ECDSAUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
-import {SignatureCheckerUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/SignatureCheckerUpgradeable.sol";
-import {SafeERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract InvestmentHandler is 
-    Initializable, 
-    AccessControlUpgradeable,
-    PausableUpgradeable,
-    ReentrancyGuardUpgradeable
+    AccessControl,
+    Pausable,
+    ReentrancyGuard
 {
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
     // STORAGE & SETUP
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
     
-    using SafeMathUpgradeable for uint;
-    using SafeERC20Upgradeable for IERC20Upgradeable;
-
-    address public deployer;
+    using SafeMath for uint;
+    using SafeERC20 for IERC20;
     
     /// @dev role for adding and modifying investments
     bytes32 public MANAGER_ROLE;
@@ -54,8 +49,8 @@ contract InvestmentHandler is
      */
     struct Investment {
         address signer; 
-        IERC20Upgradeable projectToken;
-        IERC20Upgradeable paymentToken;
+        IERC20 projectToken;
+        IERC20 paymentToken;
         uint contributionPhase;
         uint totalInvestedPaymentToken;
         uint totalAllocatedPaymentToken;
@@ -104,9 +99,6 @@ contract InvestmentHandler is
     mapping(address => mapping(address => bool)) public isInKycAddressNetwork;
     mapping(address => address) public correspondingKycAddress;
     
-    // @curi0n-s reserve space for upgrade if needed
-    uint[48] __gap; 
-
     // Events
     event InvestmentAdded(uint indexed investmentId);
     event InvestmentPaymentTokenAddressSet(uint indexed investmentId, address indexed paymentToken);
@@ -120,6 +112,7 @@ contract InvestmentHandler is
     event AddressAddedToKycAddressNetwork(address indexed kycAddress, address indexed addedAddress);
     event AddressRemovedFromKycAddressNetwork(address indexed kycAddress, address indexed removedAddress);
     
+    // Errors
     error AddressAlreadyInKycNetwork();
     error AddressNotInKycNetwork();
     error ClaimAmountExceedsTotalClaimable();
@@ -138,23 +131,14 @@ contract InvestmentHandler is
     // INITIALIZATION & MODIFIERS
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
     
-    /// @custom:oz-upgrades-unsafe-allow constructor
+    /**
+     * @dev constructor handles role setup
+     */
     constructor() {
-        _disableInitializers();
-    }    
-    
-    function initialize() public initializer {
-        __AccessControl_init();
-        __Pausable_init();
-        __ReentrancyGuard_init();
-
-        deployer = msg.sender;
         MANAGER_ROLE = keccak256("MANAGER_ROLE");
-
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(MANAGER_ROLE, msg.sender);
-        
-    }
+    }    
 
     /**
      * @dev modifier to check addresses involved in claim
@@ -203,7 +187,6 @@ contract InvestmentHandler is
         } else if(!_contributionLimitCheck(_params)) {
             revert InvestmentAmountExceedsMax();
         }
-
         _;
     }
 
@@ -226,7 +209,7 @@ contract InvestmentHandler is
         uint _claimAmount, 
         address _tokenRecipient, 
         address _kycAddress
-    ) public whenNotPaused() claimChecks(
+    ) public whenNotPaused claimChecks(
         _investmentId, 
         _claimAmount, 
         _tokenRecipient, 
@@ -327,7 +310,7 @@ contract InvestmentHandler is
         uint userTotalInvestedPaymentToken = userInvestment.totalInvestedPaymentToken;
         uint totalInvestedPaymentToken = investment.totalInvestedPaymentToken;
 
-        return MathUpgradeable.mulDiv(totalTokenAllocated, userTotalInvestedPaymentToken, totalInvestedPaymentToken);
+        return Math.mulDiv(totalTokenAllocated, userTotalInvestedPaymentToken, totalInvestedPaymentToken);
     }
 
 
@@ -362,7 +345,7 @@ contract InvestmentHandler is
         uint userTokensClaimed = userInvestments[_kycAddress][_investmentId].totalTokensClaimed;
 
         uint contractTokenBalance = investments[_investmentId].projectToken.balanceOf(address(this));
-        uint userBaseClaimableTokens = MathUpgradeable.mulDiv(contractTokenBalance+totalTokensClaimed, userTotalInvestedPaymentToken, totalInvestedPaymentToken);
+        uint userBaseClaimableTokens = Math.mulDiv(contractTokenBalance+totalTokensClaimed, userTotalInvestedPaymentToken, totalInvestedPaymentToken);
         
         return userBaseClaimableTokens - userTokensClaimed;
     }
@@ -385,9 +368,9 @@ contract InvestmentHandler is
     function _signatureCheck(InvestParams memory _params) private view returns (bool) {
         address _signer = investments[_params.investmentId].signer;
         
-        return SignatureCheckerUpgradeable.isValidSignatureNow(
+        return SignatureChecker.isValidSignatureNow(
                 _signer,
-                ECDSAUpgradeable.toEthSignedMessageHash(keccak256(abi.encodePacked(_params.kycAddress, _params.maxInvestableAmount, _params.userPhase))),
+                ECDSA.toEthSignedMessageHash(keccak256(abi.encodePacked(_params.kycAddress, _params.maxInvestableAmount, _params.userPhase))),
                 _params.signature
         );
     }
@@ -431,8 +414,8 @@ contract InvestmentHandler is
     ) public nonReentrant onlyRole(MANAGER_ROLE) {
         investments[++latestInvestmentId] = Investment({
             signer: _signer,
-            projectToken: IERC20Upgradeable(address(0)),
-            paymentToken: IERC20Upgradeable(_paymentToken),
+            projectToken: IERC20(address(0)),
+            paymentToken: IERC20(_paymentToken),
             contributionPhase: 0,
             totalInvestedPaymentToken: 0,
             totalAllocatedPaymentToken: _totalAllocatedPaymentToken,
@@ -460,7 +443,7 @@ contract InvestmentHandler is
             revert InvestmentTokenAlreadyDeposited();
         }
         
-        investments[_investmentId].paymentToken = IERC20Upgradeable(_paymentTokenAddress);
+        investments[_investmentId].paymentToken = IERC20(_paymentTokenAddress);
         emit InvestmentPaymentTokenAddressSet(_investmentId, _paymentTokenAddress);
     }
 
@@ -468,7 +451,7 @@ contract InvestmentHandler is
      * @dev caller is admin, sets project token address for an investment
      */
     function setInvestmentProjectTokenAddress(uint _investmentId, address projectTokenAddress) public onlyRole(MANAGER_ROLE) {
-        investments[_investmentId].projectToken = IERC20Upgradeable(projectTokenAddress);
+        investments[_investmentId].projectToken = IERC20(projectTokenAddress);
         emit InvestmentProjectTokenAddressSet(_investmentId, projectTokenAddress);
     }
 
@@ -525,9 +508,9 @@ contract InvestmentHandler is
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
     function checkSignature(address signer, address _user, uint256 _maxInvestableAmount, uint _userPhase, bytes memory signature) public view returns (bool) {
         return(
-            SignatureCheckerUpgradeable.isValidSignatureNow(
+            SignatureChecker.isValidSignatureNow(
                 signer,
-                ECDSAUpgradeable.toEthSignedMessageHash(keccak256(abi.encodePacked(_user, _maxInvestableAmount, _userPhase))),
+                ECDSA.toEthSignedMessageHash(keccak256(abi.encodePacked(_user, _maxInvestableAmount, _userPhase))),
                 signature
             )
         );
