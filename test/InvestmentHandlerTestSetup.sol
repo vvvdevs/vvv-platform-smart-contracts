@@ -1,9 +1,7 @@
 //SPDX-License-Identifier: MIT
 
 /**
- * This test file is focused on testing the calculations in the InvestmentHandler contract
- * i.e. computeUserClaimableAllocationForInvestment and computeUserTotalAllocationForInvesment
- * for correctness in all token claim/deposit scenarios
+ * Setup for any tests for InvestmentHandler written with Foundry test framework
  */
 
 pragma solidity 0.8.20;
@@ -38,7 +36,7 @@ contract InvestmentHandlerTestSetup is Test {
             mockProject = new MockERC20(18); //project token
             investmentHandler.unPause();
         vm.stopPrank();        
-            
+
         generateUserAddressListAndDealEtherAndMockERC20();
         createInvestment();
     }
