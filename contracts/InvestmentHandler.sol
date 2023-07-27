@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity 0.8.20;
 
 /**
  * @title InvestmentHandler
@@ -138,6 +138,9 @@ contract InvestmentHandler is
         MANAGER_ROLE = keccak256("MANAGER_ROLE");
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(MANAGER_ROLE, msg.sender);
+
+        //user-facing functions are paused by default
+        _pause();
     }    
 
     /**
