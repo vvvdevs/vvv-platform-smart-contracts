@@ -1,11 +1,12 @@
 //SPDX-License-Identifier: MIT
-pragma solidity 0.8.20;
+pragma solidity 0.8.19;
 
 /**
  * @title InvestmentHandler
  * @author @vvvfund (@curi0n-s + @kcper + @c0dejax)
  * @notice Handles the investment process for vVv allocations from contributing the payment token to claiming the project token
  * @notice Any address can invest on behalf of a kyc address, but only "in-network" addresses can claim on behalf of a kyc address
+ * @notice For uint packing: smallest uint for payment tokens: max uint112 is 5e29. 5e11 units for 18-decimal token, 5e23 USDC (6 decimals)
  */
 
 import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
@@ -51,11 +52,11 @@ contract InvestmentHandler is
         address signer; 
         IERC20 projectToken;
         IERC20 paymentToken;
-        uint contributionPhase;
-        uint totalInvestedPaymentToken;
-        uint totalAllocatedPaymentToken;
-        uint totalTokensClaimed;
-        uint totalTokensAllocated;
+        uint8 contributionPhase;
+        uint120 totalInvestedPaymentToken;
+        uint128 totalAllocatedPaymentToken;
+        uint128 totalTokensClaimed;
+        uint128 totalTokensAllocated;
     }
 
     /**
@@ -63,10 +64,11 @@ contract InvestmentHandler is
      * @param totalInvestedPaymentToken total amount of payment token invested by user in this investment
      * @param pledgeDebt = pledgedAmount - totalInvestedPaymentToken for this investment
      * @param totalTokensClaimed total amount of project token claimed by user from this investment
+     * @notice packed into 2 words to save gas
      */
     struct UserInvestment {
-        uint totalInvestedPaymentToken;
-        uint pledgeDebt;
+        uint136 totalInvestedPaymentToken;
+        uint120 pledgeDebt;
         uint totalTokensClaimed;
     }
 
@@ -78,12 +80,13 @@ contract InvestmentHandler is
      * @param userPhase phase the user is investing in
      * @param kycAddress address of the user's in-network kyc'd address
      * @param signature signature of the user's kyc'd address
+     * @notice this packs uints into 1 word to save gas
      */
     struct InvestParams {
-        uint investmentId;
-        uint maxInvestableAmount;
-        uint thisInvestmentAmount;
-        uint userPhase;
+        uint16 investmentId;
+        uint112 thisInvestmentAmount;
+        uint120 maxInvestableAmount;
+        uint8 userPhase;
         address kycAddress;
         bytes signature;
     }
@@ -219,7 +222,7 @@ contract InvestmentHandler is
         Investment storage investment = investments[_investmentId];
 
         userInvestment.totalTokensClaimed += _claimAmount;
-        investment.totalTokensClaimed += _claimAmount;
+        investment.totalTokensClaimed += uint128(_claimAmount);
 
         investment.projectToken.safeTransfer(_tokenRecipient, _claimAmount);
 
@@ -238,13 +241,13 @@ contract InvestmentHandler is
         UserInvestment storage userInvestment = userInvestments[_params.kycAddress][_params.investmentId];
         Investment storage investment = investments[_params.investmentId];
     
-        userInvestment.totalInvestedPaymentToken += _params.thisInvestmentAmount;
+        userInvestment.totalInvestedPaymentToken += uint136(_params.thisInvestmentAmount);
         investment.totalInvestedPaymentToken += _params.thisInvestmentAmount;
         
         /// @curi0n-s [!] Confirm things will work in the case that _maxInvestableAmount changes, and user has already contributed
         /// note that userInvestment.totalInvestedPaymentToken is incremented above so the below includes
         /// both the previously invested amount as well as the current proposed investment amount
-        userInvestment.pledgeDebt = _params.maxInvestableAmount - userInvestment.totalInvestedPaymentToken;
+        userInvestment.pledgeDebt = uint120(_params.maxInvestableAmount - userInvestment.totalInvestedPaymentToken);
         userInvestmentIds[_params.kycAddress].push(_params.investmentId);
 
         investment.paymentToken.safeTransferFrom(msg.sender, address(this), _params.thisInvestmentAmount);
@@ -418,7 +421,7 @@ contract InvestmentHandler is
             paymentToken: IERC20(_paymentToken),
             contributionPhase: 0,
             totalInvestedPaymentToken: 0,
-            totalAllocatedPaymentToken: _totalAllocatedPaymentToken,
+            totalAllocatedPaymentToken: uint128(_totalAllocatedPaymentToken),
             totalTokensClaimed: 0,
             totalTokensAllocated: 0
         });
@@ -430,7 +433,7 @@ contract InvestmentHandler is
      *      0=closed, 1=whales, 2=sharks, 3=fcfs, so 4-max uintN can be used for custom phases    
      */
     function setInvestmentContributionPhase(uint _investmentId, uint _investmentPhase) public onlyRole(MANAGER_ROLE) {
-        investments[_investmentId].contributionPhase = _investmentPhase;
+        investments[_investmentId].contributionPhase = uint8(_investmentPhase);
         emit InvestmentPhaseSet(_investmentId, _investmentPhase);
     }
 
@@ -459,7 +462,7 @@ contract InvestmentHandler is
      * @dev sets the amount of project token allocated for the investent - used in computeUserTotalAllocationForInvesment
      */
     function setInvestmentProjectTokenAllocation(uint _investmentId, uint totalTokensAllocated) public onlyRole(MANAGER_ROLE) {
-        investments[_investmentId].totalTokensAllocated = totalTokensAllocated;
+        investments[_investmentId].totalTokensAllocated = uint128(totalTokensAllocated);
         emit InvestmentProjectTokenAllocationSet(_investmentId, totalTokensAllocated);
     }
 
@@ -482,8 +485,8 @@ contract InvestmentHandler is
      * @param _paymentTokenAmount amount of payment tokens to add to user's contribution
      */
     function manualAddContribution(address _kycAddress, uint _investmentId, uint _paymentTokenAmount) public nonReentrant onlyRole(MANAGER_ROLE) {
-        userInvestments[_kycAddress][_investmentId].totalInvestedPaymentToken += _paymentTokenAmount;
-        investments[_investmentId].totalInvestedPaymentToken += _paymentTokenAmount;
+        userInvestments[_kycAddress][_investmentId].totalInvestedPaymentToken += uint136(_paymentTokenAmount);
+        investments[_investmentId].totalInvestedPaymentToken += uint120(_paymentTokenAmount);
         emit UserInvestmentContribution(msg.sender, _kycAddress, _investmentId, _paymentTokenAmount);
     }
     
@@ -497,8 +500,8 @@ contract InvestmentHandler is
         if(userInvestments[_kycAddress][_investmentId].totalInvestedPaymentToken < _paymentTokenAmount){
             revert RefundAmountExceedsUserBalance();
         }        
-        userInvestments[_kycAddress][_investmentId].totalInvestedPaymentToken -= _paymentTokenAmount;
-        investments[_investmentId].totalInvestedPaymentToken -= _paymentTokenAmount;
+        userInvestments[_kycAddress][_investmentId].totalInvestedPaymentToken -= uint136(_paymentTokenAmount);
+        investments[_investmentId].totalInvestedPaymentToken -= uint120(_paymentTokenAmount);
         investments[_investmentId].paymentToken.safeTransfer(_kycAddress, _paymentTokenAmount);
         emit UserRefunded(msg.sender, _kycAddress, _investmentId, _paymentTokenAmount);
     }
