@@ -138,9 +138,6 @@ contract InvestmentHandler is
         MANAGER_ROLE = keccak256("MANAGER_ROLE");
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(MANAGER_ROLE, msg.sender);
-
-        //user-facing functions are paused by default
-        _pause();
     }    
 
     /**
