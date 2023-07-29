@@ -13,6 +13,10 @@ const etherscan_api_key = process.env.ETHERSCAN_API_KEY;
 
 module.exports = {
     solidity: "0.8.20",
+    compilerOptions: {
+        optimize: true,
+        runs: 200,
+    },
     defaultNetwork: "hardhat",
     networks: {
         goerli: {
