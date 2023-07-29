@@ -6,7 +6,8 @@ pragma solidity 0.8.20;
  * @author @vvvfund (@curi0n-s + @kcper + @c0dejax)
  * @notice Handles the investment process for vVv allocations from contributing the payment token to claiming the project token
  * @notice Any address can invest on behalf of a kyc address, but only "in-network" addresses can claim on behalf of a kyc address
- * @notice For uint packing: smallest uint for payment tokens: 2^120 = 1329227995784915872903807060280344576 = 1.3e36 wei = 1.3e18 eth = 1.3e32 usdc
+ * @notice Payment token user max: 2^120 = 1329227995784915872903807060280344576 = 1.3e36 wei = 1.3e18 eth = 1.3e32 usdc
+ * @notice Project token supply max = 2^128 = 340282366920938463463374607431768211456 = 3.4e38 = 3.4e20 eth
  */
 
 import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
