@@ -10,7 +10,7 @@ pragma solidity 0.8.20;
 import "lib/forge-std/src/Test.sol";
 import "test/InvestmentHandlerTestSetup.sol";
 import { InvestmentHandler } from "contracts/InvestmentHandler.sol";
-import { InvestmentHandlerUnoptimized } from "contracts/InvestmentHandlerUnoptimized.sol";
+import { InvestmentHandlerUnoptimized } from "contracts/ref/InvestmentHandlerUnoptimized.sol";
 import { MockERC20 } from "contracts/mock/MockERC20.sol";
 
 contract InvestmentHandlerGasSavingsTest is Test, InvestmentHandlerTestSetup {
