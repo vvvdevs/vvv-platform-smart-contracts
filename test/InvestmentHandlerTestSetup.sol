@@ -2,6 +2,7 @@
 
 /**
  * Setup for any tests for InvestmentHandler written with Foundry test framework
+ * issues with signature creation being valid...
  */
 
 pragma solidity 0.8.20;
@@ -17,11 +18,22 @@ contract InvestmentHandlerTestSetup is Test {
     MockERC20 public mockProject;
 
     address[] public users = new address[](10);
-    uint public phase = 1;
+    uint8 public phase = 1;
     uint public latestInvestmentId = 0;
-    uint public stableAmount = 1000000 * 1e6; // 1 million usdc
-    uint public ownerKey = 12345;
-    address ownerAddress = vm.addr(ownerKey);
+    uint128 public stableAmount = 1000000 * 1e6; // 1 million usdc
+    uint128 public projectAmount = 5000000000000000 * 1e18; // 1 million project tokens
+    
+    uint public deployerKey = 1234;
+    uint public defaultAdminControllerKey = 12345; //will likely be multisig 
+    uint public investmentManagerKey = 123456;
+    uint public contributionAndRefundManagerKey = 1234567;
+    uint public signerKey = 12345678;
+    
+    address deployer = vm.addr(deployerKey);
+    address defaultAdminController = vm.addr(defaultAdminControllerKey);
+    address investmentManager = vm.addr(investmentManagerKey);
+    address contributionAndRefundManager = vm.addr(contributionAndRefundManagerKey);
+    address signer = vm.addr(signerKey);
 
     struct SignatureStruct {
         address userAddress;
@@ -29,15 +41,14 @@ contract InvestmentHandlerTestSetup is Test {
         uint phase;
     }
     
-    function setUp() public {
-        vm.startPrank(ownerAddress, ownerAddress);
-            investmentHandler = new InvestmentHandler();
+    function setUp() public virtual {
+        vm.startPrank(deployer, deployer);
+            investmentHandler = new InvestmentHandler(defaultAdminController, investmentManager, contributionAndRefundManager);
             mockStable = new MockERC20(6); //usdc decimals
             mockProject = new MockERC20(18); //project token
         vm.stopPrank();        
-
-        generateUserAddressListAndDealEtherAndMockERC20();
         createInvestment();
+        generateUserAddressListAndDealEtherAndMockERC20();
     }
 
     // Helpers-----------------------------------------------------------------------------
@@ -49,8 +60,8 @@ contract InvestmentHandlerTestSetup is Test {
             vm.deal(users[i], 1 ether); // and YOU get an ETH
             mockStable.mint(users[i], stableAmount);
         }
-        vm.deal(ownerAddress, 1 ether); // and YOU get an ETH
-        mockStable.mint(ownerAddress, stableAmount);
+        vm.deal(investmentManager, 1 ether); // and YOU get an ETH
+        mockStable.mint(investmentManager, stableAmount);
     }
 
     // create concat'd 65 byte signature that ethers would generate instead of r,s,v
@@ -64,50 +75,68 @@ contract InvestmentHandlerTestSetup is Test {
         return signature;
     }
 
+    function getSignature(address _user, uint120 _amount, uint8 _phase) public view returns (bytes memory) {
+        bytes32 messageHash = keccak256(abi.encodePacked(
+            _user,
+            _amount,
+            _phase
+        ));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerKey, messageHash);
+        return toBytesConcat(r, s, v);
+    }
+
 
     // Additional Setup--------------------------------------------------------------------
 
     function createInvestment() public {
-        vm.startPrank(ownerAddress, ownerAddress);
-            investmentHandler.addInvestment(ownerAddress, address(mockStable), 1500000 * 1e18);
+        vm.startPrank(investmentManager, investmentManager);
+            investmentHandler.addInvestment(signer, address(mockStable), stableAmount);
             ++latestInvestmentId;
             investmentHandler.setInvestmentProjectTokenAddress(latestInvestmentId, address(mockProject));
+            investmentHandler.setInvestmentProjectTokenAllocation(latestInvestmentId, projectAmount);
+            investmentHandler.setInvestmentContributionPhase(latestInvestmentId, phase);
         vm.stopPrank();
     }
 
     function usersInvestRandomAmounts() public {
         for (uint i = 0; i < users.length; i++) {
-            
-            vm.startPrank(ownerAddress, ownerAddress);
-                uint randomAmountWithinBalance = uint(keccak256(abi.encodePacked(block.timestamp, i))) % mockStable.balanceOf(users[i]);
+            uint112 randomAmountWithinBalance = uint112(uint(keccak256(abi.encodePacked(block.timestamp, i))) % mockStable.balanceOf(users[i]));
+            userInvest(users[i], users[i],  randomAmountWithinBalance);
+        }
+    }
 
-                bytes32 thisMessageHash = keccak256(abi.encodePacked(
-                    users[i],
-                    randomAmountWithinBalance,
-                    phase
-                ));
-
-                (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerKey, thisMessageHash);
-
-                bytes memory thisSignature = toBytesConcat(r, s, v);
+    function userInvest(address _caller, address _kycAddress, uint112 _amount) public {
+            vm.startPrank(signer, signer);
+                bytes memory thisSignature = getSignature(_kycAddress, _amount, phase);
             vm.stopPrank();
 
-
-            vm.startPrank(users[i], users[i]);
+            vm.startPrank(_caller, _caller);
                 mockStable.approve(address(investmentHandler), type(uint).max);
                 
                 InvestmentHandler.InvestParams memory investParams = InvestmentHandler.InvestParams({
-                    investmentId: investmentHandler.latestInvestmentId(),
-                    maxInvestableAmount: stableAmount,
-                    thisInvestmentAmount: randomAmountWithinBalance,
+                    investmentId: uint16(investmentHandler.latestInvestmentId()),
+                    thisInvestmentAmount: _amount,
+                    maxInvestableAmount: uint120(_amount),
                     userPhase: 1,
-                    kycAddress: users[i],
+                    kycAddress: _kycAddress,
                     signature: thisSignature
                 });
                 
                 investmentHandler.invest(investParams);
             vm.stopPrank();
-        }
+    }
+
+    function userClaim(address _caller, address _kycAddress) public {
+        uint128 claimableAmount = investmentHandler.computeUserClaimableAllocationForInvestment(_kycAddress, latestInvestmentId);
+
+        vm.startPrank(_caller, _caller);
+            investmentHandler.claim(
+                latestInvestmentId,
+                claimableAmount,
+                _caller,
+                _kycAddress
+            );
+        vm.stopPrank();
     }
 
 }

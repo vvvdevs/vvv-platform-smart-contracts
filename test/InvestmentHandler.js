@@ -47,7 +47,7 @@ describe("InvestmentHandler", function () {
 
         let InvestmentHandler = await ethers.getContractFactory("InvestmentHandler");
         InvestmentHandler = await InvestmentHandler.connect(manager);
-        const investmentHandler = await InvestmentHandler.deploy();
+        const investmentHandler = await InvestmentHandler.deploy(manager.address, manager.address, manager.address);
         await investmentHandler.deployed();
 
         const testInvestmentStablecoin = mockUsdc.address; //USDC
@@ -93,13 +93,6 @@ describe("InvestmentHandler", function () {
             userPhaseIndex,
         };
     }
-
-    describe("Deployment", function () {
-        it("Should set the right owner", async function () {
-            const { investmentHandler, manager } = await loadFixture(setupFixture);
-            expect(await investmentHandler.deployer()).to.equal(manager.address);
-        });
-    });
 
     describe("Add/Remove Address To/From KYC Address Network", function () {
         it("should add a new address to the KYC wallet network", async function () {
@@ -875,7 +868,7 @@ describe("InvestmentHandler", function () {
             const deposit_project_tokens = await mockProjectToken.connect(manager).transfer(investmentHandler.address, testInvestmentTokensAlloc.div(3));
             await deposit_project_tokens.wait();
 
-            let totalDeposits = 1000;
+            let totalDeposits = 11;
             for (let i = 1; i <= totalDeposits; i++) {
                 const deposit_project_tokens = await mockProjectToken.connect(manager).transfer(investmentHandler.address, testInvestmentTokensAlloc.div(totalDeposits));
                 await deposit_project_tokens.wait();
@@ -922,7 +915,7 @@ describe("InvestmentHandler", function () {
 //============================================================
 
 async function signDeposit(signerAddress, user, pledgeAmount, phaseIndex) {
-    const hash = ethers.utils.solidityKeccak256(["address", "uint", "uint"], [user.address, pledgeAmount, phaseIndex]);
+    const hash = ethers.utils.solidityKeccak256(["address", "uint120", "uint8"], [user.address, pledgeAmount, phaseIndex]);
     const signature = await signerAddress.signMessage(ethers.utils.arrayify(hash));
     if (logging) console.log("Signature from js: ", signature);
     return signature;

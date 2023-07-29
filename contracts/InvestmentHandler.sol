@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity 0.8.20;
 
 /**
  * @title InvestmentHandler
@@ -32,10 +32,11 @@ contract InvestmentHandler is
     using SafeERC20 for IERC20;
     
     /// @dev role for adding and modifying investments
-    bytes32 public MANAGER_ROLE;
+    bytes32 public constant INVESTMENT_MANAGER_ROLE = keccak256("ADD_INVESTMENT_ROLE");
+    bytes32 public constant ADD_CONTRIBUTION_AND_REFUND_ROLE = keccak256("ADD_CONTRIBUTION_AND_REFUND_ROLE");
     
     /// @dev global tracker for latest investment id
-    uint public latestInvestmentId; 
+    uint16 public latestInvestmentId; 
 
     /**
      * @notice Investment struct
@@ -64,7 +65,6 @@ contract InvestmentHandler is
      * @param totalInvestedPaymentToken total amount of payment token invested by user in this investment
      * @param pledgeDebt = pledgedAmount - totalInvestedPaymentToken for this investment
      * @param totalTokensClaimed total amount of project token claimed by user from this investment
-     * @notice packed into 2 words to save gas
      */
     struct UserInvestment {
         uint136 totalInvestedPaymentToken;
@@ -80,7 +80,6 @@ contract InvestmentHandler is
      * @param userPhase phase the user is investing in
      * @param kycAddress address of the user's in-network kyc'd address
      * @param signature signature of the user's kyc'd address
-     * @notice this packs uints into 1 word to save gas
      */
     struct InvestParams {
         uint16 investmentId;
@@ -137,10 +136,14 @@ contract InvestmentHandler is
     /**
      * @dev constructor handles role setup
      */
-    constructor() {
-        MANAGER_ROLE = keccak256("MANAGER_ROLE");
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _setupRole(MANAGER_ROLE, msg.sender);
+    constructor(
+         address _defaultAdminController, 
+         address _investmentManager,
+         address _contributionAndRefundManager
+    ) {
+        _grantRole(DEFAULT_ADMIN_ROLE, _defaultAdminController);
+        _grantRole(INVESTMENT_MANAGER_ROLE, _investmentManager);
+        _grantRole(ADD_CONTRIBUTION_AND_REFUND_ROLE, _contributionAndRefundManager);
     }    
 
     /**
@@ -209,7 +212,7 @@ contract InvestmentHandler is
      */
     function claim(
         uint _investmentId, 
-        uint _claimAmount, 
+        uint128 _claimAmount, 
         address _tokenRecipient, 
         address _kycAddress
     ) public whenNotPaused claimChecks(
@@ -222,7 +225,7 @@ contract InvestmentHandler is
         Investment storage investment = investments[_investmentId];
 
         userInvestment.totalTokensClaimed += _claimAmount;
-        investment.totalTokensClaimed += uint128(_claimAmount);
+        investment.totalTokensClaimed += _claimAmount;
 
         investment.projectToken.safeTransfer(_tokenRecipient, _claimAmount);
 
@@ -244,9 +247,6 @@ contract InvestmentHandler is
         userInvestment.totalInvestedPaymentToken += uint136(_params.thisInvestmentAmount);
         investment.totalInvestedPaymentToken += _params.thisInvestmentAmount;
         
-        /// @curi0n-s [!] Confirm things will work in the case that _maxInvestableAmount changes, and user has already contributed
-        /// note that userInvestment.totalInvestedPaymentToken is incremented above so the below includes
-        /// both the previously invested amount as well as the current proposed investment amount
         userInvestment.pledgeDebt = uint120(_params.maxInvestableAmount - userInvestment.totalInvestedPaymentToken);
         userInvestmentIds[_params.kycAddress].push(_params.investmentId);
 
@@ -319,29 +319,11 @@ contract InvestmentHandler is
 
     /**
      * @dev function to compute current amount claimable by user for an investment
-     * @param _sender the address of the user claiming
+     * @param _kycAddress the address on whose behalf the claim is being made by msg.sender
      * @param _investmentId the id of the investment the user is claiming from
      * @notice contractTokenBalnce + totalTokensClaimed is used to preserve user's claimable balance regardless of order
      */
-
-    /**
-        NOTES:
-        this will be a bit spicy - this will calculate claimable tokens, 
-        based on users % share of allocation
-
-        assumes that since they could invest, no further signature validation of the pledge amount is needed
-
-        confirm that math works out regardless of claim timing and frequency!
-
-        [confirm] contract balance of token + total tokens claimed is used to preserve user's claimable balance regardless of order
-
-        no checks for math yet, but this assumes that (totalTokensAllocated*userTotalInvestedPaymentToken)/totalInvestedPaymentToken
-        will work, i.e. num >> denom, when assigning to userTotalClaimableTokens. if not, maybe will need to add 
-        the case for num < denom. same thing for userBaseClaimableTokens
-
-        i.e. consider that we get 1 Investment Token for 1000 Payment Tokens (both 18 decimals), will rounding/truncation errors get significant?
-     */
-    function computeUserClaimableAllocationForInvestment(address _kycAddress, uint _investmentId) public view returns (uint) {
+    function computeUserClaimableAllocationForInvestment(address _kycAddress, uint _investmentId) public view returns (uint128) {
         uint totalInvestedPaymentToken = investments[_investmentId].totalInvestedPaymentToken;
         uint totalTokensClaimed = investments[_investmentId].totalTokensClaimed;
         uint userTotalInvestedPaymentToken = userInvestments[_kycAddress][_investmentId].totalInvestedPaymentToken;
@@ -350,7 +332,7 @@ contract InvestmentHandler is
         uint contractTokenBalance = investments[_investmentId].projectToken.balanceOf(address(this));
         uint userBaseClaimableTokens = Math.mulDiv(contractTokenBalance+totalTokensClaimed, userTotalInvestedPaymentToken, totalInvestedPaymentToken);
         
-        return userBaseClaimableTokens - userTokensClaimed;
+        return uint128(userBaseClaimableTokens - userTokensClaimed);
     }
 
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
@@ -359,6 +341,8 @@ contract InvestmentHandler is
     
     /**
      * @dev returns true if investment is open for a user based on their assigned phase
+     * @param _investmentId the id of the investment the user is checking
+     * @param _userPhase the phase the user is assigned to for the investment
      */
     function investmentIsOpen(uint _investmentId, uint _userPhase) public view returns (bool) {
         return investments[_investmentId].contributionPhase == _userPhase;
@@ -405,23 +389,23 @@ contract InvestmentHandler is
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
 
     /**
-     * For now, assuming MANAGER_ROLE will handle this all, and can be given to multiple addresses/roles
      * @dev this function will be used to add a new investment to the contract
+     * @notice the first investment's index will be 1, not 0
      * @notice signer, payment token, and total allocated payment token are set at the time of investment creation, 
      *         rest are default amounts to be added before claim is opened (phase=closed=0, everything else 0's)
      */
     function addInvestment(
         address _signer,
         address _paymentToken,
-        uint _totalAllocatedPaymentToken
-    ) public nonReentrant onlyRole(MANAGER_ROLE) {
+        uint128 _totalAllocatedPaymentToken
+    ) public nonReentrant onlyRole(INVESTMENT_MANAGER_ROLE) {
         investments[++latestInvestmentId] = Investment({
             signer: _signer,
             projectToken: IERC20(address(0)),
             paymentToken: IERC20(_paymentToken),
             contributionPhase: 0,
             totalInvestedPaymentToken: 0,
-            totalAllocatedPaymentToken: uint128(_totalAllocatedPaymentToken),
+            totalAllocatedPaymentToken: _totalAllocatedPaymentToken,
             totalTokensClaimed: 0,
             totalTokensAllocated: 0
         });
@@ -432,8 +416,8 @@ contract InvestmentHandler is
      * @dev sets the current phase of the investment. phases can be 0-max uintN value, but
      *      0=closed, 1=whales, 2=sharks, 3=fcfs, so 4-max uintN can be used for custom phases    
      */
-    function setInvestmentContributionPhase(uint _investmentId, uint _investmentPhase) public onlyRole(MANAGER_ROLE) {
-        investments[_investmentId].contributionPhase = uint8(_investmentPhase);
+    function setInvestmentContributionPhase(uint _investmentId, uint8 _investmentPhase) public onlyRole(INVESTMENT_MANAGER_ROLE) {
+        investments[_investmentId].contributionPhase = _investmentPhase;
         emit InvestmentPhaseSet(_investmentId, _investmentPhase);
     }
 
@@ -441,7 +425,7 @@ contract InvestmentHandler is
      * @dev sets the token address of the payment token for the investment
      * @notice this function can only be called before any investment funds are deposited for the investment
      */
-    function setInvestmentPaymentTokenAddress(uint _investmentId, address _paymentTokenAddress) public onlyRole(MANAGER_ROLE) {
+    function setInvestmentPaymentTokenAddress(uint _investmentId, address _paymentTokenAddress) public onlyRole(INVESTMENT_MANAGER_ROLE) {
         if(investments[_investmentId].totalInvestedPaymentToken != 0){
             revert InvestmentTokenAlreadyDeposited();
         }
@@ -453,7 +437,7 @@ contract InvestmentHandler is
     /**
      * @dev caller is admin, sets project token address for an investment
      */
-    function setInvestmentProjectTokenAddress(uint _investmentId, address projectTokenAddress) public onlyRole(MANAGER_ROLE) {
+    function setInvestmentProjectTokenAddress(uint _investmentId, address projectTokenAddress) public onlyRole(INVESTMENT_MANAGER_ROLE) {
         investments[_investmentId].projectToken = IERC20(projectTokenAddress);
         emit InvestmentProjectTokenAddressSet(_investmentId, projectTokenAddress);
     }
@@ -461,8 +445,8 @@ contract InvestmentHandler is
     /**
      * @dev sets the amount of project token allocated for the investent - used in computeUserTotalAllocationForInvesment
      */
-    function setInvestmentProjectTokenAllocation(uint _investmentId, uint totalTokensAllocated) public onlyRole(MANAGER_ROLE) {
-        investments[_investmentId].totalTokensAllocated = uint128(totalTokensAllocated);
+    function setInvestmentProjectTokenAllocation(uint _investmentId, uint128 totalTokensAllocated) public onlyRole(INVESTMENT_MANAGER_ROLE) {
+        investments[_investmentId].totalTokensAllocated = totalTokensAllocated;
         emit InvestmentProjectTokenAllocationSet(_investmentId, totalTokensAllocated);
     }
 
@@ -470,11 +454,11 @@ contract InvestmentHandler is
     /**
      * @dev admin-only for pausing/unpausing all public functions
      */
-    function pause() external onlyRole(MANAGER_ROLE) {
+    function pause() external onlyRole(INVESTMENT_MANAGER_ROLE) {
         _pause();
     }
 
-    function unPause() external onlyRole(MANAGER_ROLE) {
+    function unPause() external onlyRole(INVESTMENT_MANAGER_ROLE) {
         _unpause();
     }
 
@@ -484,9 +468,9 @@ contract InvestmentHandler is
      * @param _investmentId id of investment to add contribution to
      * @param _paymentTokenAmount amount of payment tokens to add to user's contribution
      */
-    function manualAddContribution(address _kycAddress, uint _investmentId, uint _paymentTokenAmount) public nonReentrant onlyRole(MANAGER_ROLE) {
+    function manualAddContribution(address _kycAddress, uint _investmentId, uint120 _paymentTokenAmount) public nonReentrant onlyRole(ADD_CONTRIBUTION_AND_REFUND_ROLE) {
         userInvestments[_kycAddress][_investmentId].totalInvestedPaymentToken += uint136(_paymentTokenAmount);
-        investments[_investmentId].totalInvestedPaymentToken += uint120(_paymentTokenAmount);
+        investments[_investmentId].totalInvestedPaymentToken += _paymentTokenAmount;
         emit UserInvestmentContribution(msg.sender, _kycAddress, _investmentId, _paymentTokenAmount);
     }
     
@@ -496,12 +480,12 @@ contract InvestmentHandler is
      * @param _investmentId id of investment to refund from
      * @param _paymentTokenAmount amount of payment tokens to refund
      */
-    function refundUser(address _kycAddress, uint _investmentId, uint _paymentTokenAmount) public nonReentrant onlyRole(MANAGER_ROLE) {
+    function refundUser(address _kycAddress, uint _investmentId, uint120 _paymentTokenAmount) public nonReentrant onlyRole(ADD_CONTRIBUTION_AND_REFUND_ROLE) {
         if(userInvestments[_kycAddress][_investmentId].totalInvestedPaymentToken < _paymentTokenAmount){
             revert RefundAmountExceedsUserBalance();
         }        
         userInvestments[_kycAddress][_investmentId].totalInvestedPaymentToken -= uint136(_paymentTokenAmount);
-        investments[_investmentId].totalInvestedPaymentToken -= uint120(_paymentTokenAmount);
+        investments[_investmentId].totalInvestedPaymentToken -= _paymentTokenAmount;
         investments[_investmentId].paymentToken.safeTransfer(_kycAddress, _paymentTokenAmount);
         emit UserRefunded(msg.sender, _kycAddress, _investmentId, _paymentTokenAmount);
     }
@@ -509,7 +493,7 @@ contract InvestmentHandler is
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
     // TESTING - TO BE DELETED LATER?
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
-    function checkSignature(address signer, address _user, uint256 _maxInvestableAmount, uint _userPhase, bytes memory signature) public view returns (bool) {
+    function checkSignature(address signer, address _user, uint120 _maxInvestableAmount, uint8 _userPhase, bytes memory signature) public view returns (bool) {
         return(
             SignatureChecker.isValidSignatureNow(
                 signer,
