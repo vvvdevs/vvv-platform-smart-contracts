@@ -2,12 +2,7 @@ require("@nomicfoundation/hardhat-toolbox");
 require("@nomicfoundation/hardhat-foundry");
 require("@openzeppelin/hardhat-upgrades");
 require("dotenv").config();
-
-// Potentially not needed...
-// require("@nomiclabs/hardhat-ethers");
-// require("@nomiclabs/hardhat-waffle");
-// require("@nomiclabs/hardhat-etherscan");
-// require('hardhat-deploy');
+require("hardhat-gas-reporter");
 
 const dev_wallet_key = process.env.PRIVATE_KEY;
 const etherscan_api_key = process.env.ETHERSCAN_API_KEY;
@@ -17,31 +12,36 @@ const etherscan_api_key = process.env.ETHERSCAN_API_KEY;
  */
 
 module.exports = {
-  solidity: "0.8.19",
-  defaultNetwork: "hardhat",
-  networks: {
-    goerli: {
-      chainId: 5,
-      url: process.env.ETH_GOERLI_TESTNET_URL || "",
-      accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+    solidity: "0.8.20",
+    defaultNetwork: "hardhat",
+    networks: {
+        goerli: {
+            chainId: 5,
+            url: process.env.ETH_GOERLI_TESTNET_URL || "",
+            accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+        },
+        sepolia: {
+            chainId: 11155111,
+            url: process.env.ETH_SEPOLIA_TESTNET_URL || "",
+            accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+        },
+        mainnet: {
+            chainId: 1,
+            url: process.env.ETH_MAINNET_TESTNET_URL || "",
+            accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+        },
+        // for the local dev environment
+        localhost: {
+            url: "http://localhost:8545",
+            accounts: [dev_wallet_key],
+        },
     },
-    sepolia: {
-      chainId: 11155111,
-      url: process.env.ETH_SEPOLIA_TESTNET_URL || "",
-      accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+    etherscan: {
+        apiKey: etherscan_api_key,
     },
-    mainnet: {
-      chainId: 1,
-      url: process.env.ETH_MAINNET_TESTNET_URL || "",
-      accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+    gasReporter: {
+        enabled: true,
+        currency: "USD",
+        gasPrice: 30,
     },
-    // for the local dev environment
-    localhost: {
-      url: "http://localhost:8545",
-      accounts: [dev_wallet_key],
-    },
-  },
-  etherscan: {
-    apiKey: etherscan_api_key,
-  },
 };
