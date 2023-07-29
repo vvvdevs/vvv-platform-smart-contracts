@@ -6,7 +6,7 @@ pragma solidity 0.8.20;
  * @author @vvvfund (@curi0n-s + @kcper + @c0dejax)
  * @notice Handles the investment process for vVv allocations from contributing the payment token to claiming the project token
  * @notice Any address can invest on behalf of a kyc address, but only "in-network" addresses can claim on behalf of a kyc address
- * @notice For uint packing: smallest uint for payment tokens: max uint112 is 5e29. 5e11 units for 18-decimal token, 5e23 USDC (6 decimals)
+ * @notice For uint packing: smallest uint for payment tokens: 2^120 = 1329227995784915872903807060280344576 = 1.3e36 wei = 1.3e18 eth = 1.3e32 usdc
  */
 
 import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
@@ -83,8 +83,8 @@ contract InvestmentHandler is
      */
     struct InvestParams {
         uint16 investmentId;
-        uint112 thisInvestmentAmount;
-        uint128 maxInvestableAmount;
+        uint120 thisInvestmentAmount;
+        uint120 maxInvestableAmount;
         uint8 userPhase;
         address kycAddress;
         bytes signature;
@@ -472,7 +472,7 @@ contract InvestmentHandler is
 
 
     /**
-     * @dev admin-only for pausing/unpausing all public functions
+     * @dev admin-only for pausing/unpausing all user-facing functions
      */
     function pause() external payable onlyRole(INVESTMENT_MANAGER_ROLE) {
         _pause();
