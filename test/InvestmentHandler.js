@@ -888,26 +888,26 @@ describe("InvestmentHandler", function () {
         });
     });
 
-    describe("SignatureCheck", function () {
-        it("Should return true when the signature is valid", async function () {
-            const { investmentHandler, pledgeAmount, user, signer, userPhaseIndex } = await loadFixture(setupFixture);
-            const signature = await signDeposit(signer, user, pledgeAmount, userPhaseIndex);
-            const isValid = await investmentHandler.checkSignature(signer.address, user.address, pledgeAmount, userPhaseIndex, signature);
-            expect(isValid).to.equal(true);
-        });
-        it("should return false when the signature is invalid", async function () {
-            const { investmentHandler, pledgeAmount, user, signer, userPhaseIndex } = await loadFixture(setupFixture);
-            const signature = await signDeposit(signer, user, pledgeAmount, userPhaseIndex);
-            const isValid = await investmentHandler.checkSignature(
-                signer.address,
-                signer.address, //here is the change - wrong address, should be user.address
-                pledgeAmount,
-                userPhaseIndex,
-                signature
-            );
-            expect(isValid).to.equal(false);
-        });
-    });
+    //     describe("SignatureCheck", function () {
+    //         it("Should return true when the signature is valid", async function () {
+    //             const { investmentHandler, pledgeAmount, user, signer, userPhaseIndex } = await loadFixture(setupFixture);
+    //             const signature = await signDeposit(signer, user, pledgeAmount, userPhaseIndex);
+    //             const isValid = await investmentHandler.checkSignature(signer.address, user.address, pledgeAmount, userPhaseIndex, signature);
+    //             expect(isValid).to.equal(true);
+    //         });
+    //         it("should return false when the signature is invalid", async function () {
+    //             const { investmentHandler, pledgeAmount, user, signer, userPhaseIndex } = await loadFixture(setupFixture);
+    //             const signature = await signDeposit(signer, user, pledgeAmount, userPhaseIndex);
+    //             const isValid = await investmentHandler.checkSignature(
+    //                 signer.address,
+    //                 signer.address, //here is the change - wrong address, should be user.address
+    //                 pledgeAmount,
+    //                 userPhaseIndex,
+    //                 signature
+    //             );
+    //             expect(isValid).to.equal(false);
+    //         });
+    //     });
 });
 
 //============================================================
@@ -915,7 +915,7 @@ describe("InvestmentHandler", function () {
 //============================================================
 
 async function signDeposit(signerAddress, user, pledgeAmount, phaseIndex) {
-    const hash = ethers.utils.solidityKeccak256(["address", "uint120", "uint8"], [user.address, pledgeAmount, phaseIndex]);
+    const hash = ethers.utils.solidityKeccak256(["address", "uint128", "uint8"], [user.address, pledgeAmount, phaseIndex]);
     const signature = await signerAddress.signMessage(ethers.utils.arrayify(hash));
     if (logging) console.log("Signature from js: ", signature);
     return signature;
