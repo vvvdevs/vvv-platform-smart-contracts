@@ -217,7 +217,7 @@ contract InvestmentHandler is
         uint128 _claimAmount, 
         address _tokenRecipient, 
         address _kycAddress
-    ) public whenNotPaused claimChecks(
+    ) external whenNotPaused claimChecks(
         _investmentId, 
         _claimAmount, 
         _tokenRecipient, 
@@ -245,7 +245,7 @@ contract InvestmentHandler is
      */
     function invest(
         InvestParams memory _params
-    ) public nonReentrant whenNotPaused investChecks(_params) {
+    ) external nonReentrant whenNotPaused investChecks(_params) {
         UserInvestment storage userInvestment = userInvestments[_params.kycAddress][_params.investmentId];
         Investment storage investment = investments[_params.investmentId];
 
@@ -269,7 +269,7 @@ contract InvestmentHandler is
      * @notice allows any address to add any other address to its network, but this is 
      *         only is of use to addresss who are kyc'd and able to invest/claim
      */
-    function addAddressToKycAddressNetwork(address _newAddress) public {
+    function addAddressToKycAddressNetwork(address _newAddress) external {
         if(correspondingKycAddress[_newAddress] != address(0)) {
             revert AddressAlreadyInKycNetwork();
         }
@@ -287,7 +287,7 @@ contract InvestmentHandler is
      * @notice allows any address to remove any other address from its network, but this is
      *         only is of use to addresss who are kyc'd and able to invest/claim
      */
-    function removeAddressFromKycAddressNetwork(address _networkAddress) public {
+    function removeAddressFromKycAddressNetwork(address _networkAddress) external {
         if(correspondingKycAddress[_networkAddress] != msg.sender) {
             revert AddressNotInKycNetwork();
         }
@@ -305,14 +305,14 @@ contract InvestmentHandler is
     /**
      * @dev returns user's total claimed project tokens for an investment
      */
-    function getTotalClaimedForInvestment(address _kycAddress, uint _investmentId) public view returns (uint) {
+    function getTotalClaimedForInvestment(address _kycAddress, uint _investmentId) external view returns (uint) {
         return userInvestments[_kycAddress][_investmentId].totalTokensClaimed;
     }
 
     /**
      * @dev for frontend - returns the total amount of project tokens a user can claim for an investment
      */
-    function computeUserTotalAllocationForInvesment(address _kycAddress, uint _investmentId) public view returns (uint) {
+    function computeUserTotalAllocationForInvesment(address _kycAddress, uint _investmentId) external view returns (uint) {
         UserInvestment storage userInvestment = userInvestments[_kycAddress][_investmentId];
         Investment storage investment = investments[_investmentId];
 
@@ -418,7 +418,7 @@ contract InvestmentHandler is
         address _signer,
         address _paymentToken,
         uint128 _totalAllocatedPaymentToken
-    ) public nonReentrant onlyRole(INVESTMENT_MANAGER_ROLE) {
+    ) external nonReentrant onlyRole(INVESTMENT_MANAGER_ROLE) {
         investments[++latestInvestmentId] = Investment({
             signer: _signer,
             projectToken: IERC20(address(0)),
@@ -436,7 +436,7 @@ contract InvestmentHandler is
      * @dev sets the current phase of the investment. phases can be 0-max uintN value, but
      *      0=closed, 1=whales, 2=sharks, 3=fcfs, so 4-max uintN can be used for custom phases    
      */
-    function setInvestmentContributionPhase(uint _investmentId, uint8 _investmentPhase) public payable onlyRole(INVESTMENT_MANAGER_ROLE) {
+    function setInvestmentContributionPhase(uint _investmentId, uint8 _investmentPhase) external payable onlyRole(INVESTMENT_MANAGER_ROLE) {
         investments[_investmentId].contributionPhase = _investmentPhase;
         emit InvestmentPhaseSet(_investmentId, _investmentPhase);
     }
@@ -445,7 +445,7 @@ contract InvestmentHandler is
      * @dev sets the token address of the payment token for the investment
      * @notice this function can only be called before any investment funds are deposited for the investment
      */
-    function setInvestmentPaymentTokenAddress(uint _investmentId, address _paymentTokenAddress) public payable onlyRole(INVESTMENT_MANAGER_ROLE) {
+    function setInvestmentPaymentTokenAddress(uint _investmentId, address _paymentTokenAddress) external payable onlyRole(INVESTMENT_MANAGER_ROLE) {
         if(investments[_investmentId].totalInvestedPaymentToken != 0){
             revert InvestmentTokenAlreadyDeposited();
         }
@@ -457,7 +457,7 @@ contract InvestmentHandler is
     /**
      * @dev caller is admin, sets project token address for an investment
      */
-    function setInvestmentProjectTokenAddress(uint _investmentId, address projectTokenAddress) public payable onlyRole(INVESTMENT_MANAGER_ROLE) {
+    function setInvestmentProjectTokenAddress(uint _investmentId, address projectTokenAddress) external payable onlyRole(INVESTMENT_MANAGER_ROLE) {
         investments[_investmentId].projectToken = IERC20(projectTokenAddress);
         emit InvestmentProjectTokenAddressSet(_investmentId, projectTokenAddress);
     }
@@ -465,7 +465,7 @@ contract InvestmentHandler is
     /**
      * @dev sets the amount of project token allocated for the investent - used in computeUserTotalAllocationForInvesment
      */
-    function setInvestmentProjectTokenAllocation(uint _investmentId, uint128 totalTokensAllocated) public payable onlyRole(INVESTMENT_MANAGER_ROLE) {
+    function setInvestmentProjectTokenAllocation(uint _investmentId, uint128 totalTokensAllocated) external payable onlyRole(INVESTMENT_MANAGER_ROLE) {
         investments[_investmentId].totalTokensAllocated = totalTokensAllocated;
         emit InvestmentProjectTokenAllocationSet(_investmentId, totalTokensAllocated);
     }
@@ -488,7 +488,7 @@ contract InvestmentHandler is
      * @param _investmentId id of investment to add contribution to
      * @param _paymentTokenAmount amount of payment tokens to add to user's contribution
      */
-    function manualAddContribution(address _kycAddress, uint _investmentId, uint128 _paymentTokenAmount) public payable nonReentrant onlyRole(ADD_CONTRIBUTION_AND_REFUND_ROLE) {
+    function manualAddContribution(address _kycAddress, uint _investmentId, uint128 _paymentTokenAmount) external payable nonReentrant onlyRole(ADD_CONTRIBUTION_AND_REFUND_ROLE) {
         
         if(_investmentId > latestInvestmentId){
             revert InvestmentDoesNotExist();
@@ -509,7 +509,7 @@ contract InvestmentHandler is
      * @param _investmentId id of investment to refund from
      * @param _paymentTokenAmount amount of payment tokens to refund
      */
-    function refundUser(address _kycAddress, uint _investmentId, uint128 _paymentTokenAmount) public payable nonReentrant onlyRole(ADD_CONTRIBUTION_AND_REFUND_ROLE) {
+    function refundUser(address _kycAddress, uint _investmentId, uint128 _paymentTokenAmount) external payable nonReentrant onlyRole(ADD_CONTRIBUTION_AND_REFUND_ROLE) {
         if(userInvestments[_kycAddress][_investmentId].totalInvestedPaymentToken < _paymentTokenAmount){
             revert RefundAmountExceedsUserBalance();
         }       
