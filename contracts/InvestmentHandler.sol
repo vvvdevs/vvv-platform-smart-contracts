@@ -249,7 +249,6 @@ contract InvestmentHandler is
         UserInvestment storage userInvestment = userInvestments[_params.kycAddress][_params.investmentId];
         Investment storage investment = investments[_params.investmentId];
 
-
         // overflows are not possible here given that user would have to invest more than 2^128 paymentToken or 5e23 USDC
         unchecked {
             investment.totalInvestedPaymentToken += _params.thisInvestmentAmount;
