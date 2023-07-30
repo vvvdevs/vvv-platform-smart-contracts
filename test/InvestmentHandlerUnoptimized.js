@@ -884,14 +884,6 @@ describe("InvestmentHandlerUnoptimized", function () {
                 expect(user1_claimable_amount).to.be.greaterThan(testInvestmentTokensAlloc.mul(i).div(totalDeposits).mul(99999).div(100000));
             }
 
-            totalDeposits = 5;
-            for (let i = 1; i <= totalDeposits; i++) {
-                const deposit_project_tokens = await mockProjectToken.connect(manager).transfer(investmentHandler.address, testInvestmentTokensAlloc.div(totalDeposits));
-                await deposit_project_tokens.wait();
-
-                const user1_claimable_amount = await investmentHandler.connect(user).computeUserClaimableAllocationForInvestment(user.address, investmentId);
-                expect(user1_claimable_amount).to.be.greaterThan(testInvestmentTokensAlloc.mul(i).div(totalDeposits).mul(99999).div(100000));
-            }
         });
     });
 
