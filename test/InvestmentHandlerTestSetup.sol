@@ -7,9 +7,11 @@
 
 pragma solidity 0.8.20;
 
-import "lib/forge-std/src/Test.sol";
+import "lib/forge-std/src/Test.sol"; //for stateless tests
+
 import { InvestmentHandler } from "contracts/InvestmentHandler.sol";
 import { MockERC20 } from "contracts/mock/MockERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract InvestmentHandlerTestSetup is Test {
     
@@ -19,21 +21,28 @@ contract InvestmentHandlerTestSetup is Test {
 
     address[] public users = new address[](10);
     uint8 public phase = 1;
-    uint public latestInvestmentId = 0;
+    uint public latestInvestmentIdFromTesting = 0;
     uint128 public stableAmount = 1000000 * 1e6; // 1 million usdc
     uint128 public projectAmount = 5000000000000000 * 1e18; // 1 million project tokens
     
     uint public deployerKey = 1234;
     uint public defaultAdminControllerKey = 12345; //will likely be multisig 
     uint public investmentManagerKey = 123456;
-    uint public contributionAndRefundManagerKey = 1234567;
-    uint public signerKey = 12345678;
+    uint public contributionManagerKey = 1234567;
+    uint public refundManagerKey = 12345678;
+    uint public signerKey = 123456789;
     
     address deployer = vm.addr(deployerKey);
     address defaultAdminController = vm.addr(defaultAdminControllerKey);
     address investmentManager = vm.addr(investmentManagerKey);
-    address contributionAndRefundManager = vm.addr(contributionAndRefundManagerKey);
+    address contributionManager = vm.addr(contributionManagerKey);
+    address refundManager = vm.addr(refundManagerKey);
     address signer = vm.addr(signerKey);
+
+    address sampleUser;
+    address sampleKycAddress;
+
+    bool logging = true;
 
     struct SignatureStruct {
         address userAddress;
@@ -43,7 +52,7 @@ contract InvestmentHandlerTestSetup is Test {
     
     function setUp() public virtual {
         vm.startPrank(deployer, deployer);
-            investmentHandler = new InvestmentHandler(defaultAdminController, investmentManager, contributionAndRefundManager);
+            investmentHandler = new InvestmentHandler(defaultAdminController, investmentManager, contributionManager, refundManager);
             mockStable = new MockERC20(6); //usdc decimals
             mockProject = new MockERC20(18); //project token
         vm.stopPrank();        
@@ -62,6 +71,9 @@ contract InvestmentHandlerTestSetup is Test {
         }
         vm.deal(investmentManager, 1 ether); // and YOU get an ETH
         mockStable.mint(investmentManager, stableAmount);
+
+        sampleKycAddress = users[0];
+        sampleUser = users[1];
     }
 
     // create concat'd 65 byte signature that ethers would generate instead of r,s,v
@@ -75,14 +87,28 @@ contract InvestmentHandlerTestSetup is Test {
         return signature;
     }
 
-    function getSignature(address _user, uint120 _amount, uint8 _phase) public view returns (bytes memory) {
+    function prefixed(bytes32 hash) internal pure returns (bytes32) {
+        return keccak256(
+            abi.encodePacked("\x19Ethereum Signed Message:\n32", hash)
+        );
+    }
+
+    function getSignature(address _user, uint120 _amount, uint8 _phase) public returns (bytes memory) {
         bytes32 messageHash = keccak256(abi.encodePacked(
             _user,
             _amount,
             _phase
         ));
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerKey, messageHash);
-        return toBytesConcat(r, s, v);
+        bytes32 prefixedHash = prefixed(messageHash);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerKey, prefixedHash);
+        bytes memory signature = toBytesConcat(r, s, v);
+
+        if(logging){
+            emit log_named_bytes32("hash", messageHash);
+            emit log_named_bytes("signature", signature);
+        }
+
+        return signature;
     }
 
 
@@ -91,10 +117,10 @@ contract InvestmentHandlerTestSetup is Test {
     function createInvestment() public {
         vm.startPrank(investmentManager, investmentManager);
             investmentHandler.addInvestment(signer, address(mockStable), stableAmount);
-            ++latestInvestmentId;
-            investmentHandler.setInvestmentProjectTokenAddress(latestInvestmentId, address(mockProject));
-            investmentHandler.setInvestmentProjectTokenAllocation(latestInvestmentId, projectAmount);
-            investmentHandler.setInvestmentContributionPhase(latestInvestmentId, phase);
+            ++latestInvestmentIdFromTesting;
+            investmentHandler.setInvestmentProjectTokenAddress(latestInvestmentIdFromTesting, address(mockProject));
+            investmentHandler.setInvestmentProjectTokenAllocation(latestInvestmentIdFromTesting, projectAmount);
+            investmentHandler.setInvestmentContributionPhase(latestInvestmentIdFromTesting, phase);
         vm.stopPrank();
     }
 
@@ -105,10 +131,16 @@ contract InvestmentHandlerTestSetup is Test {
         }
     }
 
-    function userInvest(address _caller, address _kycAddress, uint112 _amount) public {
+    function userInvest(address _caller, address _kycAddress, uint120 _amount) public {
             vm.startPrank(signer, signer);
                 bytes memory thisSignature = getSignature(_kycAddress, _amount, phase);
             vm.stopPrank();
+
+            if(_caller != _kycAddress){
+                vm.startPrank(_kycAddress, _kycAddress);
+                    investmentHandler.addAddressToKycAddressNetwork(_caller);
+                vm.stopPrank();                
+            }
 
             vm.startPrank(_caller, _caller);
                 mockStable.approve(address(investmentHandler), type(uint).max);
@@ -127,11 +159,11 @@ contract InvestmentHandlerTestSetup is Test {
     }
 
     function userClaim(address _caller, address _kycAddress) public {
-        uint128 claimableAmount = investmentHandler.computeUserClaimableAllocationForInvestment(_kycAddress, latestInvestmentId);
+        uint claimableAmount = investmentHandler.computeUserClaimableAllocationForInvestment(_kycAddress, latestInvestmentIdFromTesting);
 
         vm.startPrank(_caller, _caller);
             investmentHandler.claim(
-                latestInvestmentId,
+                latestInvestmentIdFromTesting,
                 claimableAmount,
                 _caller,
                 _kycAddress
