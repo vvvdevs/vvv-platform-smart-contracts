@@ -140,11 +140,13 @@ contract InvestmentHandler is
     constructor(
          address _defaultAdminController, 
          address _investmentManager,
-         address _contributionAndRefundManager
+         address _contributionAndRefundManager,
+         address _refunder
     ) {
         _grantRole(DEFAULT_ADMIN_ROLE, _defaultAdminController);
         _grantRole(INVESTMENT_MANAGER_ROLE, _investmentManager);
-        _grantRole(ADD_CONTRIBUTION_AND_REFUND_ROLE, _contributionAndRefundManager);
+        _grantRole(ADD_CONTRIBUTION_ROLE, _contributionAndRefundManager);
+        _grantRole(REFUNDER_ROLE, _refunder);
     }    
 
     /**
