@@ -1,6 +1,6 @@
 ## VVV Allocation Contracts
 
-Branch for [VVV-17](https://linear.app/vvvfund/issue/VVV-17/optimization-and-security): Remove upgradeability from the contract
+Branch for [VVV-17](https://linear.app/vvvfund/issue/VVV-17/optimization-and-security): Optimization and Security
 
 ### Patched Exploits
 
