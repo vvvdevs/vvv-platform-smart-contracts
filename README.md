@@ -14,3 +14,7 @@ Branch for [VVV-21](https://linear.app/vvvfund/issue/VVV-21/remove-upgradability
 3. No use of unchecked logic, avoids any worry about InvestParams exploits in exchange for minimal gas savings - contributionLimitCheck could have been bypassed with a number which, when combined with existing invested balance could overflow uint256. This only forgoes about 700 gas per call to `invest()` or `claim()`
 4. Signature validation approach relies on the assumption that no signature will replace a previous signature with a lower amount, leaving the previous signature to permit the user to invest the wrong higher amount
 
+### To-do
+
+1. Follow as much of [simple-security-toolkit](https://github.com/nascentxyz/simple-security-toolkit/tree/main) as possible to be solidly tested before audit, to minimize audit time/costs. Could include modifications to meet FREI-PI rather than CEI as a guiding principle. Hmm.
+
