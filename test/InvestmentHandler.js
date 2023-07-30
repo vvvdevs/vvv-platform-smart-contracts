@@ -47,7 +47,7 @@ describe("InvestmentHandler", function () {
 
         let InvestmentHandler = await ethers.getContractFactory("InvestmentHandler");
         InvestmentHandler = await InvestmentHandler.connect(manager);
-        const investmentHandler = await InvestmentHandler.deploy(manager.address, manager.address, manager.address);
+        const investmentHandler = await InvestmentHandler.deploy(manager.address, manager.address, manager.address, manager.address);
         await investmentHandler.deployed();
 
         const testInvestmentStablecoin = mockUsdc.address; //USDC
