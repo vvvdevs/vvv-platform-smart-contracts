@@ -44,7 +44,7 @@ module.exports = {
         apiKey: etherscan_api_key,
     },
     gasReporter: {
-        enabled: true,
+        enabled: false,
         currency: "USD",
         gasPrice: 30,
         url: "localhost:8545"
