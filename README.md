@@ -9,7 +9,7 @@ Branch for [VVV-21](https://linear.app/vvvfund/issue/VVV-21/remove-upgradability
 
 ### Optimization Decisions as of July 29 2023
 
-1. uint128 for investment-level paymentToken, uint120 for user-level paymentToken amounts
-2. uint256 for user- and investment-level projectToken values - avoids any concern about rounding errors for weird amounts, or unusually large token supplies. This adds about 10k gas to the `claim()` calls, which with 4000usd ether, 100gwei gas would be like 4 usd, no biggie for the type of transactions we'll be facilitating
+1. uint128 for investment-level paymentToken, uint120 for user-level paymentToken amounts. for an 18 decimal usd stablecoin, max amount a project can have invested is 1.3e18 usd or 1.3 quintillion, and for usdc (6 decimals), a project can have 1.3e24 usdc or 1.3 septillion usdc.
+2. uint256 for user- and investment-level projectToken values - avoids any concern about rounding errors for weird amounts, or unusually large token supplies. This adds about 10k gas to the `claim()` calls, which with 4000usd ether, 100gwei gas would be like 4 usd, no biggie for the type of transactions we'll be facilitating. Risk of using uint128 would likely be OK if more gas savings are desired.
 3. No use of unchecked logic, avoids any worry about InvestParams exploits in exchange for minimal gas savings - contributionLimitCheck could have been bypassed with a number which, when combined with existing invested balance could overflow uint256. This only forgoes about 700 gas per call to `invest()` or `claim()`
 
