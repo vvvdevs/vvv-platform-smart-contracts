@@ -47,5 +47,6 @@ module.exports = {
         enabled: true,
         currency: "USD",
         gasPrice: 30,
+        url: "localhost:8545"
     },
 };
