@@ -162,12 +162,7 @@ contract InvestmentHandler is AccessControl, Pausable, ReentrancyGuard {
      * @dev modifier to check addresses involved in claim
      * @dev msg.sender and _tokenRecipient must be in network of _kycAddress
      */
-    modifier claimChecks(
-        uint256 _investmentId,
-        uint256 _thisClaimAmount,
-        address _tokenRecipient,
-        address _kycAddress
-    ) {
+    modifier claimChecks(uint16 _investmentId, uint256 _thisClaimAmount, address _tokenRecipient, address _kycAddress) {
         uint256 claimableTokens = computeUserClaimableAllocationForInvestment(_kycAddress, _investmentId);
 
         if (_thisClaimAmount > claimableTokens) {
@@ -217,7 +212,7 @@ contract InvestmentHandler is AccessControl, Pausable, ReentrancyGuard {
      * @param _claimAmount the amount of tokens the user is claiming
      * @param _tokenRecipient the address the address which will receive the tokens
      */
-    function claim(uint256 _investmentId, uint256 _claimAmount, address _tokenRecipient, address _kycAddress)
+    function claim(uint16 _investmentId, uint256 _claimAmount, address _tokenRecipient, address _kycAddress)
         external
         whenNotPaused
         claimChecks(_investmentId, _claimAmount, _tokenRecipient, _kycAddress)
@@ -296,14 +291,14 @@ contract InvestmentHandler is AccessControl, Pausable, ReentrancyGuard {
     /**
      * @dev returns user's total claimed project tokens for an investment
      */
-    function getTotalClaimedForInvestment(address _kycAddress, uint256 _investmentId) external view returns (uint256) {
+    function getTotalClaimedForInvestment(address _kycAddress, uint16 _investmentId) external view returns (uint256) {
         return userInvestments[_kycAddress][_investmentId].totalTokensClaimed;
     }
 
     /**
      * @dev for frontend - returns the total amount of project tokens a user can claim for an investment
      */
-    function computeUserTotalAllocationForInvesment(address _kycAddress, uint256 _investmentId)
+    function computeUserTotalAllocationForInvesment(address _kycAddress, uint16 _investmentId)
         external
         view
         returns (uint256)
@@ -324,7 +319,7 @@ contract InvestmentHandler is AccessControl, Pausable, ReentrancyGuard {
      * @param _kycAddress the address on whose behalf the claim is being made by msg.sender
      * @param _investmentId the id of the investment the user is claiming from
      */
-    function computeUserClaimableAllocationForInvestment(address _kycAddress, uint256 _investmentId)
+    function computeUserClaimableAllocationForInvestment(address _kycAddress, uint16 _investmentId)
         public
         view
         returns (uint256)
@@ -355,7 +350,7 @@ contract InvestmentHandler is AccessControl, Pausable, ReentrancyGuard {
      * @param _userPhase the phase the user is assigned to for the investment
      * @return true if the user's assigned phase matches the investment at _investmentId's current investment phase, false otherwise
      */
-    function investmentIsOpen(uint256 _investmentId, uint256 _userPhase) public view returns (bool) {
+    function investmentIsOpen(uint16 _investmentId, uint8 _userPhase) public view returns (bool) {
         return investments[_investmentId].contributionPhase == _userPhase;
     }
 
@@ -438,7 +433,7 @@ contract InvestmentHandler is AccessControl, Pausable, ReentrancyGuard {
     /**
      * @notice sets the current phase of the investment. phases can be 0-max uint8 value, but 0=closed, 1=whales, 2=sharks, 3=fcfs, so 4-max uintN can be used for custom phases
      */
-    function setInvestmentContributionPhase(uint256 _investmentId, uint8 _investmentPhase)
+    function setInvestmentContributionPhase(uint16 _investmentId, uint8 _investmentPhase)
         external
         payable
         onlyRole(INVESTMENT_MANAGER_ROLE)
@@ -451,7 +446,7 @@ contract InvestmentHandler is AccessControl, Pausable, ReentrancyGuard {
      * @notice sets the token address of the payment token for the investment
      * @notice this function can only be called before any investment funds are deposited for the investment
      */
-    function setInvestmentPaymentTokenAddress(uint256 _investmentId, address _paymentTokenAddress)
+    function setInvestmentPaymentTokenAddress(uint16 _investmentId, address _paymentTokenAddress)
         external
         payable
         onlyRole(INVESTMENT_MANAGER_ROLE)
@@ -467,7 +462,7 @@ contract InvestmentHandler is AccessControl, Pausable, ReentrancyGuard {
     /**
      * @notice sets project token address for an investment
      */
-    function setInvestmentProjectTokenAddress(uint256 _investmentId, address projectTokenAddress)
+    function setInvestmentProjectTokenAddress(uint16 _investmentId, address projectTokenAddress)
         external
         payable
         onlyRole(INVESTMENT_MANAGER_ROLE)
@@ -479,7 +474,7 @@ contract InvestmentHandler is AccessControl, Pausable, ReentrancyGuard {
     /**
      * @dev sets the amount of project token allocated for the investent - used in computeUserTotalAllocationForInvesment
      */
-    function setInvestmentProjectTokenAllocation(uint256 _investmentId, uint256 totalTokensAllocated)
+    function setInvestmentProjectTokenAllocation(uint16 _investmentId, uint256 totalTokensAllocated)
         external
         payable
         onlyRole(INVESTMENT_MANAGER_ROLE)
@@ -505,8 +500,8 @@ contract InvestmentHandler is AccessControl, Pausable, ReentrancyGuard {
      * @param _investmentId id of investment to add contribution to
      * @param _paymentTokenAmount amount of payment tokens to add to user's contribution
      */
-    function manualAddContribution(address _kycAddress, uint256 _investmentId, uint128 _paymentTokenAmount)
-        external
+    function manualAddContribution(address _kycAddress, uint16 _investmentId, uint128 _paymentTokenAmount)
+        public
         payable
         nonReentrant
         onlyRole(ADD_CONTRIBUTION_ROLE)
@@ -521,13 +516,24 @@ contract InvestmentHandler is AccessControl, Pausable, ReentrancyGuard {
         emit UserInvestmentContribution(msg.sender, _kycAddress, _investmentId, _paymentTokenAmount);
     }
 
+    /// @dev batch version of manualAddContribution for larger past activity imports
+    function batchManualAddContribution(
+        address[] memory _kycAddresses,
+        uint16[] memory _investmentIds,
+        uint128[] memory _paymentTokenAmount
+    ) external payable {
+        for (uint256 i = 0; i < _kycAddresses.length; i++) {
+            manualAddContribution(_kycAddresses[i], _investmentIds[i], uint128(_paymentTokenAmount[i]));
+        }
+    }
+
     /**
      * @dev manually refunds user
      * @param _kycAddress address of user to refund
      * @param _investmentId id of investment to refund from
      * @param _paymentTokenAmount amount of payment tokens to refund
      */
-    function refundUser(address _kycAddress, uint256 _investmentId, uint128 _paymentTokenAmount)
+    function refundUser(address _kycAddress, uint16 _investmentId, uint128 _paymentTokenAmount)
         external
         payable
         nonReentrant
