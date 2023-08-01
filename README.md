@@ -2,6 +2,10 @@
 
 Branch for [VVV-17](https://linear.app/vvvfund/issue/VVV-17/optimization-and-security): Optimization and Security
 
+### Features Added
+
+1. Batching function for manualAddContribution to store users' previous investment data with less function calls. Using [this gas calculator](https://www.rareskills.io/ethereum-gas-price-calculator) and the --gas-report, adding 3000 contributions would cost a total of 81473777 gas. At 2000 USD per ETH, and 40 Gwei per gas, this would amount to 6517 USD.
+
 ### Patched Exploits
 
 1. Exploit 1: \_params.signer in InvestParams could be used to exploit signature validation. Instead, used the investment's signer directly in the signature check, rather than having the user issue a signer address.
