@@ -19,9 +19,9 @@ contract InvestmentHandlerTestSetup is Test {
     MockERC20 public mockStable;
     MockERC20 public mockProject;
 
-    address[] public users = new address[](10);
+    address[] public users = new address[](3000);
     uint8 public phase = 1;
-    uint public latestInvestmentIdFromTesting = 0;
+    uint16 public latestInvestmentIdFromTesting = 0;
     uint128 public stableAmount = 1000000 * 1e6; // 1 million usdc
     uint128 public projectAmount = 5000000000000000 * 1e18; // 1 million project tokens
     
