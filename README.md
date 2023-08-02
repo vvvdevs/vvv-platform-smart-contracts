@@ -5,6 +5,7 @@ Branch for [VVV-17](https://linear.app/vvvfund/issue/VVV-17/optimization-and-sec
 ### Features Added
 
 1. Batching function for manualAddContribution to store users' previous investment data with less function calls. Using [this gas calculator](https://www.rareskills.io/ethereum-gas-price-calculator) and the --gas-report, adding 3000 contributions would cost a total of 81473777 gas. At 2000 USD per ETH, and 40 Gwei per gas, this would amount to 6517 USD.
+2. Added function to transfer payment token to the desired wallet for an investment. These would have been locked! Feel silly missing that but at least it is no longer missing.
 
 ### Patched Exploits
 
@@ -21,4 +22,5 @@ Branch for [VVV-17](https://linear.app/vvvfund/issue/VVV-17/optimization-and-sec
 ### To-do
 
 1. Follow as much of [simple-security-toolkit](https://github.com/nascentxyz/simple-security-toolkit/tree/main) as possible to be solidly tested before audit, to minimize audit time/costs. Could include modifications to meet FREI-PI rather than CEI as a guiding principle. Hmm.
+2. Can we add control of the operation in any other way? No worries about centralization, all about reliability and control.
 
