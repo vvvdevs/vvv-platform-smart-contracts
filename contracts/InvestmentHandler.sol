@@ -27,8 +27,9 @@ contract InvestmentHandler is AccessControl, Pausable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     /// @dev role for adding and modifying investment data
-    bytes32 private constant INVESTMENT_MANAGER_ROLE = keccak256("ADD_INVESTMENT_ROLE");
     bytes32 private constant ADD_CONTRIBUTION_ROLE = keccak256("ADD_CONTRIBUTION_ROLE");
+    bytes32 private constant INVESTMENT_MANAGER_ROLE = keccak256("ADD_INVESTMENT_ROLE");
+    bytes32 private constant PAYMENT_TOKEN_TRANSFER_ROLE = keccak256("PAYMENT_TOKEN_TRANSFER_ROLE");
     bytes32 private constant REFUNDER_ROLE = keccak256("REFUNDER_ROLE");
 
     /// @dev global tracker for latest investment id
@@ -125,6 +126,7 @@ contract InvestmentHandler is AccessControl, Pausable, ReentrancyGuard {
     );
     event AddressAddedToKycAddressNetwork(address indexed kycAddress, address indexed addedAddress);
     event AddressRemovedFromKycAddressNetwork(address indexed kycAddress, address indexed removedAddress);
+    event PaymentTokenTransferred(address indexed sender, uint256 indexed investmentId, address indexed recipient, uint256 amount);
 
     // Errors
     error AddressAlreadyInKycNetwork();
@@ -139,6 +141,8 @@ contract InvestmentHandler is AccessControl, Pausable, ReentrancyGuard {
     error NotInKycAddressNetwork();
     error NotKycAddress();
     error RefundAmountExceedsUserBalance();
+    error TooLateForRefund();
+    error TransferAmountExceedsInvestmentBalance();
     error UserAlreadyClaimedTokens();
 
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
@@ -156,6 +160,7 @@ contract InvestmentHandler is AccessControl, Pausable, ReentrancyGuard {
         _grantRole(INVESTMENT_MANAGER_ROLE, _investmentManager);
         _grantRole(ADD_CONTRIBUTION_ROLE, _contributionAndRefundManager);
         _grantRole(REFUNDER_ROLE, _refunder);
+        _grantRole(PAYMENT_TOKEN_TRANSFER_ROLE, _investmentManager);
     }
 
     /**
@@ -539,12 +544,14 @@ contract InvestmentHandler is AccessControl, Pausable, ReentrancyGuard {
         nonReentrant
         onlyRole(REFUNDER_ROLE)
     {
-        if (userInvestments[_kycAddress][_investmentId].totalInvestedPaymentToken < _paymentTokenAmount) {
+        // refund amount must not be more than the user has invested. this will also catch wrong investmentId inputs
+        if (_paymentTokenAmount > userInvestments[_kycAddress][_investmentId].totalInvestedPaymentToken) {
             revert RefundAmountExceedsUserBalance();
         }
 
-        if (_investmentId > latestInvestmentId) {
-            revert InvestmentDoesNotExist();
+        // contract must not contain project token, to avoid manipulation of refunds based on token price
+        if (investments[_investmentId].projectToken.balanceOf(address(this)) > 0){
+            revert TooLateForRefund();
         }
 
         userInvestments[_kycAddress][_investmentId].totalInvestedPaymentToken -= uint128(_paymentTokenAmount);
@@ -553,4 +560,26 @@ contract InvestmentHandler is AccessControl, Pausable, ReentrancyGuard {
         investments[_investmentId].paymentToken.safeTransfer(_kycAddress, _paymentTokenAmount);
         emit UserRefunded(msg.sender, _kycAddress, _investmentId, _paymentTokenAmount);
     }
+
+    /**
+     * @dev transfers payment token for investment to desired destination address (i.e. a project's wallet)
+     */
+    function transferPaymentToken(uint16 _investmentId, address _destinationAddress, uint128 _paymentTokenAmount)
+        external
+        payable
+        nonReentrant
+        onlyRole(PAYMENT_TOKEN_TRANSFER_ROLE)
+    {
+        if (_investmentId > latestInvestmentId) {
+            revert InvestmentDoesNotExist();
+        }
+
+        if (investments[_investmentId].totalInvestedPaymentToken < _paymentTokenAmount) {
+            revert TransferAmountExceedsInvestmentBalance();
+        }
+
+        investments[_investmentId].paymentToken.safeTransfer(_destinationAddress, _paymentTokenAmount);
+        emit PaymentTokenTransferred(msg.sender, _investmentId, _destinationAddress, _paymentTokenAmount);
+    }
+
 }
