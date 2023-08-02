@@ -17,7 +17,7 @@ contract InvestmentHandlerTests is InvestmentHandlerTestSetup {
      * testCreateInvestment, then invests in it from a network wallet
      */
     function testInvestFromNetworkWallet() public {
-        testCreateInvestment();
+        createInvestment();
 
         uint120 investAmount = 1000000 * 1e6;
         userInvest(sampleUser, sampleKycAddress, investAmount);
@@ -83,5 +83,21 @@ contract InvestmentHandlerTests is InvestmentHandlerTestSetup {
                 investmentHandler.userInvestments(_kycAddresses[i], _investmentIds[i]);
             assertTrue(investedPaymentToken == _paymentTokenAmounts[i]);
         }
+    }
+
+    function testTransferPaymentToken() public {
+        testInvestFromNetworkWallet();
+
+        uint128 transferAmount = 1000000 * 1e6;
+
+        vm.startPrank(investmentManager, investmentManager);
+        investmentHandler.transferPaymentToken(
+            investmentHandler.latestInvestmentId(),
+            sampleProjectTreasury,
+            transferAmount
+        );
+        
+        if(logging) console.log("mockStable.balanceOf(sampleProjectTreasury)", mockStable.balanceOf(sampleProjectTreasury));
+        assert(mockStable.balanceOf(sampleProjectTreasury) == transferAmount);
     }
 }

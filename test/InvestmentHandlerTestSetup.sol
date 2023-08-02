@@ -41,6 +41,7 @@ contract InvestmentHandlerTestSetup is Test {
 
     address sampleUser;
     address sampleKycAddress;
+    address sampleProjectTreasury;
 
     bool logging = true;
 
@@ -74,6 +75,8 @@ contract InvestmentHandlerTestSetup is Test {
 
         sampleKycAddress = users[0];
         sampleUser = users[1];
+
+        sampleProjectTreasury = address(uint160(uint(keccak256(abi.encodePacked(string("sampleTreasury!!!"), uint(1234))))));
     }
 
     // create concat'd 65 byte signature that ethers would generate instead of r,s,v
