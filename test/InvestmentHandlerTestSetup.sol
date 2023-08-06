@@ -5,7 +5,7 @@
  * issues with signature creation being valid...
  */
 
-pragma solidity 0.8.20;
+pragma solidity ^0.8.20;
 
 import "lib/forge-std/src/Test.sol"; //for stateless tests
 
