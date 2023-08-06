@@ -515,6 +515,9 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard {
         emit FunctionPaused(_selector, _isPaused);
     }
 
+    /**
+     * @dev admin-only for pausing/unpausing multiple functions. can be used as a safety measure to pause all functions in the contract 
+     */
     function batchPauseFunctions(bytes4[] calldata _selectors, bool[] calldata _isPaused)
         external
         onlyRole(ADMIN_ROLE)
