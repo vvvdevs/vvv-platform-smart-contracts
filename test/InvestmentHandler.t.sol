@@ -100,4 +100,31 @@ contract InvestmentHandlerTests is InvestmentHandlerTestSetup {
         if(logging) console.log("mockStable.balanceOf(sampleProjectTreasury)", mockStable.balanceOf(sampleProjectTreasury));
         assert(mockStable.balanceOf(sampleProjectTreasury) == transferAmount);
     }
+
+    function testFunctionIsPaused() public {
+        //pause addInvestment
+        vm.startPrank(defaultAdminController, defaultAdminController);
+            investmentHandler.pauseFunction(investmentHandler.addInvestment.selector, true);
+        vm.stopPrank();
+
+        //try to add investment
+        vm.startPrank(investmentManager, investmentManager);
+            bytes4 FUNCTION_IS_PAUSED_SELECTOR = bytes4(keccak256("FunctionIsPaused()"));
+            vm.expectRevert(FUNCTION_IS_PAUSED_SELECTOR);
+            investmentHandler.addInvestment(signer, address(mockStable), stableAmount);
+        vm.stopPrank();
+
+        //unpause addInvestment
+        vm.startPrank(defaultAdminController, defaultAdminController);
+            investmentHandler.pauseFunction(investmentHandler.addInvestment.selector, false);
+        vm.stopPrank();
+
+        //add investment
+        vm.startPrank(investmentManager, investmentManager);
+            investmentHandler.addInvestment(signer, address(mockStable), stableAmount);
+        vm.stopPrank();
+        
+    }
+
+
 }

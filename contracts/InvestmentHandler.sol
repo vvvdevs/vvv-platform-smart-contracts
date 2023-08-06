@@ -8,7 +8,6 @@ pragma solidity 0.8.20;
  * @notice Any address can invest on behalf of a kyc address, but only "in-network" addresses can claim on behalf of a kyc address
  */
 
-import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -18,7 +17,7 @@ import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/Signa
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract InvestmentHandler is AccessControl, Pausable, ReentrancyGuard {
+contract InvestmentHandler is AccessControl, ReentrancyGuard {
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
     // STORAGE & SETUP
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
@@ -27,6 +26,7 @@ contract InvestmentHandler is AccessControl, Pausable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     /// @dev role for adding and modifying investment data
+    bytes32 private constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 private constant ADD_CONTRIBUTION_ROLE = keccak256("ADD_CONTRIBUTION_ROLE");
     bytes32 private constant INVESTMENT_MANAGER_ROLE = keccak256("ADD_INVESTMENT_ROLE");
     bytes32 private constant PAYMENT_TOKEN_TRANSFER_ROLE = keccak256("PAYMENT_TOKEN_TRANSFER_ROLE");
@@ -98,7 +98,11 @@ contract InvestmentHandler is AccessControl, Pausable, ReentrancyGuard {
     mapping(address => mapping(address => bool)) public isInKycAddressNetwork;
     mapping(address => address) public correspondingKycAddress;
 
+    /// @notice function is paused by admins: functionId => bool
+    mapping(bytes4 => bool) public functionIsPaused;
+
     // Events
+    event FunctionPaused(bytes4 indexed functionId, bool indexed isPaused);
     event InvestmentAdded(uint256 indexed investmentId);
     event InvestmentPaymentTokenAddressSet(uint256 indexed investmentId, address indexed paymentToken);
     event InvestmentPhaseSet(uint256 indexed investmentId, uint256 indexed phase);
@@ -131,8 +135,9 @@ contract InvestmentHandler is AccessControl, Pausable, ReentrancyGuard {
     // Errors
     error AddressAlreadyInKycNetwork();
     error AddressNotInKycNetwork();
-    error BatchAddArrayLengthMismatch();
+    error ArrayLengthMismatch();
     error ClaimAmountExceedsTotalClaimable();
+    error FunctionIsPaused();
     error InvalidSignature();
     error InsufficientAllowance();
     error InvestmentAmountExceedsMax();
@@ -157,11 +162,17 @@ contract InvestmentHandler is AccessControl, Pausable, ReentrancyGuard {
         address _contributionAndRefundManager,
         address _refunder
     ) {
+        //Deployer is default admin while setting up roles
         _grantRole(DEFAULT_ADMIN_ROLE, _defaultAdminController);
+        _grantRole(ADMIN_ROLE, _defaultAdminController);
         _grantRole(INVESTMENT_MANAGER_ROLE, _investmentManager);
         _grantRole(ADD_CONTRIBUTION_ROLE, _contributionAndRefundManager);
         _grantRole(REFUNDER_ROLE, _refunder);
-        _grantRole(PAYMENT_TOKEN_TRANSFER_ROLE, _investmentManager);
+        _grantRole(PAYMENT_TOKEN_TRANSFER_ROLE, _investmentManager);        
+
+        //Deployer renounces default admin role
+        _revokeRole(DEFAULT_ADMIN_ROLE, _msgSender());
+
     }
 
     /**
@@ -205,6 +216,14 @@ contract InvestmentHandler is AccessControl, Pausable, ReentrancyGuard {
         _;
     }
 
+    /// @dev reverts if the function of the function selector in msg.sig is paused
+    modifier whenNotPaused() {
+        if(functionIsPaused[msg.sig]) {
+            revert FunctionIsPaused();
+        }
+        _;
+    }
+
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
     // USER WRITE FUNCTIONS (INVEST, CLAIM)
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
@@ -223,7 +242,6 @@ contract InvestmentHandler is AccessControl, Pausable, ReentrancyGuard {
         whenNotPaused
         claimChecks(_investmentId, _claimAmount, _tokenRecipient, _kycAddress)
     {
-        //EI
         UserInvestment storage userInvestment = userInvestments[_kycAddress][_investmentId];
         Investment storage investment = investments[_investmentId];
 
@@ -242,7 +260,6 @@ contract InvestmentHandler is AccessControl, Pausable, ReentrancyGuard {
      * @notice adjusts user's pledge debt (pledged - contributed)
      */
     function invest(InvestParams memory _params) external nonReentrant whenNotPaused investChecks(_params) {
-        //EI
         UserInvestment storage userInvestment = userInvestments[_params.kycAddress][_params.investmentId];
         Investment storage investment = investments[_params.investmentId];
 
@@ -421,6 +438,7 @@ contract InvestmentHandler is AccessControl, Pausable, ReentrancyGuard {
     function addInvestment(address _signer, address _paymentToken, uint128 _totalAllocatedPaymentToken)
         external
         nonReentrant
+        whenNotPaused
         onlyRole(INVESTMENT_MANAGER_ROLE)
     {
         investments[++latestInvestmentId] = Investment({
@@ -441,7 +459,7 @@ contract InvestmentHandler is AccessControl, Pausable, ReentrancyGuard {
      */
     function setInvestmentContributionPhase(uint16 _investmentId, uint8 _investmentPhase)
         external
-        payable
+        whenNotPaused
         onlyRole(INVESTMENT_MANAGER_ROLE)
     {
         investments[_investmentId].contributionPhase = _investmentPhase;
@@ -454,7 +472,7 @@ contract InvestmentHandler is AccessControl, Pausable, ReentrancyGuard {
      */
     function setInvestmentPaymentTokenAddress(uint16 _investmentId, address _paymentTokenAddress)
         external
-        payable
+        whenNotPaused
         onlyRole(INVESTMENT_MANAGER_ROLE)
     {
         if (investments[_investmentId].totalInvestedPaymentToken != 0) {
@@ -470,7 +488,7 @@ contract InvestmentHandler is AccessControl, Pausable, ReentrancyGuard {
      */
     function setInvestmentProjectTokenAddress(uint16 _investmentId, address projectTokenAddress)
         external
-        payable
+        whenNotPaused
         onlyRole(INVESTMENT_MANAGER_ROLE)
     {
         investments[_investmentId].projectToken = IERC20(projectTokenAddress);
@@ -482,7 +500,7 @@ contract InvestmentHandler is AccessControl, Pausable, ReentrancyGuard {
      */
     function setInvestmentProjectTokenAllocation(uint16 _investmentId, uint256 totalTokensAllocated)
         external
-        payable
+        whenNotPaused
         onlyRole(INVESTMENT_MANAGER_ROLE)
     {
         investments[_investmentId].totalTokensAllocated = totalTokensAllocated;
@@ -490,14 +508,24 @@ contract InvestmentHandler is AccessControl, Pausable, ReentrancyGuard {
     }
 
     /**
-     * @dev admin-only for pausing/unpausing all user-facing functions
+     * @dev admin-only for pausing/unpausing any function in the contract
      */
-    function pause() external payable onlyRole(INVESTMENT_MANAGER_ROLE) {
-        _pause();
+    function pauseFunction(bytes4 _selector, bool _isPaused) external whenNotPaused onlyRole(ADMIN_ROLE) {
+        functionIsPaused[_selector] = _isPaused;
+        emit FunctionPaused(_selector, _isPaused);
     }
 
-    function unPause() external payable onlyRole(INVESTMENT_MANAGER_ROLE) {
-        _unpause();
+    function batchPauseFunctions(bytes4[] calldata _selectors, bool[] calldata _isPaused)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
+        if(_selectors.length != _isPaused.length) {
+            revert ArrayLengthMismatch();
+        }
+        for (uint256 i = 0; i < _selectors.length; i++) {
+            functionIsPaused[_selectors[i]] = _isPaused[i];
+            emit FunctionPaused(_selectors[i], _isPaused[i]);
+        }
     }
 
     /**
@@ -508,8 +536,8 @@ contract InvestmentHandler is AccessControl, Pausable, ReentrancyGuard {
      */
     function manualAddContribution(address _kycAddress, uint16 _investmentId, uint128 _paymentTokenAmount)
         public
-        payable
         nonReentrant
+        whenNotPaused
         onlyRole(ADD_CONTRIBUTION_ROLE)
     {
         if (_investmentId > latestInvestmentId) {
@@ -527,12 +555,12 @@ contract InvestmentHandler is AccessControl, Pausable, ReentrancyGuard {
         address[] memory _kycAddresses,
         uint16[] memory _investmentIds,
         uint128[] memory _paymentTokenAmount
-    ) external payable {
+    ) external {
         if(
             _kycAddresses.length != _investmentIds.length || 
             _kycAddresses.length != _paymentTokenAmount.length
         ){
-            revert BatchAddArrayLengthMismatch();
+            revert ArrayLengthMismatch();
         }
 
         for (uint256 i = 0; i < _kycAddresses.length; ++i) {
@@ -548,8 +576,8 @@ contract InvestmentHandler is AccessControl, Pausable, ReentrancyGuard {
      */
     function refundUser(address _kycAddress, uint16 _investmentId, uint128 _paymentTokenAmount)
         external
-        payable
         nonReentrant
+        whenNotPaused
         onlyRole(REFUNDER_ROLE)
     {
         // refund amount must not be more than the user has invested. this will also catch wrong investmentId inputs
@@ -574,8 +602,8 @@ contract InvestmentHandler is AccessControl, Pausable, ReentrancyGuard {
      */
     function transferPaymentToken(uint16 _investmentId, address _destinationAddress, uint128 _paymentTokenAmount)
         external
-        payable
         nonReentrant
+        whenNotPaused
         onlyRole(PAYMENT_TOKEN_TRANSFER_ROLE)
     {
         if (_investmentId > latestInvestmentId) {
