@@ -37,7 +37,7 @@ contract InvestmentHandlerTests is InvestmentHandlerTestSetup {
             investmentHandler.computeUserClaimableAllocationForInvestment(sampleKycAddress, thisInvestmentId);
 
         vm.startPrank(sampleUser, sampleUser);
-        investmentHandler.claim(thisInvestmentId, thisClaimAmount, sampleUser, sampleKycAddress);
+            investmentHandler.claim(thisInvestmentId, thisClaimAmount, sampleUser, sampleKycAddress);
         vm.stopPrank();
 
         assertTrue(mockProject.balanceOf(sampleUser) == thisClaimAmount);

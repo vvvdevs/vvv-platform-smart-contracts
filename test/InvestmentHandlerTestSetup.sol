@@ -57,7 +57,7 @@ contract InvestmentHandlerTestSetup is Test {
             mockStable = new MockERC20(6); //usdc decimals
             mockProject = new MockERC20(18); //project token
         vm.stopPrank();        
-        createInvestment();
+        // createInvestment();
         generateUserAddressListAndDealEtherAndMockERC20();
     }
 
