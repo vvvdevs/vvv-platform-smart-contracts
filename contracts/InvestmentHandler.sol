@@ -131,6 +131,7 @@ contract InvestmentHandler is AccessControl, Pausable, ReentrancyGuard {
     // Errors
     error AddressAlreadyInKycNetwork();
     error AddressNotInKycNetwork();
+    error BatchAddArrayLengthMismatch();
     error ClaimAmountExceedsTotalClaimable();
     error InvalidSignature();
     error InsufficientAllowance();
@@ -527,8 +528,14 @@ contract InvestmentHandler is AccessControl, Pausable, ReentrancyGuard {
         uint16[] memory _investmentIds,
         uint128[] memory _paymentTokenAmount
     ) external payable {
-        for (uint256 i = 0; i < _kycAddresses.length; ++i) {
+        if(
+            _kycAddresses.length != _investmentIds.length || 
+            _kycAddresses.length != _paymentTokenAmount.length
+        ){
+            revert BatchAddArrayLengthMismatch();
+        }
 
+        for (uint256 i = 0; i < _kycAddresses.length; ++i) {
             manualAddContribution(_kycAddresses[i], _investmentIds[i], uint128(_paymentTokenAmount[i]));
         }
     }
