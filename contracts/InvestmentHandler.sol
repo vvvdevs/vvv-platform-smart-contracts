@@ -239,6 +239,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard {
      */
     function claim(uint16 _investmentId, uint256 _claimAmount, address _tokenRecipient, address _kycAddress)
         external
+        nonReentrant
         whenNotPaused
         claimChecks(_investmentId, _claimAmount, _tokenRecipient, _kycAddress)
     {
@@ -280,7 +281,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard {
      * @notice allows any address to add any other address to its network, but this is only is of use to addresss who are kyc'd and able to invest/claim
      * @param _newAddress the address of the address to be added to the network
      */
-    function addAddressToKycAddressNetwork(address _newAddress) external {
+    function addAddressToKycAddressNetwork(address _newAddress) external nonReentrant {
         if (correspondingKycAddress[_newAddress] != address(0)) {
             revert AddressAlreadyInKycNetwork();
         }
@@ -296,7 +297,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard {
      * @notice allows any address to remove any other address from its network, but this is only is of use to addresss who are kyc'd and able to invest/claim
      * @param _networkAddress the address of the address to be removed from the network, must be in the network of the calling kyc address
      */
-    function removeAddressFromKycAddressNetwork(address _networkAddress) external {
+    function removeAddressFromKycAddressNetwork(address _networkAddress) external nonReentrant {
         if (correspondingKycAddress[_networkAddress] != msg.sender) {
             revert AddressNotInKycNetwork();
         }
@@ -459,6 +460,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard {
      */
     function setInvestmentContributionPhase(uint16 _investmentId, uint8 _investmentPhase)
         external
+        nonReentrant
         whenNotPaused
         onlyRole(INVESTMENT_MANAGER_ROLE)
     {
@@ -472,6 +474,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard {
      */
     function setInvestmentPaymentTokenAddress(uint16 _investmentId, address _paymentTokenAddress)
         external
+        nonReentrant
         whenNotPaused
         onlyRole(INVESTMENT_MANAGER_ROLE)
     {
@@ -488,6 +491,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard {
      */
     function setInvestmentProjectTokenAddress(uint16 _investmentId, address projectTokenAddress)
         external
+        nonReentrant
         whenNotPaused
         onlyRole(INVESTMENT_MANAGER_ROLE)
     {
@@ -500,6 +504,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard {
      */
     function setInvestmentProjectTokenAllocation(uint16 _investmentId, uint256 totalTokensAllocated)
         external
+        nonReentrant
         whenNotPaused
         onlyRole(INVESTMENT_MANAGER_ROLE)
     {
@@ -510,7 +515,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard {
     /**
      * @dev admin-only for pausing/unpausing any function in the contract
      */
-    function pauseFunction(bytes4 _selector, bool _isPaused) external whenNotPaused onlyRole(ADMIN_ROLE) {
+    function pauseFunction(bytes4 _selector, bool _isPaused) external nonReentrant whenNotPaused onlyRole(ADMIN_ROLE) {
         functionIsPaused[_selector] = _isPaused;
         emit FunctionPaused(_selector, _isPaused);
     }
@@ -525,6 +530,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard {
         if(_selectors.length != _isPaused.length) {
             revert ArrayLengthMismatch();
         }
+
         for (uint256 i = 0; i < _selectors.length; i++) {
             functionIsPaused[_selectors[i]] = _isPaused[i];
             emit FunctionPaused(_selectors[i], _isPaused[i]);
