@@ -4,13 +4,27 @@ pragma solidity ^0.8.20;
 
 import "./InvestmentHandlerTestSetup.sol";
 
-contract InvestmentHandlerTests is InvestmentHandlerTestSetup {
+contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
+    
+    function setUp() public {
+        vm.startPrank(deployer, deployer);
+        investmentHandler =
+            new InvestmentHandler(defaultAdminController, investmentManager, contributionManager, refundManager);
+        mockStable = new MockERC20(6); //usdc decimals
+        mockProject = new MockERC20(18); //project token
+        vm.stopPrank();
+
+        targetContract(address(investmentHandler));
+
+        generateUserAddressListAndDealEtherAndMockERC20();
+    }
+
     /**
      * creates an investment and checks it incremented latestInvestmentId within the contract
      */
     function testCreateInvestment() public {
         createInvestment();
-        assertTrue(latestInvestmentIdFromTesting == investmentHandler.latestInvestmentId());
+        assertTrue(ghost_latestInvestmentId == investmentHandler.latestInvestmentId());
     }
 
     /**
