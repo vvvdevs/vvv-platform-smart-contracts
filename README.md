@@ -12,6 +12,9 @@ Branch for [VVV-17](https://linear.app/vvvfund/issue/VVV-17/optimization-and-sec
 1. Exploit 1: \_params.signer in InvestParams could be used to exploit signature validation. Instead, used the investment's signer directly in the signature check, rather than having the user issue a signer address.
 2. Exploit 2: correspondingKycAddress could be overridden as there were no checks to make sure the mapping value was not another address. added check to confirm that correspondingKycAddress[address] == address(0) before allowing a wallet to be added to network.
 
+### Added Security Measures, Testing Approaches
+1. Invariant testing.
+
 ### Optimization Decisions as of July 29 2023
 
 1. uint128 for investment-level paymentToken, uint120 for user-level paymentToken amounts. for an 18 decimal usd stablecoin, max amount a project can have invested is 1.3e18 usd or 1.3 quintillion, and for usdc (6 decimals), a project can have 1.3e24 usdc or 1.3 septillion usdc.
