@@ -5,26 +5,30 @@ pragma solidity ^0.8.20;
 import "./InvestmentHandlerTestSetup.sol";
 
 contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
-    
     function setUp() public {
         vm.startPrank(deployer, deployer);
-        investmentHandler =
-            new InvestmentHandler(defaultAdminController, investmentManager, contributionManager, refundManager);
-        mockStable = new MockERC20(6); //usdc decimals
-        mockProject = new MockERC20(18); //project token
+        investmentHandler = new InvestmentHandler(
+            defaultAdminController,
+            investmentManager,
+            contributionManager,
+            refundManager
+        );
+        mockStable = new MockStable(6); //usdc decimals
+        mockProject = new MockProject(18); //project token
         vm.stopPrank();
 
         targetContract(address(investmentHandler));
 
-        generateUserAddressListAndDealEtherAndMockERC20();
+        generateUserAddressListAndDealEtherAndMockStable();
     }
 
     /**
      * creates an investment and checks it incremented latestInvestmentId within the contract
      */
     function testCreateInvestment() public {
+        uint256 oldInvestmentId = investmentHandler.latestInvestmentId();
         createInvestment();
-        assertTrue(ghost_latestInvestmentId == investmentHandler.latestInvestmentId());
+        assertTrue(investmentHandler.latestInvestmentId() == oldInvestmentId + 1);
     }
 
     /**
@@ -36,7 +40,9 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         uint120 investAmount = 1000000 * 1e6;
         userInvest(sampleUser, sampleKycAddress, investAmount);
 
-        (,,,, uint128 investedPaymentToken,,,) = investmentHandler.investments(investmentHandler.latestInvestmentId());
+        (, , , , uint128 investedPaymentToken, , , ) = investmentHandler.investments(
+            investmentHandler.latestInvestmentId()
+        );
         assertTrue(investedPaymentToken == investAmount);
     }
 
@@ -47,11 +53,13 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         testInvestFromNetworkWallet();
 
         uint16 thisInvestmentId = investmentHandler.latestInvestmentId();
-        uint256 thisClaimAmount =
-            investmentHandler.computeUserClaimableAllocationForInvestment(sampleKycAddress, thisInvestmentId);
+        uint256 thisClaimAmount = investmentHandler.computeUserClaimableAllocationForInvestment(
+            sampleKycAddress,
+            thisInvestmentId
+        );
 
         vm.startPrank(sampleUser, sampleUser);
-            investmentHandler.claim(thisInvestmentId, thisClaimAmount, sampleUser, sampleKycAddress);
+        investmentHandler.claim(thisInvestmentId, thisClaimAmount, sampleUser, sampleKycAddress);
         vm.stopPrank();
 
         assertTrue(mockProject.balanceOf(sampleUser) == thisClaimAmount);
@@ -64,11 +72,22 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         uint16 _investmentId = investmentHandler.latestInvestmentId();
         uint128 _paymentTokenAmount = 1000000 * 1e6; // 1M USDC
 
-        vm.startPrank(contributionManager, contributionManager);
-            investmentHandler.manualAddContribution(_kycAddress, _investmentId, _paymentTokenAmount);
+        //unpause as PAUSER_ROLE
+        vm.startPrank(defaultAdminController, defaultAdminController);
+        investmentHandler.setFunctionIsPaused(investmentHandler.manualAddContribution.selector, false);
         vm.stopPrank();
-        
-        (uint128 investedPaymentToken,,)=investmentHandler.userInvestments(_kycAddress, _investmentId);
+
+        //add manual contribution as ADD_CONTRIBUTION_ROLE
+        vm.startPrank(contributionManager, contributionManager);
+        investmentHandler.manualAddContribution(
+            _kycAddress,
+            _investmentId,
+            _paymentTokenAmount,
+            pauseAfterCall
+        );
+        vm.stopPrank();
+
+        (uint128 investedPaymentToken, , ) = investmentHandler.userInvestments(_kycAddress, _investmentId);
         assertTrue(investedPaymentToken == _paymentTokenAmount);
     }
 
@@ -89,12 +108,19 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         }
 
         vm.startPrank(contributionManager, contributionManager);
-        investmentHandler.batchManualAddContribution(_kycAddresses, _investmentIds, _paymentTokenAmounts);
+        investmentHandler.batchManualAddContribution(
+            _kycAddresses,
+            _investmentIds,
+            _paymentTokenAmounts,
+            pauseAfterCall
+        );
         vm.stopPrank();
 
         for (uint256 i = 0; i < users.length; i++) {
-            (uint128 investedPaymentToken,,) =
-                investmentHandler.userInvestments(_kycAddresses[i], _investmentIds[i]);
+            (uint128 investedPaymentToken, , ) = investmentHandler.userInvestments(
+                _kycAddresses[i],
+                _investmentIds[i]
+            );
             assertTrue(investedPaymentToken == _paymentTokenAmounts[i]);
         }
     }
@@ -104,41 +130,63 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
 
         uint128 transferAmount = 1000000 * 1e6;
 
+        //unpause as PAUSER_ROLE
+        vm.startPrank(defaultAdminController, defaultAdminController);
+        investmentHandler.setFunctionIsPaused(investmentHandler.transferPaymentToken.selector, false);
+        vm.stopPrank();
+
+        //transfer payment token as PAYMENT_TOKEN_TRANSFER_ROLE
         vm.startPrank(investmentManager, investmentManager);
         investmentHandler.transferPaymentToken(
             investmentHandler.latestInvestmentId(),
             sampleProjectTreasury,
-            transferAmount
+            transferAmount,
+            pauseAfterCall
         );
-        
-        if(logging) console.log("mockStable.balanceOf(sampleProjectTreasury)", mockStable.balanceOf(sampleProjectTreasury));
+        vm.stopPrank();
+
+        if (logging)
+            console.log(
+                "mockStable.balanceOf(sampleProjectTreasury)",
+                mockStable.balanceOf(sampleProjectTreasury)
+            );
         assert(mockStable.balanceOf(sampleProjectTreasury) == transferAmount);
     }
 
     function testFunctionIsPaused() public {
         //pause addInvestment
         vm.startPrank(defaultAdminController, defaultAdminController);
-            investmentHandler.pauseFunction(investmentHandler.addInvestment.selector, true);
+        investmentHandler.setFunctionIsPaused(investmentHandler.addInvestment.selector, true);
         vm.stopPrank();
 
         //try to add investment
         vm.startPrank(investmentManager, investmentManager);
-            bytes4 FUNCTION_IS_PAUSED_SELECTOR = bytes4(keccak256("FunctionIsPaused()"));
-            vm.expectRevert(FUNCTION_IS_PAUSED_SELECTOR);
-            investmentHandler.addInvestment(signer, address(mockStable), stableAmount);
+        bytes4 FUNCTION_IS_PAUSED_SELECTOR = bytes4(keccak256("FunctionIsPaused()"));
+        vm.expectRevert(FUNCTION_IS_PAUSED_SELECTOR);
+        investmentHandler.addInvestment(signer, address(mockStable), stableAmount, pauseAfterCall);
         vm.stopPrank();
 
         //unpause addInvestment
         vm.startPrank(defaultAdminController, defaultAdminController);
-            investmentHandler.pauseFunction(investmentHandler.addInvestment.selector, false);
+        investmentHandler.setFunctionIsPaused(investmentHandler.addInvestment.selector, false);
         vm.stopPrank();
 
         //add investment
         vm.startPrank(investmentManager, investmentManager);
-            investmentHandler.addInvestment(signer, address(mockStable), stableAmount);
+        investmentHandler.addInvestment(signer, address(mockStable), stableAmount, pauseAfterCall);
         vm.stopPrank();
-        
     }
 
-
+    /**
+     * Ether cannot be sent to the contract - nonexistent fallback will revert
+     * No need to worry about false eth transfers
+     */
+    function testFailSendEtherToContract() public {
+        vm.deal(deployer, 1 ether);
+        vm.startPrank(deployer, deployer);
+        vm.expectRevert(bytes(""));
+        (bool os, ) = address(investmentHandler).call{ value: 1 wei }("");
+        vm.stopPrank();
+        assertTrue(!os);
+    }
 }

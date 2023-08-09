@@ -1,28 +1,32 @@
 //SPDX-License-Identifier: MIT
 
 /**
- * Setup for any tests for InvestmentHandler written with Foundry test framework
- * issues with signature creation being valid...
+ * @dev Setup for any tests for InvestmentHandler written with Foundry test framework
+ *
+ * BIG NOTE: I'm bad a naming things. I learned about handler testing after I had named the contract InvestmentHandler, so the handler for the InvestmentHandler is called HandlerForInvestmentHandler.
  */
 
 pragma solidity ^0.8.20;
 
 import "lib/forge-std/src/Test.sol"; //for stateless tests
 
-import {InvestmentHandler} from "contracts/InvestmentHandler.sol";
-import {MockERC20} from "contracts/mock/MockERC20.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { InvestmentHandler } from "contracts/InvestmentHandler.sol";
+import { MockStable } from "contracts/mock/MockStable.sol";
+import { MockProject } from "contracts/mock/MockProject.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { HandlerForInvestmentHandler } from "test/HandlerForInvestmentHandler.sol";
 
 contract InvestmentHandlerTestSetup is Test {
     InvestmentHandler public investmentHandler;
-    MockERC20 public mockStable;
-    MockERC20 public mockProject;
+    MockStable public mockStable;
+    MockProject public mockProject;
+
+    HandlerForInvestmentHandler public handler;
 
     address[] public users = new address[](3000);
     uint8 public phase = 1;
-    uint16 public ghost_latestInvestmentId = 0;
-    uint128 public stableAmount = 1000000 * 1e6; // 1 million usdc
-    uint128 public projectAmount = 5000000000000000 * 1e18; // 1 million project tokens
+    uint128 public stableAmount = 1_000_000 * 1e6; // 1 million usdc
+    uint128 public projectAmount = 5_000_000_000_000_000 * 1e18;
 
     uint256 public deployerKey = 1234;
     uint256 public defaultAdminControllerKey = 12345; //will likely be multisig
@@ -44,7 +48,9 @@ contract InvestmentHandlerTestSetup is Test {
     address sampleKycAddress;
     address sampleProjectTreasury;
 
-    bool logging = true;
+    bool pauseAfterCall = false;
+
+    bool logging = false;
 
     struct SignatureStruct {
         address userAddress;
@@ -52,13 +58,16 @@ contract InvestmentHandlerTestSetup is Test {
         uint256 phase;
     }
 
+    //added for use with invariant testing
+    uint16 public ghost_latestInvestmentId = 0;
     mapping(uint256 id => uint256 amount) public ghost_investedTotal;
     mapping(uint256 id => uint256 amount) public ghost_claimedTotal;
     mapping(uint256 id => uint256 amount) public ghost_depositedProjectTokens;
+
     // Helpers-----------------------------------------------------------------------------
 
     // generate list of random addresses
-    function generateUserAddressListAndDealEtherAndMockERC20() public {
+    function generateUserAddressListAndDealEtherAndMockStable() public {
         for (uint256 i = 0; i < users.length; i++) {
             users[i] = address(uint160(uint256(keccak256(abi.encodePacked(block.timestamp, i)))));
             vm.deal(users[i], 1 ether); // and YOU get an ETH
@@ -70,8 +79,9 @@ contract InvestmentHandlerTestSetup is Test {
         sampleKycAddress = users[0];
         sampleUser = users[1];
 
-        sampleProjectTreasury =
-            address(uint160(uint256(keccak256(abi.encodePacked(string("sampleTreasury!!!"), uint256(1234))))));
+        sampleProjectTreasury = address(
+            uint160(uint256(keccak256(abi.encodePacked(string("sampleTreasury!!!"), uint256(1234)))))
+        );
     }
 
     // create concat'd 65 byte signature that ethers would generate instead of r,s,v
@@ -103,25 +113,36 @@ contract InvestmentHandlerTestSetup is Test {
         return signature;
     }
 
-    // Additional Setup--------------------------------------------------------------------
+    //==================================================================================================
+    // INVESTMENT HANDLER SETUP FUNCTIONS
+    //==================================================================================================
 
     function createInvestment() public {
         vm.startPrank(investmentManager, investmentManager);
-        investmentHandler.addInvestment(signer, address(mockStable), stableAmount);
-        ++ghost_latestInvestmentId; //during addInvestment, contract's investmentId is incremented
-        investmentHandler.setInvestmentProjectTokenAddress(ghost_latestInvestmentId, address(mockProject));
-        investmentHandler.setInvestmentProjectTokenAllocation(ghost_latestInvestmentId, projectAmount);
-        investmentHandler.setInvestmentContributionPhase(ghost_latestInvestmentId, phase);
+        investmentHandler.addInvestment(signer, address(mockStable), stableAmount, pauseAfterCall);
+        investmentHandler.setInvestmentProjectTokenAddress(
+            investmentHandler.latestInvestmentId(),
+            address(mockProject),
+            pauseAfterCall
+        );
+        investmentHandler.setInvestmentProjectTokenAllocation(
+            investmentHandler.latestInvestmentId(),
+            projectAmount,
+            pauseAfterCall
+        );
+        investmentHandler.setInvestmentContributionPhase(
+            investmentHandler.latestInvestmentId(),
+            phase,
+            pauseAfterCall
+        );
         vm.stopPrank();
     }
 
     function usersInvestRandomAmounts() public {
         for (uint256 i = 0; i < users.length; i++) {
-            uint112 randomAmountWithinBalance =
-                uint112(uint256(keccak256(abi.encodePacked(block.timestamp, i))) % mockStable.balanceOf(users[i]));
-
-            ghost_investedTotal[ghost_latestInvestmentId] += randomAmountWithinBalance;
-
+            uint112 randomAmountWithinBalance = uint112(
+                uint256(keccak256(abi.encodePacked(block.timestamp, i))) % mockStable.balanceOf(users[i])
+            );
             userInvest(users[i], users[i], randomAmountWithinBalance);
         }
     }
@@ -154,31 +175,157 @@ contract InvestmentHandlerTestSetup is Test {
     }
 
     function userClaim(address _caller, address _kycAddress, uint256 _amount) public {
-        uint256 claimableAmount =
-            investmentHandler.computeUserClaimableAllocationForInvestment(_kycAddress, ghost_latestInvestmentId);
+        uint256 claimableAmount = investmentHandler.computeUserClaimableAllocationForInvestment(
+            _kycAddress,
+            investmentHandler.latestInvestmentId()
+        );
 
         if (_amount == 0) {
             _amount = claimableAmount;
         }
 
         vm.startPrank(_caller, _caller);
-        investmentHandler.claim(ghost_latestInvestmentId, _amount, _caller, _kycAddress);
+        investmentHandler.claim(investmentHandler.latestInvestmentId(), _amount, _caller, _kycAddress);
         vm.stopPrank();
-
-        ghost_claimedTotal[ghost_latestInvestmentId] += _amount;
     }
 
     function usersClaimRandomAmounts() public {
         for (uint256 i = 0; i < users.length; i++) {
-            uint256 claimableAmount =
-                investmentHandler.computeUserClaimableAllocationForInvestment(users[i], ghost_latestInvestmentId);
+            uint256 claimableAmount = investmentHandler.computeUserClaimableAllocationForInvestment(
+                users[i],
+                investmentHandler.latestInvestmentId()
+            );
             userClaim(users[i], users[i], claimableAmount);
         }
     }
 
-    function transferProjectTokensToHandler(uint256 _amount) public {
+    function transferProjectTokensToInvestmentHandler(uint256 _amount) public {
         vm.startPrank(projectSender, projectSender);
         mockProject.mint(address(this), _amount);
+        mockProject.transfer(address(investmentHandler), _amount);
+        vm.stopPrank();
+    }
+
+    //==================================================================================================
+    // HANDLER FOR INVESTMENT HANDLER HELPERS
+    // amazing naming I know
+    // tracks ghost variables for use in invariant testing as well
+    // part of following https://mirror.xyz/horsefacts.eth/Jex2YVaO65dda6zEyfM_-DXlXhOWCAoSpOx5PLocYgw
+    //==================================================================================================
+
+    function createInvestment_HandlerForInvestmentHandler() public {
+        handler.addInvestment(
+            investmentManager,
+            signer,
+            address(mockStable),
+            stableAmount,
+            pauseAfterCall
+        );
+        ++ghost_latestInvestmentId; //during addInvestment, contract's investmentId is incremented
+        handler.setInvestmentProjectTokenAddress(
+            investmentManager,
+            ghost_latestInvestmentId,
+            address(mockProject),
+            pauseAfterCall
+        );
+        handler.setInvestmentProjectTokenAllocation(
+            investmentManager,
+            ghost_latestInvestmentId,
+            projectAmount,
+            pauseAfterCall
+        );
+        handler.setInvestmentContributionPhase(
+            investmentManager,
+            ghost_latestInvestmentId,
+            phase,
+            pauseAfterCall
+        );
+    }
+
+    function usersInvestRandomAmounts_HandlerForInvestmentHandler() public {
+        for (uint256 i = 0; i < users.length; i++) {
+            uint112 randomAmountWithinBalance = uint112(
+                uint256(keccak256(abi.encodePacked(block.timestamp, i))) % mockStable.balanceOf(users[i])
+            );
+            userInvest_HandlerForInvestmentHandler(
+                users[i],
+                users[i],
+                users[i],
+                randomAmountWithinBalance
+            );
+        }
+    }
+
+    function userInvest_HandlerForInvestmentHandler(
+        address _caller,
+        address _newAddress,
+        address _kycAddress,
+        uint120 _amount
+    ) public {
+        vm.startPrank(signer, signer);
+        bytes memory thisSignature = getSignature(_kycAddress, _amount, phase);
+        vm.stopPrank();
+
+        if (_caller != _kycAddress) {
+            handler.addAddressToKycAddressNetwork(_caller, _newAddress);
+        }
+
+        vm.startPrank(_caller, _caller);
+        mockStable.approve(address(handler), type(uint256).max);
+        vm.stopPrank();
+
+        InvestmentHandler.InvestParams memory investParams = InvestmentHandler.InvestParams({
+            investmentId: uint16(handler.latestInvestmentId()),
+            thisInvestmentAmount: _amount,
+            maxInvestableAmount: uint120(_amount),
+            userPhase: 1,
+            kycAddress: _kycAddress,
+            signature: thisSignature
+        });
+
+        handler.invest(_caller, investParams);
+
+        //update ghosts
+        ghost_investedTotal[ghost_latestInvestmentId] += _amount;
+    }
+
+    function userClaim_HandlerForInvestmentHandler(
+        address _caller,
+        address _kycAddress,
+        uint256 _amount
+    ) public {
+        uint256 claimableAmount = handler.computeUserClaimableAllocationForInvestment(
+            _kycAddress,
+            ghost_latestInvestmentId
+        );
+
+        if (_amount == 0) {
+            _amount = claimableAmount;
+        }
+
+        handler.claim(_caller, ghost_latestInvestmentId, _amount, _caller, _kycAddress);
+
+        //update ghosts
+        ghost_claimedTotal[ghost_latestInvestmentId] += _amount;
+    }
+
+    function usersClaimRandomAmounts_HandlerForInvestmentHandler() public {
+        for (uint256 i = 0; i < users.length; i++) {
+            uint256 claimableAmount = handler.computeUserClaimableAllocationForInvestment(
+                users[i],
+                ghost_latestInvestmentId
+            );
+            userClaim_HandlerForInvestmentHandler(users[i], users[i], claimableAmount);
+        }
+    }
+
+    function transferProjectTokensTo_HandlerForInvestmentHandler(uint256 _amount) public {
+        vm.startPrank(projectSender, projectSender);
+        mockProject.mint(projectSender, _amount);
+        mockProject.transfer(address(handler), _amount);
+        vm.stopPrank();
+
+        //update ghosts
         ghost_depositedProjectTokens[ghost_latestInvestmentId] += _amount;
     }
 }
