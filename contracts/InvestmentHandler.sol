@@ -359,6 +359,16 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard {
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
 
     /**
+     * @dev returns user's total invested payment token for an investment
+     */
+    function getTotalInvestedForInvestment(
+        address _kycAddress,
+        uint16 _investmentId
+    ) external view returns (uint256) {
+        return userInvestments[_kycAddress][_investmentId].totalInvestedPaymentToken;
+    }
+
+    /**
      * @dev returns user's total claimed project tokens for an investment
      */
     function getTotalClaimedForInvestment(
