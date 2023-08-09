@@ -31,6 +31,55 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         assertTrue(investmentHandler.latestInvestmentId() == oldInvestmentId + 1);
     }
 
+    function testAlterInvestmentParams() public {
+        createInvestment();
+        uint8 desiredContributionPhase = 1;
+        uint16 latestId = investmentHandler.latestInvestmentId();
+        address newPaymentTokenAddress = address(mockStable);
+        address newProjectTokenAddress = address(mockProject);
+        uint256 newTokensAllocated = 123456789 * 1e18;
+
+        vm.startPrank(investmentManager, investmentManager);
+        investmentHandler.setInvestmentContributionPhase(
+            latestId,
+            desiredContributionPhase,
+            pauseAfterCall
+        );
+        investmentHandler.setInvestmentPaymentTokenAddress(
+            latestId,
+            newPaymentTokenAddress,
+            pauseAfterCall
+        );
+        investmentHandler.setInvestmentProjectTokenAddress(
+            latestId,
+            newProjectTokenAddress,
+            pauseAfterCall
+        );
+        investmentHandler.setInvestmentProjectTokenAllocation(
+            latestId,
+            newTokensAllocated,
+            pauseAfterCall
+        );
+
+        vm.stopPrank();
+
+        (
+            ,
+            IERC20 projectToken,
+            IERC20 paymentToken,
+            uint8 currentPhase,
+            ,
+            ,
+            ,
+            uint256 tokensAllocated
+        ) = investmentHandler.investments(latestId);
+
+        assertTrue(address(paymentToken) == newPaymentTokenAddress);
+        assertTrue(address(projectToken) == newProjectTokenAddress);
+        assertTrue(currentPhase == desiredContributionPhase);
+        assertTrue(tokensAllocated == newTokensAllocated);
+    }
+
     /**
      * testCreateInvestment, then invests in it from a network wallet
      */
