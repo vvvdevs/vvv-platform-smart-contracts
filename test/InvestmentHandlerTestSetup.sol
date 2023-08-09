@@ -15,6 +15,7 @@ import { MockStable } from "contracts/mock/MockStable.sol";
 import { MockProject } from "contracts/mock/MockProject.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { HandlerForInvestmentHandler } from "test/HandlerForInvestmentHandler.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 
 contract InvestmentHandlerTestSetup is Test {
     InvestmentHandler public investmentHandler;
@@ -23,10 +24,10 @@ contract InvestmentHandlerTestSetup is Test {
 
     HandlerForInvestmentHandler public handler;
 
-    address[] public users = new address[](3000);
+    address[] public users = new address[](333);
     uint8 public phase = 1;
     uint128 public stableAmount = 1_000_000 * 1e6; // 1 million usdc
-    uint128 public projectAmount = 5_000_000_000_000_000 * 1e18;
+    uint128 public projectAmount = 5_000_000_000 * 1e18;
 
     uint256 public deployerKey = 1234;
     uint256 public defaultAdminControllerKey = 12345; //will likely be multisig
@@ -63,6 +64,8 @@ contract InvestmentHandlerTestSetup is Test {
     mapping(uint256 id => uint256 amount) public ghost_investedTotal;
     mapping(uint256 id => uint256 amount) public ghost_claimedTotal;
     mapping(uint256 id => uint256 amount) public ghost_depositedProjectTokens;
+    mapping(uint256 id => mapping(address => uint256)) public ghost_userInvestedTotal;
+    mapping(uint256 id => mapping(address => uint256)) public ghost_userClaimedTotal;
 
     // Helpers-----------------------------------------------------------------------------
 
@@ -287,6 +290,7 @@ contract InvestmentHandlerTestSetup is Test {
 
         //update ghosts
         ghost_investedTotal[ghost_latestInvestmentId] += _amount;
+        ghost_userInvestedTotal[ghost_latestInvestmentId][_caller] += _amount;
     }
 
     function userClaim_HandlerForInvestmentHandler(
@@ -307,6 +311,7 @@ contract InvestmentHandlerTestSetup is Test {
 
         //update ghosts
         ghost_claimedTotal[ghost_latestInvestmentId] += _amount;
+        ghost_userClaimedTotal[ghost_latestInvestmentId][_caller] += _amount;
     }
 
     function usersClaimRandomAmounts_HandlerForInvestmentHandler() public {
@@ -327,5 +332,19 @@ contract InvestmentHandlerTestSetup is Test {
 
         //update ghosts
         ghost_depositedProjectTokens[ghost_latestInvestmentId] += _amount;
+    }
+
+    function getProjectToPaymentTokenRatioRandomAddress_HandlerForInvestmentHandler(
+        uint256 _index
+    ) public view returns (uint256) {
+        address user = users[_index];
+        uint totalClaimed = handler.getTotalClaimedForInvestment(user, ghost_latestInvestmentId);
+        uint remainingClaimable = handler.computeUserClaimableAllocationForInvestment(
+            user,
+            ghost_latestInvestmentId
+        );
+        uint investedAmount = handler.getTotalInvestedForInvestment(user, ghost_latestInvestmentId);
+        uint projectToPaymentRatio = Math.mulDiv(totalClaimed + remainingClaimable, 1, investedAmount);
+        return projectToPaymentRatio;
     }
 }

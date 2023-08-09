@@ -8,6 +8,8 @@ import { MockProject } from "contracts/mock/MockProject.sol";
 import "lib/forge-std/src/Test.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+/// @dev a handler to act between the fuzzer and the investmentHandler contract
+
 contract HandlerForInvestmentHandler is Test {
     InvestmentHandler public investmentHandler;
     MockStable public mockStable;
@@ -94,17 +96,33 @@ contract HandlerForInvestmentHandler is Test {
     function setInvestmentProjectTokenAllocation(
         address _caller,
         uint16 _investmentId,
-        uint256 totalTokensAllocated,
+        uint256 _totalTokensAllocated,
         bool _pauseAfterCall
     ) public useActor(_caller) {
+        _investmentId = bound(_investmentId, 0, 1234);
+        _totalTokensAllocated = bound(_totalTokensAllocated, 0, type(uint128).max);
         investmentHandler.setInvestmentProjectTokenAllocation(
-            _investmentId,
-            totalTokensAllocated,
+            uint16(_investmentId),
+            _totalTokensAllocated,
             _pauseAfterCall
         );
     }
 
     function latestInvestmentId() public view returns (uint16) {
         return investmentHandler.latestInvestmentId();
+    }
+
+    function getTotalInvestedForInvestment(
+        address _kycAddress,
+        uint16 _investmentId
+    ) public view returns (uint256) {
+        return investmentHandler.getTotalInvestedForInvestment(_kycAddress, _investmentId);
+    }
+
+    function getTotalClaimedForInvestment(
+        address _kycAddress,
+        uint16 _investmentId
+    ) public view returns (uint256) {
+        return investmentHandler.getTotalClaimedForInvestment(_kycAddress, _investmentId);
     }
 }
