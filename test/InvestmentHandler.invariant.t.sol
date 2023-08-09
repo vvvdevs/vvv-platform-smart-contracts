@@ -118,6 +118,6 @@ contract InvestmentHandlerInvariantTests is InvestmentHandlerTestSetup {
      * Invariant 4: The amount of projectToken a user receives is independent of the time and frequency of claims
      */
     function invariant_timeIndependentTokenClaimCorrectAmount() public {
-        assertEq()
+        // assertEq(1, 1);
     }
 }

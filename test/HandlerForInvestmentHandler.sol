@@ -99,7 +99,7 @@ contract HandlerForInvestmentHandler is Test {
         uint256 _totalTokensAllocated,
         bool _pauseAfterCall
     ) public useActor(_caller) {
-        _investmentId = bound(_investmentId, 0, 1234);
+        // _investmentId = bound(_investmentId, 0, 1234);
         _totalTokensAllocated = bound(_totalTokensAllocated, 0, type(uint128).max);
         investmentHandler.setInvestmentProjectTokenAllocation(
             uint16(_investmentId),
