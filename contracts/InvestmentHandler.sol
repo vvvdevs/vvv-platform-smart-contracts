@@ -194,10 +194,10 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
 
     function defaultPauseConfig() private {
         //Pause paused-by-default functions
-        functionIsPaused[this.manualAddContribution.selector] = true;
-        functionIsPaused[this.refundUser.selector] = true;
-        functionIsPaused[this.transferPaymentToken.selector] = true;
-        functionIsPaused[this.recoverERC20.selector] = true;
+        _setFunctionIsPaused(this.manualAddContribution.selector, true);
+        _setFunctionIsPaused(this.refundUser.selector, true);
+        _setFunctionIsPaused(this.transferPaymentToken.selector, true);
+        _setFunctionIsPaused(this.recoverERC20.selector, true);
     }
 
     /**

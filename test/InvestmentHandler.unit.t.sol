@@ -237,7 +237,7 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
      * @dev Ether cannot be sent to the contract - nonexistent fallback will revert
      * Strange: call reverts, yet balance of contract increases
      */
-    function testFailSendEtherToContract() public {
+    function testSendEtherToContract() public {
         vm.deal(deployer, 1 ether);
         vm.startPrank(deployer, deployer);
         vm.expectRevert(bytes(""));
@@ -245,6 +245,6 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         vm.stopPrank();
         console.log("os", os);
         console.log("balance of investmentHandler", address(investmentHandler).balance);
-        assertTrue(address(investmentHandler).balance == 1 wei);
+        assertTrue(address(investmentHandler).balance == 0 wei);
     }
 }
