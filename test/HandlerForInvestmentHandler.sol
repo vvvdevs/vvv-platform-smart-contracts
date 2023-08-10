@@ -99,11 +99,16 @@ contract HandlerForInvestmentHandler is Test {
         uint256 _totalTokensAllocated,
         bool _pauseAfterCall
     ) public useActor(_caller) {
-        // _investmentId = bound(_investmentId, 0, 1234);
-        _totalTokensAllocated = bound(_totalTokensAllocated, 0, type(uint128).max);
+        uint16 minId = 1;
+        uint16 maxId = 1234;
+        uint256 minTokens = 1000 * 1e18;
+
+        uint256 boundInvestmentId = bound(_investmentId, minId, maxId);
+        uint256 boundTotalTokensAllocated = bound(_totalTokensAllocated, minTokens, type(uint128).max);
+
         investmentHandler.setInvestmentProjectTokenAllocation(
-            uint16(_investmentId),
-            _totalTokensAllocated,
+            uint16(boundInvestmentId),
+            boundTotalTokensAllocated,
             _pauseAfterCall
         );
     }
