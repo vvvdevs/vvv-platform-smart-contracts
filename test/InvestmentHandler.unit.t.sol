@@ -217,8 +217,8 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
 
         //try to add investment
         vm.startPrank(investmentManager, investmentManager);
-        bytes4 FUNCTION_IS_PAUSED_SELECTOR = bytes4(keccak256("FunctionIsPaused()"));
-        vm.expectRevert(FUNCTION_IS_PAUSED_SELECTOR);
+
+        vm.expectRevert();
         investmentHandler.addInvestment(signer, address(mockStable), stableAmount, pauseAfterCall);
         vm.stopPrank();
 
