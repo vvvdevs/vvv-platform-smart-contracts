@@ -16,8 +16,9 @@ import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { PausableSelective } from "@uintgroup/pausable-selective/src/PausableSelective.sol";
 
-contract InvestmentHandler is AccessControl, ReentrancyGuard {
+contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective {
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
     // STORAGE & SETUP
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
@@ -98,9 +99,6 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard {
     mapping(address => mapping(address => bool)) public isInKycAddressNetwork;
     mapping(address => address) public correspondingKycAddress;
 
-    /// @notice function is paused by admins: functionId => bool
-    mapping(bytes4 => bool) public functionIsPaused;
-
     // Events
     event ERC20Recovered(
         address indexed sender,
@@ -155,7 +153,6 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard {
     error ArrayLengthMismatch();
     error ClaimAmountExceedsTotalClaimable();
     error ERC20AmountExceedsBalance();
-    error FunctionIsPaused();
     error InvalidSignature();
     error InsufficientAllowance();
     error InvestmentAmountExceedsMax();
@@ -249,15 +246,6 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard {
         _;
     }
 
-    /// @dev reverts if the function of the function selector in msg.sig is paused
-    modifier whenNotPaused(bool _pauseAfterCall) {
-        if (functionIsPaused[msg.sig]) {
-            revert FunctionIsPaused();
-        }
-        _;
-        functionIsPaused[msg.sig] = _pauseAfterCall;
-    }
-
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
     // USER WRITE FUNCTIONS (INVEST, CLAIM)
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
@@ -279,7 +267,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard {
     )
         external
         nonReentrant
-        whenNotPaused(false)
+        whenNotPausedSelective(false)
         claimChecks(_investmentId, _claimAmount, _tokenRecipient, _kycAddress)
     {
         UserInvestment storage userInvestment = userInvestments[_kycAddress][_investmentId];
@@ -301,7 +289,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard {
      */
     function invest(
         InvestParams memory _params
-    ) external nonReentrant whenNotPaused(false) investChecks(_params) {
+    ) external nonReentrant whenNotPausedSelective(false) investChecks(_params) {
         UserInvestment storage userInvestment = userInvestments[_params.kycAddress][_params.investmentId];
         Investment storage investment = investments[_params.investmentId];
 
@@ -507,7 +495,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard {
         address _paymentToken,
         uint128 _totalAllocatedPaymentToken,
         bool _pauseAfterCall
-    ) external nonReentrant whenNotPaused(_pauseAfterCall) onlyRole(INVESTMENT_MANAGER_ROLE) {
+    ) external nonReentrant whenNotPausedSelective(_pauseAfterCall) onlyRole(INVESTMENT_MANAGER_ROLE) {
         investments[++latestInvestmentId] = Investment({
             signer: _signer,
             projectToken: IERC20(address(0)),
@@ -528,7 +516,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard {
         uint16 _investmentId,
         uint8 _investmentPhase,
         bool _pauseAfterCall
-    ) external nonReentrant whenNotPaused(_pauseAfterCall) onlyRole(INVESTMENT_MANAGER_ROLE) {
+    ) external nonReentrant whenNotPausedSelective(_pauseAfterCall) onlyRole(INVESTMENT_MANAGER_ROLE) {
         investments[_investmentId].contributionPhase = _investmentPhase;
         emit InvestmentPhaseSet(_investmentId, _investmentPhase);
     }
@@ -541,7 +529,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard {
         uint16 _investmentId,
         address _paymentTokenAddress,
         bool _pauseAfterCall
-    ) external nonReentrant whenNotPaused(_pauseAfterCall) onlyRole(INVESTMENT_MANAGER_ROLE) {
+    ) external nonReentrant whenNotPausedSelective(_pauseAfterCall) onlyRole(INVESTMENT_MANAGER_ROLE) {
         if (investments[_investmentId].totalInvestedPaymentToken != 0) {
             revert InvestmentTokenAlreadyDeposited();
         }
@@ -557,7 +545,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard {
         uint16 _investmentId,
         address projectTokenAddress,
         bool _pauseAfterCall
-    ) external nonReentrant whenNotPaused(_pauseAfterCall) onlyRole(INVESTMENT_MANAGER_ROLE) {
+    ) external nonReentrant whenNotPausedSelective(_pauseAfterCall) onlyRole(INVESTMENT_MANAGER_ROLE) {
         investments[_investmentId].projectToken = IERC20(projectTokenAddress);
         emit InvestmentProjectTokenAddressSet(_investmentId, projectTokenAddress);
     }
@@ -569,7 +557,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard {
         uint16 _investmentId,
         uint256 totalTokensAllocated,
         bool _pauseAfterCall
-    ) external nonReentrant whenNotPaused(_pauseAfterCall) onlyRole(INVESTMENT_MANAGER_ROLE) {
+    ) external nonReentrant whenNotPausedSelective(_pauseAfterCall) onlyRole(INVESTMENT_MANAGER_ROLE) {
         investments[_investmentId].totalTokensAllocated = totalTokensAllocated;
         emit InvestmentProjectTokenAllocationSet(_investmentId, totalTokensAllocated);
     }
@@ -581,8 +569,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard {
         bytes4 _selector,
         bool _isPaused
     ) external nonReentrant onlyRole(PAUSER_ROLE) {
-        functionIsPaused[_selector] = _isPaused;
-        emit FunctionIsPausedUpdate(_selector, _isPaused);
+        _setFunctionIsPaused(_selector, _isPaused);
     }
 
     /**
@@ -592,14 +579,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard {
         bytes4[] calldata _selectors,
         bool[] calldata _isPaused
     ) external onlyRole(PAUSER_ROLE) {
-        if (_selectors.length != _isPaused.length) {
-            revert ArrayLengthMismatch();
-        }
-
-        for (uint256 i = 0; i < _selectors.length; i++) {
-            functionIsPaused[_selectors[i]] = _isPaused[i];
-            emit FunctionIsPausedUpdate(_selectors[i], _isPaused[i]);
-        }
+        _batchSetFunctionIsPaused(_selectors, _isPaused);
     }
 
     /**
@@ -613,7 +593,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard {
         uint16 _investmentId,
         uint128 _paymentTokenAmount,
         bool _pauseAfterCall
-    ) public nonReentrant whenNotPaused(_pauseAfterCall) onlyRole(ADD_CONTRIBUTION_ROLE) {
+    ) public nonReentrant whenNotPausedSelective(_pauseAfterCall) onlyRole(ADD_CONTRIBUTION_ROLE) {
         if (_investmentId > latestInvestmentId) {
             revert InvestmentDoesNotExist();
         }
@@ -661,7 +641,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard {
         uint16 _investmentId,
         uint128 _paymentTokenAmount,
         bool _pauseAfterCall
-    ) public nonReentrant whenNotPaused(_pauseAfterCall) onlyRole(REFUNDER_ROLE) {
+    ) public nonReentrant whenNotPausedSelective(_pauseAfterCall) onlyRole(REFUNDER_ROLE) {
         // refund amount must not be more than the user has invested. this will also catch wrong investmentId inputs
         if (_paymentTokenAmount > userInvestments[_kycAddress][_investmentId].totalInvestedPaymentToken) {
             revert RefundAmountExceedsUserBalance();
@@ -689,7 +669,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard {
         address _destinationAddress,
         uint128 _paymentTokenAmount,
         bool _pauseAfterCall
-    ) public nonReentrant whenNotPaused(_pauseAfterCall) onlyRole(PAYMENT_TOKEN_TRANSFER_ROLE) {
+    ) public nonReentrant whenNotPausedSelective(_pauseAfterCall) onlyRole(PAYMENT_TOKEN_TRANSFER_ROLE) {
         if (_investmentId > latestInvestmentId) {
             revert InvestmentDoesNotExist();
         }
@@ -710,7 +690,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard {
         address _destinationAddress,
         uint256 _tokenAmount,
         bool _pauseAfterCall
-    ) public nonReentrant whenNotPaused(_pauseAfterCall) onlyRole(PAYMENT_TOKEN_TRANSFER_ROLE) {
+    ) public nonReentrant whenNotPausedSelective(_pauseAfterCall) onlyRole(PAYMENT_TOKEN_TRANSFER_ROLE) {
         if (_tokenAmount > IERC20(_tokenAddress).balanceOf(address(this))) {
             revert ERC20AmountExceedsBalance();
         }

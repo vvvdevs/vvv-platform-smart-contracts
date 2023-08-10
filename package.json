@@ -12,6 +12,7 @@
   "dependencies": {
     "@openzeppelin/contracts": "^4.9.0",
     "@openzeppelin/contracts-upgradeable": "^4.9.0",
+    "@uintgroup/pausable-selective": "^1.0.3",
     "dotenv": "^16.1.3",
     "hardhat-abi-exporter": "^2.10.1"
   },
