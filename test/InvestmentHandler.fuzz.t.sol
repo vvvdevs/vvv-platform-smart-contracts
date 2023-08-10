@@ -15,7 +15,7 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
  * Invariants:
  * 1. The paymentToken balance of the InvestmentHandler contract should be equal to the total amount of paymentTokens deposited by all users.
  * 2. The projectToken balance of the InvestmentHandler contract should be equal to the total amount of projectTokens deposited to the contract minus the total amount of projectTokens (for this investmentId) that have been claimed by users
- * 3. The paymentToken to projectToken ratio should be the same for each user who deposits paymentToken
+ * 3. The paymentToken to projectToken ratio should be the same for each user who deposits paymentToken  for a given investmentId
  * 4. The amount of projectToken a user receives is independent of the time and frequency of claims
  *
  * Possible Setbacks:
@@ -80,44 +80,42 @@ contract InvestmentHandlerInvariantTests is InvestmentHandlerTestSetup {
     }
 
     /**
-     * Invariant 3: The paymentToken to projectToken ratio should be the same for each user who deposits paymentToken and claims projectToken
+     * Invariant 3: The paymentToken to projectToken ratio should be the same for each user who deposits paymentToken and claims projectToken for a given investmentId
      *
      * How to get this to run with many addresses? Perhaps better as a regular fuzz test with an address input? Perhaps that is possible
      * Requires that the user whose activity is used to create the project/payment ratio has invested more than 0
      */
     function invariant_constantProjectTokenToPaymentTokenRatioPerProject() public {
-        uint index = 9;
-        address user = users[index];
-        uint totalClaimed = handler.getTotalClaimedForInvestment(user, ghost_latestInvestmentId);
-        uint remainingClaimable = handler.computeUserClaimableAllocationForInvestment(
-            user,
-            ghost_latestInvestmentId
+        assertEq(
+            ghost_claimedTotal[ghost_latestInvestmentId] / ghost_investedTotal[ghost_latestInvestmentId],
+            getProjectToPaymentTokenRatioRandomAddress_HandlerForInvestmentHandler(1)
         );
-        uint investedAmount = handler.getTotalInvestedForInvestment(user, ghost_latestInvestmentId);
-        uint projectToPaymentRatio = Math.mulDiv(totalClaimed + remainingClaimable, 1, investedAmount);
-
-        uint projectToPaymentRatio2 = getProjectToPaymentTokenRatioRandomAddress_HandlerForInvestmentHandler(
-                index
-            );
-
-        console.log("totalClaimed: ", totalClaimed);
-        console.log("remainingClaimable: ", remainingClaimable);
-        console.log("investedAmount: ", investedAmount);
-        console.log("projectToPaymentRatio: ", projectToPaymentRatio);
-        console.log("projectToPaymentRatio2: ", projectToPaymentRatio2);
-
-        assertEq(projectToPaymentRatio, projectToPaymentRatio2);
 
         assertEq(
             ghost_claimedTotal[ghost_latestInvestmentId] / ghost_investedTotal[ghost_latestInvestmentId],
-            projectToPaymentRatio
+            getProjectToPaymentTokenRatioRandomAddress_HandlerForInvestmentHandler(users.length - 1)
         );
+    }
+
+    function testFuzz_compareProjectToPaymentTokenRatio(uint16 _index) public {
+        if (_index > 1 && _index < users.length) {
+            uint256 ratio1 = getProjectToPaymentTokenRatioRandomAddress_HandlerForInvestmentHandler(
+                _index - 1
+            );
+            uint256 ratio2 = getProjectToPaymentTokenRatioRandomAddress_HandlerForInvestmentHandler(
+                _index
+            );
+            assertEq(ratio1, ratio2);
+
+            console.log("ratio1: ", ratio1);
+            console.log("ratio2: ", ratio2);
+        }
     }
 
     /**
      * Invariant 4: The amount of projectToken a user receives is independent of the time and frequency of claims
      */
-    function invariant_timeIndependentTokenClaimCorrectAmount() public {
-        // assertEq(1, 1);
-    }
+    // function testFuzz_timeIndependentTokenClaimCorrectAmount() public {
+    //     assertEq(totalClaimed);
+    // }
 }

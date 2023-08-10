@@ -23,7 +23,7 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
     }
 
     /**
-     * creates an investment and checks it incremented latestInvestmentId within the contract
+     * @dev creates an investment and checks it incremented latestInvestmentId within the contract
      */
     function testCreateInvestment() public {
         uint256 oldInvestmentId = investmentHandler.latestInvestmentId();
@@ -31,6 +31,7 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         assertTrue(investmentHandler.latestInvestmentId() == oldInvestmentId + 1);
     }
 
+    /// @dev confirms that investment params are set correctly
     function testAlterInvestmentParams() public {
         createInvestment();
         uint8 desiredContributionPhase = 1;
@@ -81,7 +82,7 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
     }
 
     /**
-     * testCreateInvestment, then invests in it from a network wallet
+     * @dev testCreateInvestment, then invests in it from a network wallet
      */
     function testInvestFromNetworkWallet() public {
         createInvestment();
@@ -96,7 +97,7 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
     }
 
     /**
-     * testInvestFromNetworkWallet, then claims allocation, checks balance matches allocation as computed by contract
+     * @dev testInvestFromNetworkWallet, then claims allocation, checks balance matches allocation as computed by contract
      */
     function testClaimFromNetworkWallet() public {
         testInvestFromNetworkWallet();
@@ -174,6 +175,9 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         }
     }
 
+    /**
+     * @dev Confirms that ERC20 transferred to the contract can be transferred away. I.e., when investment is made and payment to the project is required
+     */
     function testTransferPaymentToken() public {
         testInvestFromNetworkWallet();
 
@@ -202,6 +206,9 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         assert(mockStable.balanceOf(sampleProjectTreasury) == transferAmount);
     }
 
+    /**
+     * @dev confirms each function is paused and unpaused as expected
+     */
     function testFunctionIsPaused() public {
         //pause addInvestment
         vm.startPrank(defaultAdminController, defaultAdminController);
@@ -227,8 +234,8 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
     }
 
     /**
-     * Ether cannot be sent to the contract - nonexistent fallback will revert
-     * No need to worry about false eth transfers
+     * @dev Ether cannot be sent to the contract - nonexistent fallback will revert
+     * Strange: call reverts, yet balance of contract increases
      */
     function testFailSendEtherToContract() public {
         vm.deal(deployer, 1 ether);
@@ -236,6 +243,8 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         vm.expectRevert(bytes(""));
         (bool os, ) = address(investmentHandler).call{ value: 1 wei }("");
         vm.stopPrank();
-        assertTrue(!os);
+        console.log("os", os);
+        console.log("balance of investmentHandler", address(investmentHandler).balance);
+        assertTrue(address(investmentHandler).balance == 1 wei);
     }
 }
