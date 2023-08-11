@@ -53,6 +53,9 @@ contract InvestmentHandlerTestSetup is Test {
 
     bool logging = false;
 
+    uint256 blockNumber;
+    uint256 blockTimestamp;
+
     struct SignatureStruct {
         address userAddress;
         uint256 pledgeAmount;
@@ -114,6 +117,15 @@ contract InvestmentHandlerTestSetup is Test {
         }
 
         return signature;
+    }
+
+    function advanceBlockNumberAndTimestamp(uint256 blocks) public {
+        for (uint256 i = 0; i < blocks; i++) {
+            blockNumber += 1;
+            blockTimestamp += 12; //seconds per block
+        }
+        vm.warp(blockTimestamp);
+        vm.roll(blockNumber);
     }
 
     //==================================================================================================

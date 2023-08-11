@@ -4,8 +4,7 @@ pragma solidity 0.8.21;
 /**
  * @title InvestmentHandler
  * @author @vvvfund (@curi0n-s + @c0dejax + @kcper), audits by @marko1010, and [eventual audit firm/site]
- * @notice Handles the investment process for vVv allocations from contributing the payment token to claiming the project token
- * @notice Any address can invest on behalf of a kyc address, but only "in-network" addresses can claim on behalf of a kyc address
+ * @notice Handles the investment process for vVv allocations' investments and claims
  */
 
 import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
@@ -192,8 +191,8 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
         _revokeRole(DEFAULT_ADMIN_ROLE, _msgSender());
     }
 
+    /// @dev called in constructor to set default paused functions for security
     function defaultPauseConfig() private {
-        //Pause paused-by-default functions
         _setFunctionIsPaused(this.manualAddContribution.selector, true);
         _setFunctionIsPaused(this.refundUser.selector, true);
         _setFunctionIsPaused(this.transferPaymentToken.selector, true);
@@ -243,6 +242,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
         } else if (!_contributionLimitCheck(_params)) {
             revert InvestmentAmountExceedsMax();
         }
+
         _;
     }
 

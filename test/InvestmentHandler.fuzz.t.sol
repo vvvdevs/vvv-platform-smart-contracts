@@ -7,23 +7,25 @@ import { HandlerForInvestmentHandler } from "./HandlerForInvestmentHandler.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 
 /**
- * Excuse my learning invariant testing during this project :)
- *
- * Notes:
- * Following https://mirror.xyz/horsefacts.eth/Jex2YVaO65dda6zEyfM_-DXlXhOWCAoSpOx5PLocYgw to invariant test the InvestmentHandler contract.
- *
- * Invariants:
- * 1. The paymentToken balance of the InvestmentHandler contract should be equal to the total amount of paymentTokens deposited by all users.
- * 2. The projectToken balance of the InvestmentHandler contract should be equal to the total amount of projectTokens deposited to the contract minus the total amount of projectTokens (for this investmentId) that have been claimed by users
- * 3. The paymentToken to projectToken ratio should be the same for each user who deposits paymentToken  for a given investmentId
- * 4. The amount of projectToken a user receives is independent of the time and frequency of claims
- *
- * Possible Setbacks:
- * 1. Dividing among many users and different amounts will cause slight rounding errors, requiring a tolerance for the invariant tests.
- * 2. Regarding what claim patterns are "within reason" claiming 1e-18 of a token at a time 10e24 times is not considered a realistic condition, lets consider first a range of 1-100 claims for a particular investment and examine how timing and projectToken supply affect this desired invariant.
- *
- * Approach:
- * 1. Create a handler contract that will call InvestmentHandler functions and keep track of state variables outside of the contract.
+ 
+Excuse my learning invariant testing during this project :)
+
+Notes:
+Following https://mirror.xyz/horsefacts.eth/Jex2YVaO65dda6zEyfM_-DXlXhOWCAoSpOx5PLocYgw to invariant test the InvestmentHandler contract.
+ 
+Invariants:
+1. The paymentToken balance of the InvestmentHandler contract should be equal to the total amount of paymentTokens deposited by all users.
+2. The projectToken balance of the InvestmentHandler contract should be equal to the total amount of projectTokens deposited to the contract minus the total amount of projectTokens (for this investmentId) that have been claimed by users
+3. The paymentToken to projectToken ratio should be the same for each user who deposits paymentToken  for a given investmentId
+4. The amount of projectToken a user receives is independent of the time and frequency of claims
+ 
+Possible Setbacks:
+1. Dividing among many users and different amounts will cause slight rounding errors, requiring a tolerance for the invariant tests.
+2. Regarding what claim patterns are "within reason" claiming 1e-18 of a token at a time 10e24 times is not considered a realistic condition, lets consider first a range of 1-100 claims for a particular investment and examine how timing and projectToken supply affect this desired invariant.
+
+Approach:
+1. Create a handler contract that will allow for calling InvestmentHandler functions with bounded inputs - allows for more focused fuzzing. Will this be overkill/unnecessary, we shall see...
+
  */
 
 contract InvestmentHandlerInvariantTests is InvestmentHandlerTestSetup {
@@ -97,6 +99,10 @@ contract InvestmentHandlerInvariantTests is InvestmentHandlerTestSetup {
         );
     }
 
+    /**
+     * Related to invariant 3
+     */
+
     function testFuzz_compareProjectToPaymentTokenRatio(uint16 _index) public {
         if (_index > 1 && _index < users.length) {
             uint256 ratio1 = getProjectToPaymentTokenRatioRandomAddress_HandlerForInvestmentHandler(
@@ -113,9 +119,9 @@ contract InvestmentHandlerInvariantTests is InvestmentHandlerTestSetup {
     }
 
     /**
-     * Invariant 4: The amount of projectToken a user receives is independent of the time and frequency of claims
+     * Invariant 4: The amount of projectToken a user receives is independent of the time and frequency of claims relative to other users' claims
      */
-    // function testFuzz_timeIndependentTokenClaimCorrectAmount() public {
-    //     assertEq(totalClaimed);
-    // }
+    function invariant_claimsUnaffectedByClaimDelayAndFrequency() public {
+        //test investing and claiming with all users in different orders to test that each users' total balance ends up the same regardless of order and number of claims
+    }
 }
