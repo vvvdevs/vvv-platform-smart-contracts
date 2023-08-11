@@ -247,4 +247,32 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         console.log("balance of investmentHandler", address(investmentHandler).balance);
         assertTrue(address(investmentHandler).balance == 0 wei);
     }
+
+    function testClaimsUnaffectedByClaimDelayAndFrequency() public {
+        createInvestment();
+
+        vm.startPrank(projectSender, projectSender);
+        mockProject.mint(address(investmentHandler), 1_000_000 * 1e18);
+        vm.stopPrank();
+
+        uint256 _seed = 1;
+        uint256 randomIndex;
+        uint120 investAmount = 100000000;
+        uint256 claimAmount = 1000000000000000000;
+        // get random order of users array
+        address[] memory randomUsers = users;
+
+        for (uint256 i = 0; i < users.length; i++) {
+            randomIndex = uint256(keccak256(abi.encodePacked(_seed, i))) % (users.length - 1);
+            (users[i], randomUsers[randomIndex]) = (randomUsers[randomIndex], users[i]);
+            _seed++;
+        }
+
+        // each user invests and claims in random order. users is now the randomized one
+        for (uint256 i = 0; i < users.length; i++) {
+            userInvest(users[i], users[i], investAmount);
+            advanceBlockNumberAndTimestamp(i ** 2);
+            userClaim(users[i], users[i], claimAmount);
+        }
+    }
 }
