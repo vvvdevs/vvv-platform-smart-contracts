@@ -121,7 +121,7 @@ contract InvestmentHandlerInvariantTests is InvestmentHandlerTestSetup {
     /**
      * Invariant 4: The amount of projectToken a user receives is independent of the time and frequency of claims relative to other users' claims
      */
-    function invariant_claimsUnaffectedByClaimDelayAndFrequency() public {
-        //test investing and claiming with all users in different orders to test that each users' total balance ends up the same regardless of order and number of claims
-    }
+    // function invariant_claimsUnaffectedByClaimDelayAndFrequency() public {
+    //     //test investing and claiming with all users in different orders to test that each users' total balance ends up the same regardless of order and number of claims
+    // }
 }

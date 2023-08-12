@@ -150,6 +150,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
     error AddressAlreadyInKycNetwork();
     error AddressNotInKycNetwork();
     error ArrayLengthMismatch();
+    error CantClaimZero();
     error ClaimAmountExceedsTotalClaimable();
     error ERC20AmountExceedsBalance();
     error InvalidSignature();
@@ -210,6 +211,10 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
         address _kycAddress
     ) {
         uint256 claimableTokens = computeUserClaimableAllocationForInvestment(_kycAddress, _investmentId);
+
+        if(_thisClaimAmount == 0) {
+            revert CantClaimZero();
+        }
 
         if (_thisClaimAmount > claimableTokens) {
             revert ClaimAmountExceedsTotalClaimable();
@@ -510,7 +515,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
     }
 
     /**
-     * @notice sets the current phase of the investment. phases can be 0-max uint8 value, but 0=closed, 1=whales, 2=sharks, 3=fcfs, so 4-max uintN can be used for custom phases
+     * @notice sets the current phase of the investment. phases can be 0-max uint8 value, but 0=closed, 1=whales, 2=sharks, 3=fcfs, so 4-max uint8 can be used for custom phases
      */
     function setInvestmentContributionPhase(
         uint16 _investmentId,
