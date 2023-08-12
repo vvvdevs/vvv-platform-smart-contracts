@@ -134,7 +134,7 @@ contract InvestmentHandlerTestSetup is Test {
 
     function createInvestment() public {
         vm.startPrank(investmentManager, investmentManager);
-        investmentHandler.addInvestment(signer, address(mockStable), stableAmount, pauseAfterCall);
+        investmentHandler.addInvestment(signer, address(mockStable), uint128(stableAmount * users.length), pauseAfterCall);
         investmentHandler.setInvestmentProjectTokenAddress(
             investmentHandler.latestInvestmentId(),
             address(mockProject),
@@ -150,6 +150,12 @@ contract InvestmentHandlerTestSetup is Test {
             phase,
             pauseAfterCall
         );
+        vm.stopPrank();
+    }
+
+    function mintProjectTokensToInvestmentHandler() public {
+        vm.startPrank(projectSender, projectSender);
+        mockProject.mint(address(investmentHandler), projectAmount);
         vm.stopPrank();
     }
 
@@ -222,8 +228,8 @@ contract InvestmentHandlerTestSetup is Test {
     }
 
     //==================================================================================================
-    // HANDLER FOR INVESTMENT HANDLER HELPERS
-    // amazing naming I know
+    // HANDLER FOR INVESTMENTHANDLER HELPERS
+    // amazing clear naming I know
     // tracks ghost variables for use in invariant testing as well
     // part of following https://mirror.xyz/horsefacts.eth/Jex2YVaO65dda6zEyfM_-DXlXhOWCAoSpOx5PLocYgw
     //==================================================================================================
