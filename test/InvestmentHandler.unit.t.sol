@@ -215,7 +215,8 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         uint120 investAmount = 100000 * 1e6;
         uint256 claimAmount;
         uint16 investmentId = investmentHandler.latestInvestmentId();
-        // each user invests and claims in random order. users is now the randomized one
+
+        // each user invests and claims in some rearranged order
         for (uint256 i = 2; i < users.length; i++) {
             userInvest(users[i], users[i], investAmount);
             (uint128 investedPaymentToken,,) = investmentHandler.userInvestments(users[i], investmentId);
@@ -223,7 +224,14 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
             advanceBlockNumberAndTimestamp(i);
         }
 
-        for (uint256 i = users.length-1; i > 1; i--) {
+        for (uint256 i = users.length-1; i > 1; i=i-2) {
+            claimAmount = investmentHandler.computeUserClaimableAllocationForInvestment(users[i], investmentId);
+            userClaim(users[i], users[i], claimAmount);
+            assertTrue(mockProject.balanceOf(users[i]) == claimAmount);
+            advanceBlockNumberAndTimestamp(i);
+        }
+
+        for (uint256 i = users.length-2; i > 1; i=i-2) {
             claimAmount = investmentHandler.computeUserClaimableAllocationForInvestment(users[i], investmentId);
             userClaim(users[i], users[i], claimAmount);
             assertTrue(mockProject.balanceOf(users[i]) == claimAmount);
