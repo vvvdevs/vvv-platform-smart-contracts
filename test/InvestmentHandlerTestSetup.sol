@@ -55,6 +55,7 @@ contract InvestmentHandlerTestSetup is Test {
 
     uint256 blockNumber;
     uint256 blockTimestamp;
+    uint128 investedTotal;
 
     struct SignatureStruct {
         address userAddress;
@@ -63,12 +64,21 @@ contract InvestmentHandlerTestSetup is Test {
     }
 
     //added for use with invariant testing
-    uint16 public ghost_latestInvestmentId = 0;
-    mapping(uint256 id => uint256 amount) public ghost_investedTotal;
-    mapping(uint256 id => uint256 amount) public ghost_claimedTotal;
-    mapping(uint256 id => uint256 amount) public ghost_depositedProjectTokens;
-    mapping(uint256 id => mapping(address => uint256)) public ghost_userInvestedTotal;
-    mapping(uint256 id => mapping(address => uint256)) public ghost_userClaimedTotal;
+    // bound testing
+    uint16 public ghost_bound_latestInvestmentId = 0;
+    mapping(uint256 id => uint256 amount) public ghost_bound_investedTotal;
+    mapping(uint256 id => uint256 amount) public ghost_bound_claimedTotal;
+    mapping(uint256 id => uint256 amount) public ghost_bound_depositedProjectTokens;
+    mapping(uint256 id => mapping(address => uint256)) public ghost_bound_userInvestedTotal;
+    mapping(uint256 id => mapping(address => uint256)) public ghost_bound_userClaimedTotal;
+
+    // open testing
+    uint16 public ghost_open_latestInvestmentId = 0;
+    mapping(uint256 id => uint256 amount) public ghost_open_investedTotal;
+    mapping(uint256 id => uint256 amount) public ghost_open_claimedTotal;
+    mapping(uint256 id => uint256 amount) public ghost_open_depositedProjectTokens;
+    mapping(uint256 id => mapping(address => uint256)) public ghost_open_userInvestedTotal;
+    mapping(uint256 id => mapping(address => uint256)) public ghost_open_userClaimedTotal;
 
     // Helpers-----------------------------------------------------------------------------
 
@@ -129,12 +139,13 @@ contract InvestmentHandlerTestSetup is Test {
     }
 
     //==================================================================================================
-    // INVESTMENT HANDLER SETUP FUNCTIONS
+    // INVESTMENT HANDLER SETUP FUNCTIONS (OPEN INVARIANT TESTING)
     //==================================================================================================
 
     function createInvestment() public {
         vm.startPrank(investmentManager, investmentManager);
         investmentHandler.addInvestment(signer, address(mockStable), uint128(stableAmount * users.length), pauseAfterCall);
+        ++ghost_open_latestInvestmentId; //during addInvestment, contract's investmentId is incremented
         investmentHandler.setInvestmentProjectTokenAddress(
             investmentHandler.latestInvestmentId(),
             address(mockProject),
@@ -193,6 +204,10 @@ contract InvestmentHandlerTestSetup is Test {
 
         investmentHandler.invest(investParams);
         vm.stopPrank();
+
+        //update ghosts
+        ghost_open_investedTotal[ghost_open_latestInvestmentId] += _amount;
+        ghost_open_userInvestedTotal[ghost_open_latestInvestmentId][_caller] += _amount;
     }
 
     function userClaim(address _caller, address _kycAddress, uint256 _amount) public {
@@ -208,6 +223,10 @@ contract InvestmentHandlerTestSetup is Test {
         vm.startPrank(_caller, _caller);
         investmentHandler.claim(investmentHandler.latestInvestmentId(), _amount, _caller, _kycAddress);
         vm.stopPrank();
+
+        //update ghosts
+        ghost_open_claimedTotal[ghost_open_latestInvestmentId] += _amount;
+        ghost_open_userClaimedTotal[ghost_open_latestInvestmentId][_caller] += _amount;
     }
 
     function usersClaimRandomAmounts() public {
@@ -216,19 +235,36 @@ contract InvestmentHandlerTestSetup is Test {
                 users[i],
                 investmentHandler.latestInvestmentId()
             );
-            userClaim(users[i], users[i], claimableAmount);
+            if(claimableAmount == 0) {
+                userClaim(users[i], users[i], claimableAmount);
+            }
         }
     }
 
     function transferProjectTokensToInvestmentHandler(uint256 _amount) public {
         vm.startPrank(projectSender, projectSender);
-        mockProject.mint(address(this), _amount);
-        mockProject.transfer(address(investmentHandler), _amount);
+        mockProject.mint(address(investmentHandler), _amount);
         vm.stopPrank();
+        //update ghosts
+        ghost_open_depositedProjectTokens[ghost_open_latestInvestmentId] += _amount;
+    }
+
+    function getProjectToPaymentTokenRatioRandomAddress(
+        uint256 _index
+    ) public view returns (uint256) {
+        address user = users[_index];
+        uint totalClaimed = investmentHandler.getTotalClaimedForInvestment(user, ghost_open_latestInvestmentId);
+        uint remainingClaimable = investmentHandler.computeUserClaimableAllocationForInvestment(
+            user,
+            ghost_open_latestInvestmentId
+        );
+        uint investedAmount = investmentHandler.getTotalInvestedForInvestment(user, ghost_open_latestInvestmentId);
+        uint projectToPaymentRatio = Math.mulDiv(totalClaimed + remainingClaimable, 1, investedAmount);
+        return projectToPaymentRatio;
     }
 
     //==================================================================================================
-    // HANDLER FOR INVESTMENTHANDLER HELPERS
+    // HANDLER FOR INVESTMENTHANDLER HELPERS (BOUND INVARIANT TESTS)
     // amazing clear naming I know
     // tracks ghost variables for use in invariant testing as well
     // part of following https://mirror.xyz/horsefacts.eth/Jex2YVaO65dda6zEyfM_-DXlXhOWCAoSpOx5PLocYgw
@@ -242,22 +278,22 @@ contract InvestmentHandlerTestSetup is Test {
             stableAmount,
             pauseAfterCall
         );
-        ++ghost_latestInvestmentId; //during addInvestment, contract's investmentId is incremented
+        ++ghost_bound_latestInvestmentId; //during addInvestment, contract's investmentId is incremented
         handler.setInvestmentProjectTokenAddress(
             investmentManager,
-            ghost_latestInvestmentId,
+            ghost_bound_latestInvestmentId,
             address(mockProject),
             pauseAfterCall
         );
         handler.setInvestmentProjectTokenAllocation(
             investmentManager,
-            ghost_latestInvestmentId,
+            ghost_bound_latestInvestmentId,
             projectAmount,
             pauseAfterCall
         );
         handler.setInvestmentContributionPhase(
             investmentManager,
-            ghost_latestInvestmentId,
+            ghost_bound_latestInvestmentId,
             phase,
             pauseAfterCall
         );
@@ -307,8 +343,8 @@ contract InvestmentHandlerTestSetup is Test {
         handler.invest(_caller, investParams);
 
         //update ghosts
-        ghost_investedTotal[ghost_latestInvestmentId] += _amount;
-        ghost_userInvestedTotal[ghost_latestInvestmentId][_caller] += _amount;
+        ghost_bound_investedTotal[ghost_bound_latestInvestmentId] += _amount;
+        ghost_bound_userInvestedTotal[ghost_bound_latestInvestmentId][_caller] += _amount;
     }
 
     function userClaim_HandlerForInvestmentHandler(
@@ -318,27 +354,29 @@ contract InvestmentHandlerTestSetup is Test {
     ) public {
         uint256 claimableAmount = handler.computeUserClaimableAllocationForInvestment(
             _kycAddress,
-            ghost_latestInvestmentId
+            ghost_bound_latestInvestmentId
         );
 
         if (_amount == 0) {
             _amount = claimableAmount;
         }
 
-        handler.claim(_caller, ghost_latestInvestmentId, _amount, _caller, _kycAddress);
+        handler.claim(_caller, ghost_bound_latestInvestmentId, _amount, _caller, _kycAddress);
 
         //update ghosts
-        ghost_claimedTotal[ghost_latestInvestmentId] += _amount;
-        ghost_userClaimedTotal[ghost_latestInvestmentId][_caller] += _amount;
+        ghost_bound_claimedTotal[ghost_bound_latestInvestmentId] += _amount;
+        ghost_bound_userClaimedTotal[ghost_bound_latestInvestmentId][_caller] += _amount;
     }
 
     function usersClaimRandomAmounts_HandlerForInvestmentHandler() public {
         for (uint256 i = 0; i < users.length; i++) {
             uint256 claimableAmount = handler.computeUserClaimableAllocationForInvestment(
                 users[i],
-                ghost_latestInvestmentId
+                ghost_bound_latestInvestmentId
             );
-            userClaim_HandlerForInvestmentHandler(users[i], users[i], claimableAmount);
+            if(claimableAmount > 0){
+                userClaim_HandlerForInvestmentHandler(users[i], users[i], claimableAmount);
+            }
         }
     }
 
@@ -349,19 +387,19 @@ contract InvestmentHandlerTestSetup is Test {
         vm.stopPrank();
 
         //update ghosts
-        ghost_depositedProjectTokens[ghost_latestInvestmentId] += _amount;
+        ghost_bound_depositedProjectTokens[ghost_bound_latestInvestmentId] += _amount;
     }
 
     function getProjectToPaymentTokenRatioRandomAddress_HandlerForInvestmentHandler(
         uint256 _index
     ) public view returns (uint256) {
         address user = users[_index];
-        uint totalClaimed = handler.getTotalClaimedForInvestment(user, ghost_latestInvestmentId);
+        uint totalClaimed = handler.getTotalClaimedForInvestment(user, ghost_bound_latestInvestmentId);
         uint remainingClaimable = handler.computeUserClaimableAllocationForInvestment(
             user,
-            ghost_latestInvestmentId
+            ghost_bound_latestInvestmentId
         );
-        uint investedAmount = handler.getTotalInvestedForInvestment(user, ghost_latestInvestmentId);
+        uint investedAmount = handler.getTotalInvestedForInvestment(user, ghost_bound_latestInvestmentId);
         uint projectToPaymentRatio = Math.mulDiv(totalClaimed + remainingClaimable, 1, investedAmount);
         return projectToPaymentRatio;
     }

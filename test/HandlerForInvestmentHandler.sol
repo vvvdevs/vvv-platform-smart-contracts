@@ -63,10 +63,13 @@ contract HandlerForInvestmentHandler is Test {
         uint128 _totalAllocatedPaymentToken,
         bool _pauseAfterCall
     ) public useActor(_caller) {
+
+        uint256 totalAllocatedPaymentToken = bound(_totalAllocatedPaymentToken, 10_000 * 1e6, 10_000_000 * 1e6);
+
         investmentHandler.addInvestment(
             _signer,
             _paymentToken,
-            _totalAllocatedPaymentToken,
+            uint128(totalAllocatedPaymentToken),
             _pauseAfterCall
         );
     }
@@ -100,7 +103,7 @@ contract HandlerForInvestmentHandler is Test {
         bool _pauseAfterCall
     ) public useActor(_caller) {
         uint16 minId = 1;
-        uint16 maxId = 1234;
+        uint16 maxId = 333;
         uint256 minTokens = 1000 * 1e18;
 
         uint256 boundInvestmentId = bound(_investmentId, minId, maxId);
