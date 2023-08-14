@@ -84,10 +84,7 @@ contract InvestmentHandlerInvariantTests_Bound is InvestmentHandlerTestSetup {
     }
 
     /**
-     * Invariant 3: The paymentToken to projectToken ratio should be the same for each user who deposits paymentToken and claims projectToken for a given investmentId
-     *
-     * How to get this to run with many addresses? Perhaps better as a regular fuzz test with an address input? Perhaps that is possible
-     * Requires that the user whose activity is used to create the project/payment ratio has invested more than 0
+     * Invariant 3: The paymentToken to projectToken ratio should be the same for each user who deposits paymentToken and claims projectToken for a given investmentId. Not a strong test, as it only uses 2 addresses.
      */
     function invariant_constantProjectTokenToPaymentTokenRatioPerProject() public {
         assertEq(
@@ -104,7 +101,6 @@ contract InvestmentHandlerInvariantTests_Bound is InvestmentHandlerTestSetup {
     /**
      * Related to invariant 3 - checks for seeing if users' ratio of claimed to invested tokens can change
      */
-
     function testFuzz_compareProjectToPaymentTokenRatio(uint16 _index) public {
         if (_index > 1 && _index < users.length) {
             uint256 ratio1 = getProjectToPaymentTokenRatioRandomAddress_HandlerForInvestmentHandler(
@@ -148,7 +144,6 @@ contract InvestmentHandlerInvariantTests_Open is InvestmentHandlerTestSetup {
 
     /**
      * Invariant 1: The paymentToken balance of the InvestmentHandler contract should be equal to the total amount of paymentTokens deposited by all
-     * Note: investmentHandler:invest transferFrom s the paymentToken to the investmentHandler contract, so the balance wont show in the handler, thus we check the investmentHandler balance here
      */
     function invariant_open_contractPaymentTokenBalanceIsEqualToDeposits() public {
         assertTrue(
@@ -176,10 +171,7 @@ contract InvestmentHandlerInvariantTests_Open is InvestmentHandlerTestSetup {
     }
 
     /**
-     * Invariant 3: The paymentToken to projectToken ratio should be the same for each user who deposits paymentToken and claims projectToken for a given investmentId
-     *
-     * How to get this to run with many addresses? Perhaps better as a regular fuzz test with an address input? Perhaps that is possible
-     * Requires that the user whose activity is used to create the project/payment ratio has invested more than 0
+     * Invariant 3: The paymentToken to projectToken ratio should be the same for each user who deposits paymentToken and claims projectToken for a given investmentId. Not a strong test, as it only uses 2 addresses.
      */
     function invariant_open_constantProjectTokenToPaymentTokenRatioPerProject() public {
         assertEq(
@@ -196,7 +188,6 @@ contract InvestmentHandlerInvariantTests_Open is InvestmentHandlerTestSetup {
     /**
      * Related to invariant 3 - checks for seeing if users' ratio of claimed to invested tokens can change
      */
-
     function testFuzz_open_compareProjectToPaymentTokenRatio(uint16 _index) public {
         if (_index > 1 && _index < users.length) {
             uint256 ratio1 = getProjectToPaymentTokenRatioRandomAddress(
