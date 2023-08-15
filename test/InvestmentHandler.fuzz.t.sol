@@ -38,8 +38,8 @@ contract InvestmentHandlerInvariantTests_Bound is InvestmentHandlerTestSetup {
             contributionManager,
             refundManager
         );
-        mockStable = new MockStable(6); //usdc decimals
-        mockProject = new MockProject(18); //project token
+        mockStable = new MockERC20(6); //usdc decimals
+        mockProject = new MockERC20(18); //project token
         handler = new HandlerForInvestmentHandler(investmentHandler, mockStable, mockProject);
         vm.stopPrank();
 
@@ -50,7 +50,6 @@ contract InvestmentHandlerInvariantTests_Bound is InvestmentHandlerTestSetup {
         usersInvestRandomAmounts_HandlerForInvestmentHandler();
         transferProjectTokensTo_HandlerForInvestmentHandler(1_000_000 * 1e6);
         usersClaimRandomAmounts_HandlerForInvestmentHandler();
-
     }
 
     /**
@@ -88,12 +87,14 @@ contract InvestmentHandlerInvariantTests_Bound is InvestmentHandlerTestSetup {
      */
     function invariant_constantProjectTokenToPaymentTokenRatioPerProject() public {
         assertEq(
-            ghost_bound_claimedTotal[ghost_bound_latestInvestmentId] / ghost_bound_investedTotal[ghost_bound_latestInvestmentId],
+            ghost_bound_claimedTotal[ghost_bound_latestInvestmentId] /
+                ghost_bound_investedTotal[ghost_bound_latestInvestmentId],
             getProjectToPaymentTokenRatioRandomAddress_HandlerForInvestmentHandler(1)
         );
 
         assertEq(
-            ghost_bound_claimedTotal[ghost_bound_latestInvestmentId] / ghost_bound_investedTotal[ghost_bound_latestInvestmentId],
+            ghost_bound_claimedTotal[ghost_bound_latestInvestmentId] /
+                ghost_bound_investedTotal[ghost_bound_latestInvestmentId],
             getProjectToPaymentTokenRatioRandomAddress_HandlerForInvestmentHandler(users.length - 1)
         );
     }
@@ -115,7 +116,6 @@ contract InvestmentHandlerInvariantTests_Bound is InvestmentHandlerTestSetup {
             console.log("ratio2: ", ratio2);
         }
     }
-
 }
 
 contract InvestmentHandlerInvariantTests_Open is InvestmentHandlerTestSetup {
@@ -127,8 +127,8 @@ contract InvestmentHandlerInvariantTests_Open is InvestmentHandlerTestSetup {
             contributionManager,
             refundManager
         );
-        mockStable = new MockStable(6); //usdc decimals
-        mockProject = new MockProject(18); //project token
+        mockStable = new MockERC20(6); //usdc decimals
+        mockProject = new MockERC20(18); //project token
         vm.stopPrank();
 
         targetContract(address(investmentHandler));
@@ -139,16 +139,16 @@ contract InvestmentHandlerInvariantTests_Open is InvestmentHandlerTestSetup {
         transferProjectTokensToInvestmentHandler(1_000_000 * 1e6);
         usersClaimRandomAmounts();
 
-        (,,,,investedTotal,,,) = investmentHandler.investments(investmentHandler.latestInvestmentId());
+        (, , , , investedTotal, , , ) = investmentHandler.investments(
+            investmentHandler.latestInvestmentId()
+        );
     }
 
     /**
      * Invariant 1: The paymentToken balance of the InvestmentHandler contract should be equal to the total amount of paymentTokens deposited by all
      */
     function invariant_open_contractPaymentTokenBalanceIsEqualToDeposits() public {
-        assertTrue(
-            mockStable.balanceOf(address(investmentHandler)) == investedTotal
-        );
+        assertTrue(mockStable.balanceOf(address(investmentHandler)) == investedTotal);
     }
 
     /**
@@ -175,12 +175,14 @@ contract InvestmentHandlerInvariantTests_Open is InvestmentHandlerTestSetup {
      */
     function invariant_open_constantProjectTokenToPaymentTokenRatioPerProject() public {
         assertEq(
-            ghost_open_claimedTotal[ghost_open_latestInvestmentId] / ghost_open_investedTotal[ghost_open_latestInvestmentId],
+            ghost_open_claimedTotal[ghost_open_latestInvestmentId] /
+                ghost_open_investedTotal[ghost_open_latestInvestmentId],
             getProjectToPaymentTokenRatioRandomAddress(1)
         );
 
         assertEq(
-            ghost_open_claimedTotal[ghost_open_latestInvestmentId] / ghost_open_investedTotal[ghost_open_latestInvestmentId],
+            ghost_open_claimedTotal[ghost_open_latestInvestmentId] /
+                ghost_open_investedTotal[ghost_open_latestInvestmentId],
             getProjectToPaymentTokenRatioRandomAddress(users.length - 1)
         );
     }
@@ -190,12 +192,8 @@ contract InvestmentHandlerInvariantTests_Open is InvestmentHandlerTestSetup {
      */
     function testFuzz_open_compareProjectToPaymentTokenRatio(uint16 _index) public {
         if (_index > 1 && _index < users.length) {
-            uint256 ratio1 = getProjectToPaymentTokenRatioRandomAddress(
-                _index - 1
-            );
-            uint256 ratio2 = getProjectToPaymentTokenRatioRandomAddress(
-                _index
-            );
+            uint256 ratio1 = getProjectToPaymentTokenRatioRandomAddress(_index - 1);
+            uint256 ratio2 = getProjectToPaymentTokenRatioRandomAddress(_index);
             assertEq(ratio1, ratio2);
 
             console.log("ratio1: ", ratio1);

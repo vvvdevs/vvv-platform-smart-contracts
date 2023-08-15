@@ -3,8 +3,7 @@
 pragma solidity ^0.8.21;
 
 import { InvestmentHandler } from "contracts/InvestmentHandler.sol";
-import { MockStable } from "contracts/mock/MockStable.sol";
-import { MockProject } from "contracts/mock/MockProject.sol";
+import { MockERC20 } from "contracts/mock/MockERC20.sol";
 import "lib/forge-std/src/Test.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -12,10 +11,10 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract HandlerForInvestmentHandler is Test {
     InvestmentHandler public investmentHandler;
-    MockStable public mockStable;
-    MockProject public mockProject;
+    MockERC20 public mockStable;
+    MockERC20 public mockProject;
 
-    constructor(InvestmentHandler _investmentHandler, MockStable _mockStable, MockProject _mockProject) {
+    constructor(InvestmentHandler _investmentHandler, MockERC20 _mockStable, MockERC20 _mockProject) {
         investmentHandler = _investmentHandler;
         mockStable = _mockStable;
         mockProject = _mockProject;
@@ -63,8 +62,11 @@ contract HandlerForInvestmentHandler is Test {
         uint128 _totalAllocatedPaymentToken,
         bool _pauseAfterCall
     ) public useActor(_caller) {
-
-        uint256 totalAllocatedPaymentToken = bound(_totalAllocatedPaymentToken, 10_000 * 1e6, 10_000_000 * 1e6);
+        uint256 totalAllocatedPaymentToken = bound(
+            _totalAllocatedPaymentToken,
+            10_000 * 1e6,
+            10_000_000 * 1e6
+        );
 
         investmentHandler.addInvestment(
             _signer,
