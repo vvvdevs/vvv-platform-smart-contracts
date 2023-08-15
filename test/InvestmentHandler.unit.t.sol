@@ -23,6 +23,92 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
     }
 
     /**
+     * @dev deployment test
+     */
+    function testDeployment() public {
+        assertTrue(address(investmentHandler) != address(0));
+    }
+
+    /// @dev tests default pause config is set correctly
+
+    function testDefaultPauseConfig() public {
+        assertTrue(investmentHandler.functionIsPaused(investmentHandler.manualAddContribution.selector));
+        assertTrue(investmentHandler.functionIsPaused(investmentHandler.refundUser.selector));
+        assertTrue(investmentHandler.functionIsPaused(investmentHandler.transferPaymentToken.selector));
+        assertTrue(investmentHandler.functionIsPaused(investmentHandler.recoverERC20.selector));
+    }
+
+    /// @dev tests adding address to kyc address network
+    function testAddAddressToKycAddressNetwork() public {
+        vm.startPrank(sampleKycAddress, sampleKycAddress);
+        investmentHandler.addAddressToKycAddressNetwork(sampleUser);
+        vm.stopPrank();
+        assertTrue(investmentHandler.isInKycAddressNetwork(sampleKycAddress, sampleUser));
+        assertTrue(investmentHandler.correspondingKycAddress(sampleUser) == sampleKycAddress);
+    }
+
+    /// @dev addAddressToKycAddressNetwork fails when adding address that is already in network
+    function testAddAddressToKycAddressNetworkWhenAlreadyAdded() public {
+        testAddAddressToKycAddressNetwork();
+        vm.startPrank(sampleKycAddress, sampleKycAddress);
+        vm.expectRevert(bytes4(keccak256("AddressAlreadyInKycNetwork()")));
+        investmentHandler.addAddressToKycAddressNetwork(sampleUser);
+        vm.stopPrank();
+    }
+
+    /// @dev tests removing address from kyc address network
+    function testRemoveAddressFromKycAddressNetwork() public {
+        testAddAddressToKycAddressNetwork();
+        vm.startPrank(sampleKycAddress, sampleKycAddress);
+        investmentHandler.removeAddressFromKycAddressNetwork(sampleUser);
+        vm.stopPrank();
+        assertTrue(!investmentHandler.isInKycAddressNetwork(sampleKycAddress, sampleUser));
+        assertTrue(investmentHandler.correspondingKycAddress(sampleUser) == address(0));
+    }
+
+    /// @dev removeAddressFromKycAddressNetwork fails when trying to remove an address that is not in the network
+    function testRemoveAddressFromKycAddressNetworkThatIsntPartOfNetwork() public {
+        vm.startPrank(sampleKycAddress, sampleKycAddress);
+        vm.expectRevert(bytes4(keccak256("AddressNotInKycNetwork()")));
+        investmentHandler.removeAddressFromKycAddressNetwork(sampleUser);
+        vm.stopPrank();
+    }
+
+    /// @dev test computing allocation correctly (claimable allocation)
+    function testComputeUserClaimableAndTotalAllocationForInvestment() public {
+        createInvestment();
+        userInvest(
+            investmentHandler.latestInvestmentId(),
+            sampleUser,
+            sampleKycAddress,
+            1000 * 1e6 // 1000 USDC
+        );
+        mintProjectTokensToInvestmentHandler();
+
+        uint16 thisInvestmentId = investmentHandler.latestInvestmentId();
+        uint256 thisTotalClaimAmount = investmentHandler.computeUserTotalAllocationForInvesment(
+            sampleKycAddress,
+            thisInvestmentId
+        );
+
+        uint256 thisCurrentClaimableAmount = investmentHandler.computeUserClaimableAllocationForInvestment(
+            sampleKycAddress,
+            thisInvestmentId
+        );
+
+        uint256 projectToPaymentRatio = IERC20(mockProject).balanceOf(address(investmentHandler)) /
+            IERC20(mockStable).balanceOf(address(investmentHandler));
+
+        (uint128 investedPaymentToken, , ) = investmentHandler.userInvestments(
+            sampleKycAddress,
+            thisInvestmentId
+        );
+
+        assertTrue(thisTotalClaimAmount / investedPaymentToken == projectToPaymentRatio);
+        assertTrue(thisCurrentClaimableAmount / investedPaymentToken == projectToPaymentRatio);
+    }
+
+    /**
      * @dev creates an investment and checks it incremented latestInvestmentId within the contract
      */
     function testCreateInvestment() public {
@@ -62,6 +148,18 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
             pauseAfterCall
         );
 
+        vm.stopPrank();
+
+        //now test expected revert for chaing payment token after investments start. will revert even if called with same token address
+        userInvest(latestId, sampleUser, sampleKycAddress, 1000000 * 1e6);
+
+        vm.startPrank(investmentManager, investmentManager);
+        vm.expectRevert(bytes4(keccak256("InvestmentTokenAlreadyDeposited()")));
+        investmentHandler.setInvestmentPaymentTokenAddress(
+            latestId,
+            newPaymentTokenAddress,
+            pauseAfterCall
+        );
         vm.stopPrank();
 
         (
@@ -149,12 +247,17 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
             createInvestment();
         }
 
-        address[] memory _kycAddresses = users;
-        uint16[] memory _investmentIds = new uint16[](users.length);
-        uint128[] memory _paymentTokenAmounts = new uint128[](users.length);
+        address[] memory _kycAddresses = new address[](numInvestments);
+        uint16[] memory _investmentIds = new uint16[](numInvestments);
+        uint128[] memory _paymentTokenAmounts = new uint128[](numInvestments);
 
-        for (uint16 i = 0; i < users.length; i++) {
-            _investmentIds[i] = numInvestments % (i + 1);
+        //get a slice of users and write to _kycAddresses
+        for (uint256 i = 0; i < numInvestments; i++) {
+            _kycAddresses[i] = users[i + 4]; //some buffer to not interfere with sample addresses
+        }
+
+        for (uint16 i = 0; i < numInvestments; i++) {
+            _investmentIds[i] = i + 1;
             _paymentTokenAmounts[i] = 1000000 * 1e6; // 1M USDC
         }
 
@@ -165,9 +268,23 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
             _paymentTokenAmounts,
             pauseAfterCall
         );
+
+        // revert when array lengths are not matching
+        uint16[] memory _mistakeInvestmentIds = new uint16[](numInvestments - 1);
+        for (uint16 i = 0; i < numInvestments - 1; i++) {
+            _mistakeInvestmentIds[i] = i + 1;
+        }
+        vm.expectRevert(bytes4(keccak256("ArrayLengthMismatch()")));
+        investmentHandler.batchManualAddContribution(
+            _kycAddresses,
+            _mistakeInvestmentIds,
+            _paymentTokenAmounts,
+            pauseAfterCall
+        );
+
         vm.stopPrank();
 
-        for (uint256 i = 0; i < users.length; i++) {
+        for (uint256 i = 0; i < numInvestments; i++) {
             (uint128 investedPaymentToken, , ) = investmentHandler.userInvestments(
                 _kycAddresses[i],
                 _investmentIds[i]
@@ -176,13 +293,61 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         }
     }
 
+    /// @dev test refundUser and its requirements. unpauses relevant functions, then refunds user less than total invested balance, checks revert conditions, then checks balance changes post-refund
+    function testRefundUser() public {
+        createInvestment();
+        uint16 _investmentId = investmentHandler.latestInvestmentId();
+        uint120 _investAmount = 100000 * 1e6; // 1M USDC
+        uint128 _claimAmount = 10000 * 1e6; // 100k USDC
+        userInvest(_investmentId, sampleUser, sampleKycAddress, _investAmount);
+        (uint128 investedPaymentTokenBeforeRefund, , ) = investmentHandler.userInvestments(
+            sampleKycAddress,
+            _investmentId
+        );
+
+        //unpause as PAUSER_ROLE
+        vm.startPrank(defaultAdminController, defaultAdminController);
+        investmentHandler.setFunctionIsPaused(investmentHandler.refundUser.selector, false);
+        vm.stopPrank();
+
+        //refund user as REFUNDER_ROLE
+        vm.startPrank(refundManager, refundManager);
+        investmentHandler.refundUser(sampleKycAddress, _investmentId, _claimAmount, pauseAfterCall);
+        vm.stopPrank();
+
+        //revert case 1 refunding more than user invested
+        vm.startPrank(refundManager, refundManager);
+        vm.expectRevert(bytes4(keccak256("RefundAmountExceedsUserBalance()")));
+        investmentHandler.refundUser(
+            sampleKycAddress,
+            _investmentId,
+            _claimAmount * 10,
+            pauseAfterCall //false
+        );
+        vm.stopPrank();
+
+        // revert case 2 refunding when project tokens have been deposited (aka claims could have started already)
+        mintProjectTokensToInvestmentHandler();
+        vm.startPrank(refundManager, refundManager);
+        vm.expectRevert(bytes4(keccak256("TooLateForRefund()")));
+        investmentHandler.refundUser(sampleKycAddress, _investmentId, uint120(1), pauseAfterCall);
+        vm.stopPrank();
+
+        (uint128 investedPaymentTokenAfterRefund, , ) = investmentHandler.userInvestments(
+            sampleKycAddress,
+            _investmentId
+        );
+        assertTrue(investedPaymentTokenBeforeRefund == _investAmount);
+        assertTrue(investedPaymentTokenAfterRefund == _investAmount - _claimAmount);
+    }
+
     /**
      * @dev Confirms that ERC20 transferred to the contract can be transferred away. I.e., when investment is made and payment to the project is required
      */
     function testTransferPaymentToken() public {
-        testInvestFromNetworkWallet();
-
-        uint128 transferAmount = 1000000 * 1e6;
+        uint120 transferAmount = 1000 * 1e6;
+        createInvestment();
+        userInvest(investmentHandler.latestInvestmentId(), sampleUser, sampleKycAddress, transferAmount);
 
         //unpause as PAUSER_ROLE
         vm.startPrank(defaultAdminController, defaultAdminController);
@@ -199,6 +364,33 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         );
         vm.stopPrank();
 
+        //revert case 1 non-existent investment ID
+        vm.startPrank(investmentManager, investmentManager);
+
+        console.log("investmentId", investmentHandler.latestInvestmentId());
+        console.log("paymentTokenBalance", mockStable.balanceOf(address(investmentHandler)));
+
+        uint16 latestInvestmentId = investmentHandler.latestInvestmentId();
+        vm.expectRevert(bytes4(keccak256("InvestmentDoesNotExist()")));
+        investmentHandler.transferPaymentToken(
+            latestInvestmentId + 1,
+            sampleProjectTreasury,
+            transferAmount,
+            pauseAfterCall
+        );
+        vm.stopPrank();
+
+        //revert case 2 transfer amount exceeds contract balance for that investment
+        vm.startPrank(investmentManager, investmentManager);
+        vm.expectRevert(bytes4(keccak256("TransferAmountExceedsInvestmentBalance()")));
+        investmentHandler.transferPaymentToken(
+            latestInvestmentId,
+            sampleProjectTreasury,
+            transferAmount * 2,
+            pauseAfterCall
+        );
+        vm.stopPrank();
+
         if (logging) {
             console.log(
                 "mockStable.balanceOf(sampleProjectTreasury)",
@@ -206,6 +398,39 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
             );
         }
         assert(mockStable.balanceOf(sampleProjectTreasury) == transferAmount);
+    }
+
+    function testRecoverERC20() public {
+        uint256 recoverAmount = 1000 * 1e6;
+        mockProject.mint(address(investmentHandler), recoverAmount);
+
+        //unpause function as PAUSER_ROLE
+        vm.startPrank(defaultAdminController, defaultAdminController);
+        investmentHandler.setFunctionIsPaused(investmentHandler.recoverERC20.selector, false);
+        vm.stopPrank();
+
+        //recover ERC20 as PAYMENT_TOKEN_TRANSFER_ROLE
+        vm.startPrank(investmentManager, investmentManager);
+        investmentHandler.recoverERC20(
+            address(mockProject),
+            investmentManager,
+            recoverAmount,
+            pauseAfterCall
+        );
+        vm.stopPrank();
+
+        //revert case, recover more than balance
+        vm.startPrank(investmentManager, investmentManager);
+        vm.expectRevert(bytes4(keccak256("ERC20AmountExceedsBalance()")));
+        investmentHandler.recoverERC20(
+            address(mockProject),
+            investmentManager,
+            recoverAmount * 2,
+            pauseAfterCall
+        );
+        vm.stopPrank();
+
+        assertTrue(mockProject.balanceOf(address(investmentHandler)) == 0);
     }
 
     /**
@@ -233,6 +458,40 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         vm.startPrank(investmentManager, investmentManager);
         investmentHandler.addInvestment(signer, address(mockStable), stableAmount, pauseAfterCall);
         vm.stopPrank();
+    }
+
+    /// @dev batch set function is paused
+    function testBatchSetFunctionIsPaused() public {
+        // function selector array
+        bytes4[] memory functionSelectors = new bytes4[](13);
+        functionSelectors[0] = investmentHandler.claim.selector;
+        functionSelectors[1] = investmentHandler.invest.selector;
+        functionSelectors[2] = investmentHandler.addAddressToKycAddressNetwork.selector;
+        functionSelectors[3] = investmentHandler.removeAddressFromKycAddressNetwork.selector;
+        functionSelectors[4] = investmentHandler.addInvestment.selector;
+        functionSelectors[5] = investmentHandler.setInvestmentContributionPhase.selector;
+        functionSelectors[6] = investmentHandler.setInvestmentPaymentTokenAddress.selector;
+        functionSelectors[7] = investmentHandler.setInvestmentProjectTokenAddress.selector;
+        functionSelectors[8] = investmentHandler.setInvestmentProjectTokenAllocation.selector;
+        functionSelectors[9] = investmentHandler.manualAddContribution.selector;
+        functionSelectors[10] = investmentHandler.refundUser.selector;
+        functionSelectors[11] = investmentHandler.transferPaymentToken.selector;
+        functionSelectors[12] = investmentHandler.recoverERC20.selector;
+
+        bool[] memory isPaused = new bool[](13);
+        for (uint256 i = 0; i < isPaused.length; i++) {
+            isPaused[i] = true;
+        }
+
+        // pause all functions
+        vm.startPrank(defaultAdminController, defaultAdminController);
+        investmentHandler.batchSetFunctionIsPaused(functionSelectors, isPaused);
+        vm.stopPrank();
+
+        //confirm all are paused
+        for (uint256 i = 0; i < isPaused.length; i++) {
+            assertTrue(investmentHandler.functionIsPaused(functionSelectors[i]));
+        }
     }
 
     /**
