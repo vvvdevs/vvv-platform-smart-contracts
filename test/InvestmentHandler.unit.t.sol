@@ -41,15 +41,39 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         uint256 newTokensAllocated = 123456789 * 1e18;
 
         vm.startPrank(investmentManager, investmentManager);
-        investmentHandler.setInvestmentContributionPhase(latestId, desiredContributionPhase, pauseAfterCall);
-        investmentHandler.setInvestmentPaymentTokenAddress(latestId, newPaymentTokenAddress, pauseAfterCall);
-        investmentHandler.setInvestmentProjectTokenAddress(latestId, newProjectTokenAddress, pauseAfterCall);
-        investmentHandler.setInvestmentProjectTokenAllocation(latestId, newTokensAllocated, pauseAfterCall);
+        investmentHandler.setInvestmentContributionPhase(
+            latestId,
+            desiredContributionPhase,
+            pauseAfterCall
+        );
+        investmentHandler.setInvestmentPaymentTokenAddress(
+            latestId,
+            newPaymentTokenAddress,
+            pauseAfterCall
+        );
+        investmentHandler.setInvestmentProjectTokenAddress(
+            latestId,
+            newProjectTokenAddress,
+            pauseAfterCall
+        );
+        investmentHandler.setInvestmentProjectTokenAllocation(
+            latestId,
+            newTokensAllocated,
+            pauseAfterCall
+        );
 
         vm.stopPrank();
 
-        (, IERC20 projectToken, IERC20 paymentToken, uint8 currentPhase,,,, uint256 tokensAllocated) =
-            investmentHandler.investments(latestId);
+        (
+            ,
+            IERC20 projectToken,
+            IERC20 paymentToken,
+            uint8 currentPhase,
+            ,
+            ,
+            ,
+            uint256 tokensAllocated
+        ) = investmentHandler.investments(latestId);
 
         assertTrue(address(paymentToken) == newPaymentTokenAddress);
         assertTrue(address(projectToken) == newProjectTokenAddress);
@@ -64,9 +88,11 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         createInvestment();
 
         uint120 investAmount = 1000000 * 1e6;
-        userInvest(sampleUser, sampleKycAddress, investAmount);
+        userInvest(investmentHandler.latestInvestmentId(), sampleUser, sampleKycAddress, investAmount);
 
-        (,,,, uint128 investedPaymentToken,,,) = investmentHandler.investments(investmentHandler.latestInvestmentId());
+        (, , , , uint128 investedPaymentToken, , , ) = investmentHandler.investments(
+            investmentHandler.latestInvestmentId()
+        );
         assertTrue(investedPaymentToken == investAmount);
     }
 
@@ -78,8 +104,10 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         mintProjectTokensToInvestmentHandler();
 
         uint16 thisInvestmentId = investmentHandler.latestInvestmentId();
-        uint256 thisClaimAmount =
-            investmentHandler.computeUserClaimableAllocationForInvestment(sampleKycAddress, thisInvestmentId);
+        uint256 thisClaimAmount = investmentHandler.computeUserClaimableAllocationForInvestment(
+            sampleKycAddress,
+            thisInvestmentId
+        );
 
         vm.startPrank(sampleUser, sampleUser);
         investmentHandler.claim(thisInvestmentId, thisClaimAmount, sampleUser, sampleKycAddress);
@@ -102,10 +130,15 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
 
         //add manual contribution as ADD_CONTRIBUTION_ROLE
         vm.startPrank(contributionManager, contributionManager);
-        investmentHandler.manualAddContribution(_kycAddress, _investmentId, _paymentTokenAmount, pauseAfterCall);
+        investmentHandler.manualAddContribution(
+            _kycAddress,
+            _investmentId,
+            _paymentTokenAmount,
+            pauseAfterCall
+        );
         vm.stopPrank();
 
-        (uint128 investedPaymentToken,,) = investmentHandler.userInvestments(_kycAddress, _investmentId);
+        (uint128 investedPaymentToken, , ) = investmentHandler.userInvestments(_kycAddress, _investmentId);
         assertTrue(investedPaymentToken == _paymentTokenAmount);
     }
 
@@ -127,12 +160,18 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
 
         vm.startPrank(contributionManager, contributionManager);
         investmentHandler.batchManualAddContribution(
-            _kycAddresses, _investmentIds, _paymentTokenAmounts, pauseAfterCall
+            _kycAddresses,
+            _investmentIds,
+            _paymentTokenAmounts,
+            pauseAfterCall
         );
         vm.stopPrank();
 
         for (uint256 i = 0; i < users.length; i++) {
-            (uint128 investedPaymentToken,,) = investmentHandler.userInvestments(_kycAddresses[i], _investmentIds[i]);
+            (uint128 investedPaymentToken, , ) = investmentHandler.userInvestments(
+                _kycAddresses[i],
+                _investmentIds[i]
+            );
             assertTrue(investedPaymentToken == _paymentTokenAmounts[i]);
         }
     }
@@ -153,12 +192,18 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         //transfer payment token as PAYMENT_TOKEN_TRANSFER_ROLE
         vm.startPrank(investmentManager, investmentManager);
         investmentHandler.transferPaymentToken(
-            investmentHandler.latestInvestmentId(), sampleProjectTreasury, transferAmount, pauseAfterCall
+            investmentHandler.latestInvestmentId(),
+            sampleProjectTreasury,
+            transferAmount,
+            pauseAfterCall
         );
         vm.stopPrank();
 
         if (logging) {
-            console.log("mockStable.balanceOf(sampleProjectTreasury)", mockStable.balanceOf(sampleProjectTreasury));
+            console.log(
+                "mockStable.balanceOf(sampleProjectTreasury)",
+                mockStable.balanceOf(sampleProjectTreasury)
+            );
         }
         assert(mockStable.balanceOf(sampleProjectTreasury) == transferAmount);
     }
@@ -198,7 +243,7 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         vm.deal(deployer, 1 ether);
         vm.startPrank(deployer, deployer);
         vm.expectRevert(bytes(""));
-        (bool os,) = address(investmentHandler).call{value: 1 wei}("");
+        (bool os, ) = address(investmentHandler).call{ value: 1 wei }("");
         vm.stopPrank();
         console.log("os", os);
         console.log("balance of investmentHandler", address(investmentHandler).balance);
@@ -218,21 +263,27 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
 
         // each user invests and claims in some rearranged order
         for (uint256 i = 2; i < users.length; i++) {
-            userInvest(users[i], users[i], investAmount);
-            (uint128 investedPaymentToken,,) = investmentHandler.userInvestments(users[i], investmentId);
+            userInvest(investmentHandler.latestInvestmentId(), users[i], users[i], investAmount);
+            (uint128 investedPaymentToken, , ) = investmentHandler.userInvestments(users[i], investmentId);
             assertTrue(investedPaymentToken == investAmount);
             advanceBlockNumberAndTimestamp(i);
         }
 
-        for (uint256 i = users.length-1; i > 1; i=i-2) {
-            claimAmount = investmentHandler.computeUserClaimableAllocationForInvestment(users[i], investmentId);
+        for (uint256 i = users.length - 1; i > 1; i = i - 2) {
+            claimAmount = investmentHandler.computeUserClaimableAllocationForInvestment(
+                users[i],
+                investmentId
+            );
             userClaim(users[i], users[i], claimAmount);
             assertTrue(mockProject.balanceOf(users[i]) == claimAmount);
             advanceBlockNumberAndTimestamp(i);
         }
 
-        for (uint256 i = users.length-2; i > 1; i=i-2) {
-            claimAmount = investmentHandler.computeUserClaimableAllocationForInvestment(users[i], investmentId);
+        for (uint256 i = users.length - 2; i > 1; i = i - 2) {
+            claimAmount = investmentHandler.computeUserClaimableAllocationForInvestment(
+                users[i],
+                investmentId
+            );
             userClaim(users[i], users[i], claimAmount);
             assertTrue(mockProject.balanceOf(users[i]) == claimAmount);
             advanceBlockNumberAndTimestamp(i);

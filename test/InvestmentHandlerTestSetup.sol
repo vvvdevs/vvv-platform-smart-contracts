@@ -36,6 +36,7 @@ contract InvestmentHandlerTestSetup is Test {
     uint256 public refundManagerKey = 12345678;
     uint256 public signerKey = 123456789;
     uint256 public projectSenderKey = 1234567890;
+    uint256 public chainid;
 
     address deployer = vm.addr(deployerKey);
     address defaultAdminController = vm.addr(defaultAdminControllerKey);
@@ -115,8 +116,14 @@ contract InvestmentHandlerTestSetup is Test {
         return keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash));
     }
 
-    function getSignature(address _user, uint120 _amount, uint8 _phase) public returns (bytes memory) {
-        bytes32 messageHash = keccak256(abi.encodePacked(_user, _amount, _phase));
+    function getSignature(
+        uint16 _investmentId,
+        address _user,
+        uint120 _amount,
+        uint8 _phase
+    ) public returns (bytes memory) {
+        chainid = block.chainid;
+        bytes32 messageHash = keccak256(abi.encodePacked(_investmentId, _user, _amount, _phase, chainid));
         bytes32 prefixedHash = prefixed(messageHash);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerKey, prefixedHash);
         bytes memory signature = toBytesConcat(r, s, v);
@@ -144,7 +151,12 @@ contract InvestmentHandlerTestSetup is Test {
 
     function createInvestment() public {
         vm.startPrank(investmentManager, investmentManager);
-        investmentHandler.addInvestment(signer, address(mockStable), uint128(stableAmount * users.length), pauseAfterCall);
+        investmentHandler.addInvestment(
+            signer,
+            address(mockStable),
+            uint128(stableAmount * users.length),
+            pauseAfterCall
+        );
         ++ghost_open_latestInvestmentId; //during addInvestment, contract's investmentId is incremented
         investmentHandler.setInvestmentProjectTokenAddress(
             investmentHandler.latestInvestmentId(),
@@ -175,13 +187,18 @@ contract InvestmentHandlerTestSetup is Test {
             uint112 randomAmountWithinBalance = uint112(
                 uint256(keccak256(abi.encodePacked(block.timestamp, i))) % mockStable.balanceOf(users[i])
             );
-            userInvest(users[i], users[i], randomAmountWithinBalance);
+            userInvest(ghost_open_latestInvestmentId, users[i], users[i], randomAmountWithinBalance);
         }
     }
 
-    function userInvest(address _caller, address _kycAddress, uint120 _amount) public {
+    function userInvest(
+        uint16 _investmentId,
+        address _caller,
+        address _kycAddress,
+        uint120 _amount
+    ) public {
         vm.startPrank(signer, signer);
-        bytes memory thisSignature = getSignature(_kycAddress, _amount, phase);
+        bytes memory thisSignature = getSignature(_investmentId, _kycAddress, _amount, phase);
         vm.stopPrank();
 
         if (_caller != _kycAddress) {
@@ -235,7 +252,7 @@ contract InvestmentHandlerTestSetup is Test {
                 users[i],
                 investmentHandler.latestInvestmentId()
             );
-            if(claimableAmount == 0) {
+            if (claimableAmount == 0) {
                 userClaim(users[i], users[i], claimableAmount);
             }
         }
@@ -249,16 +266,20 @@ contract InvestmentHandlerTestSetup is Test {
         ghost_open_depositedProjectTokens[ghost_open_latestInvestmentId] += _amount;
     }
 
-    function getProjectToPaymentTokenRatioRandomAddress(
-        uint256 _index
-    ) public view returns (uint256) {
+    function getProjectToPaymentTokenRatioRandomAddress(uint256 _index) public view returns (uint256) {
         address user = users[_index];
-        uint totalClaimed = investmentHandler.getTotalClaimedForInvestment(user, ghost_open_latestInvestmentId);
+        uint totalClaimed = investmentHandler.getTotalClaimedForInvestment(
+            user,
+            ghost_open_latestInvestmentId
+        );
         uint remainingClaimable = investmentHandler.computeUserClaimableAllocationForInvestment(
             user,
             ghost_open_latestInvestmentId
         );
-        uint investedAmount = investmentHandler.getTotalInvestedForInvestment(user, ghost_open_latestInvestmentId);
+        uint investedAmount = investmentHandler.getTotalInvestedForInvestment(
+            user,
+            ghost_open_latestInvestmentId
+        );
         uint projectToPaymentRatio = Math.mulDiv(totalClaimed + remainingClaimable, 1, investedAmount);
         return projectToPaymentRatio;
     }
@@ -305,6 +326,7 @@ contract InvestmentHandlerTestSetup is Test {
                 uint256(keccak256(abi.encodePacked(block.timestamp, i))) % mockStable.balanceOf(users[i])
             );
             userInvest_HandlerForInvestmentHandler(
+                ghost_bound_latestInvestmentId,
                 users[i],
                 users[i],
                 users[i],
@@ -314,13 +336,14 @@ contract InvestmentHandlerTestSetup is Test {
     }
 
     function userInvest_HandlerForInvestmentHandler(
+        uint16 _investmentId,
         address _caller,
         address _newAddress,
         address _kycAddress,
         uint120 _amount
     ) public {
         vm.startPrank(signer, signer);
-        bytes memory thisSignature = getSignature(_kycAddress, _amount, phase);
+        bytes memory thisSignature = getSignature(_investmentId, _kycAddress, _amount, phase);
         vm.stopPrank();
 
         if (_caller != _kycAddress) {
@@ -374,7 +397,7 @@ contract InvestmentHandlerTestSetup is Test {
                 users[i],
                 ghost_bound_latestInvestmentId
             );
-            if(claimableAmount > 0){
+            if (claimableAmount > 0) {
                 userClaim_HandlerForInvestmentHandler(users[i], users[i], claimableAmount);
             }
         }
