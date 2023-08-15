@@ -157,6 +157,9 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
     error AddressNotInKycNetwork();
     error ArrayLengthMismatch();
     error CantClaimZero();
+    error CantInvestZero();
+    error CantRefundZero();
+    error CantTransferZero();
     error ClaimAmountExceedsTotalClaimable();
     error ERC20AmountExceedsBalance();
     error InvalidSignature();
@@ -251,6 +254,8 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
             revert InvalidSignature();
         } else if (!_phaseCheck(_params)) {
             revert InvestmentIsNotOpen();
+        } else if (_params.thisInvestmentAmount == 0) {
+            revert CantInvestZero();
         } else if (!_paymentTokenAllowanceCheck(_params)) {
             revert InsufficientAllowance();
         } else if (!_contributionLimitCheck(_params)) {
@@ -329,7 +334,9 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
      * @notice allows any address to add any other address to its network, but this is only is of use to addresss who are kyc'd and able to invest/claim
      * @param _newAddress the address of the address to be added to the network
      */
-    function addAddressToKycAddressNetwork(address _newAddress) external nonReentrant {
+    function addAddressToKycAddressNetwork(
+        address _newAddress
+    ) external nonReentrant whenNotPausedSelective(false) {
         if (correspondingKycAddress[_newAddress] != address(0)) {
             revert AddressAlreadyInKycNetwork();
         }
@@ -345,7 +352,9 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
      * @notice allows any address to remove any other address from its network, but this is only is of use to addresss who are kyc'd and able to invest/claim
      * @param _networkAddress the address of the address to be removed from the network, must be in the network of the calling kyc address
      */
-    function removeAddressFromKycAddressNetwork(address _networkAddress) external nonReentrant {
+    function removeAddressFromKycAddressNetwork(
+        address _networkAddress
+    ) external nonReentrant whenNotPausedSelective(false) {
         if (correspondingKycAddress[_networkAddress] != msg.sender) {
             revert AddressNotInKycNetwork();
         }
@@ -483,13 +492,14 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
 
     /**
      * @dev confirms the calling address's payment token allocation is sufficient for the amount they're trying to invest
-     * @dev accuracy of maxInvestableAmount relies on integrity of _signatureCheck, in which maxInvestableAmount is validated
+     * @dev accuracy of maxInvestableAmount relies on integrity of _signatureCheck, in which maxInvestableAmount is validated before this function is called
      * @return bool true if the sum of the proposed contribution to investment of investmentId and any existing contribution to the same investment is less than or equal to the maximum allowed investable amount for that user
      */
     function _contributionLimitCheck(InvestParams memory _params) private view returns (bool) {
         uint256 proposedTotalContribution = _params.thisInvestmentAmount +
             userInvestments[_params.kycAddress][_params.investmentId].totalInvestedPaymentToken;
-        return proposedTotalContribution <= _params.maxInvestableAmount;
+        bool withinLimit = proposedTotalContribution <= _params.maxInvestableAmount;
+        return withinLimit;
     }
 
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
@@ -612,7 +622,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
         uint128 _paymentTokenAmount,
         bool _pauseAfterCall
     ) public nonReentrant whenNotPausedSelective(_pauseAfterCall) onlyRole(ADD_CONTRIBUTION_ROLE) {
-        if (_investmentId > latestInvestmentId) {
+        if (_investmentId > latestInvestmentId || _investmentId == 0) {
             revert InvestmentDoesNotExist();
         }
 
@@ -660,6 +670,11 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
         uint128 _paymentTokenAmount,
         bool _pauseAfterCall
     ) public nonReentrant whenNotPausedSelective(_pauseAfterCall) onlyRole(REFUNDER_ROLE) {
+        // refund is not 0
+        if (_paymentTokenAmount == 0) {
+            revert CantRefundZero();
+        }
+
         // refund amount must not be more than the user has invested. this will also catch wrong investmentId inputs
         if (_paymentTokenAmount > userInvestments[_kycAddress][_investmentId].totalInvestedPaymentToken) {
             revert RefundAmountExceedsUserBalance();
@@ -688,11 +703,15 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
         uint128 _paymentTokenAmount,
         bool _pauseAfterCall
     ) public nonReentrant whenNotPausedSelective(_pauseAfterCall) onlyRole(PAYMENT_TOKEN_TRANSFER_ROLE) {
-        if (_investmentId > latestInvestmentId) {
+        if (_investmentId > latestInvestmentId || _investmentId == 0) {
             revert InvestmentDoesNotExist();
         }
 
-        if (investments[_investmentId].totalInvestedPaymentToken < _paymentTokenAmount) {
+        if (_paymentTokenAmount == 0) {
+            revert CantTransferZero();
+        }
+
+        if (_paymentTokenAmount > investments[_investmentId].totalInvestedPaymentToken) {
             revert TransferAmountExceedsInvestmentBalance();
         }
 
