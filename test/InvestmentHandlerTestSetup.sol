@@ -11,16 +11,15 @@ pragma solidity ^0.8.20;
 import "lib/forge-std/src/Test.sol"; //for stateless tests
 
 import { InvestmentHandler } from "contracts/InvestmentHandler.sol";
-import { MockStable } from "contracts/mock/MockStable.sol";
-import { MockProject } from "contracts/mock/MockProject.sol";
+import { MockERC20 } from "contracts/mock/MockERC20.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { HandlerForInvestmentHandler } from "test/HandlerForInvestmentHandler.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 
 contract InvestmentHandlerTestSetup is Test {
     InvestmentHandler public investmentHandler;
-    MockStable public mockStable;
-    MockProject public mockProject;
+    MockERC20 public mockStable;
+    MockERC20 public mockProject;
 
     HandlerForInvestmentHandler public handler;
 

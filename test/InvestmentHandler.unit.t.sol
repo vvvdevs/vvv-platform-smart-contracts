@@ -13,8 +13,8 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
             contributionManager,
             refundManager
         );
-        mockStable = new MockStable(6); //usdc decimals
-        mockProject = new MockProject(18); //project token
+        mockStable = new MockERC20(6); //usdc decimals
+        mockProject = new MockERC20(18); //project token
         vm.stopPrank();
 
         targetContract(address(investmentHandler));
