@@ -183,13 +183,14 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
     /// @dev constructor handles role setup
     constructor(
         address _defaultAdminController,
+        address _pauser,
         address _investmentManager,
         address _contributionAndRefundManager,
         address _refunder
     ) {
         //Deployer is default admin while setting up roles
         _grantRole(DEFAULT_ADMIN_ROLE, _defaultAdminController);
-        _grantRole(PAUSER_ROLE, _defaultAdminController);
+        _grantRole(PAUSER_ROLE, _pauser);
         _grantRole(INVESTMENT_MANAGER_ROLE, _investmentManager);
         _grantRole(ADD_CONTRIBUTION_ROLE, _contributionAndRefundManager);
         _grantRole(REFUNDER_ROLE, _refunder);

@@ -1,0 +1,20 @@
+1. solidity-code-metrics report
+2. requirement notes
+3. questions about how to improve (FREI-PI like post-call checks, etc.)
+
+---
+
+Re: requirement notes - rekt test items
+
+1. All actors, roles, and privileges documented
+2. Documentation of any/all external services, contracts, and oracles
+3. Written and tested incident response plan 
+4. Best ways to attack system
+5. Employee ID Verification 
+6. Team member for security purposes
+7. Require hardware security keys 
+8. Key management requires multiple people and physical steps 
+9. Define key invariants and test on every commit 
+10. Use automated tools to check for vulnerabilities
+11. Get external audits
+12. How to manage users who abuse system
