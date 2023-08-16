@@ -9,6 +9,7 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         vm.startPrank(deployer, deployer);
         investmentHandler = new InvestmentHandler(
             defaultAdminController,
+            pauser,
             investmentManager,
             contributionManager,
             refundManager
@@ -222,7 +223,7 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         uint128 _paymentTokenAmount = 1000000 * 1e6; // 1M USDC
 
         //unpause as PAUSER_ROLE
-        vm.startPrank(defaultAdminController, defaultAdminController);
+        vm.startPrank(pauser, pauser);
         investmentHandler.setFunctionIsPaused(investmentHandler.manualAddContribution.selector, false);
         vm.stopPrank();
 
@@ -306,7 +307,7 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         );
 
         //unpause as PAUSER_ROLE
-        vm.startPrank(defaultAdminController, defaultAdminController);
+        vm.startPrank(pauser, pauser);
         investmentHandler.setFunctionIsPaused(investmentHandler.refundUser.selector, false);
         vm.stopPrank();
 
@@ -350,7 +351,7 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         userInvest(investmentHandler.latestInvestmentId(), sampleUser, sampleKycAddress, transferAmount);
 
         //unpause as PAUSER_ROLE
-        vm.startPrank(defaultAdminController, defaultAdminController);
+        vm.startPrank(pauser, pauser);
         investmentHandler.setFunctionIsPaused(investmentHandler.transferPaymentToken.selector, false);
         vm.stopPrank();
 
@@ -405,7 +406,7 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         mockProject.mint(address(investmentHandler), recoverAmount);
 
         //unpause function as PAUSER_ROLE
-        vm.startPrank(defaultAdminController, defaultAdminController);
+        vm.startPrank(pauser, pauser);
         investmentHandler.setFunctionIsPaused(investmentHandler.recoverERC20.selector, false);
         vm.stopPrank();
 
@@ -438,7 +439,7 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
      */
     function testFunctionIsPaused() public {
         //pause addInvestment
-        vm.startPrank(defaultAdminController, defaultAdminController);
+        vm.startPrank(pauser, pauser);
         investmentHandler.setFunctionIsPaused(investmentHandler.addInvestment.selector, true);
         vm.stopPrank();
 
@@ -450,7 +451,7 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         vm.stopPrank();
 
         //unpause addInvestment
-        vm.startPrank(defaultAdminController, defaultAdminController);
+        vm.startPrank(pauser, pauser);
         investmentHandler.setFunctionIsPaused(investmentHandler.addInvestment.selector, false);
         vm.stopPrank();
 
@@ -484,7 +485,7 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         }
 
         // pause all functions
-        vm.startPrank(defaultAdminController, defaultAdminController);
+        vm.startPrank(pauser, pauser);
         investmentHandler.batchSetFunctionIsPaused(functionSelectors, isPaused);
         vm.stopPrank();
 

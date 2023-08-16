@@ -34,6 +34,7 @@ contract InvestmentHandlerInvariantTests_Bound is InvestmentHandlerTestSetup {
         vm.startPrank(deployer, deployer);
         investmentHandler = new InvestmentHandler(
             defaultAdminController,
+            pauser,
             investmentManager,
             contributionManager,
             refundManager
@@ -123,6 +124,7 @@ contract InvestmentHandlerInvariantTests_Open is InvestmentHandlerTestSetup {
         vm.startPrank(deployer, deployer);
         investmentHandler = new InvestmentHandler(
             defaultAdminController,
+            pauser,
             investmentManager,
             contributionManager,
             refundManager

@@ -35,6 +35,7 @@ contract InvestmentHandlerTestSetup is Test {
     uint256 public refundManagerKey = 12345678;
     uint256 public signerKey = 123456789;
     uint256 public projectSenderKey = 1234567890;
+    uint256 public pauserKey = 12345678901;
     uint256 public chainid;
 
     address deployer = vm.addr(deployerKey);
@@ -44,6 +45,7 @@ contract InvestmentHandlerTestSetup is Test {
     address refundManager = vm.addr(refundManagerKey);
     address signer = vm.addr(signerKey);
     address projectSender = vm.addr(projectSenderKey);
+    address pauser = vm.addr(pauserKey);
 
     address sampleUser;
     address sampleKycAddress;
