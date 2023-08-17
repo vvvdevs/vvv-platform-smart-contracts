@@ -203,7 +203,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
         _revokeRole(DEFAULT_ADMIN_ROLE, _msgSender());
     }
 
-    /// @dev called in constructor to set default paused functions for security
+    /// @dev called from constructor to set default paused functions for security
     function defaultPauseConfig() private {
         _setFunctionIsPaused(this.manualAddContribution.selector, true);
         _setFunctionIsPaused(this.refundUser.selector, true);
@@ -400,9 +400,11 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
         UserInvestment storage userInvestment = userInvestments[_kycAddress][_investmentId];
         Investment storage investment = investments[_investmentId];
 
+        uint256 totalInvestedPaymentToken = investment.totalInvestedPaymentToken;
+        if (totalInvestedPaymentToken == 0) return 0;
+
         uint256 totalTokenAllocated = investment.totalTokensAllocated;
         uint256 userTotalInvestedPaymentToken = userInvestment.totalInvestedPaymentToken;
-        uint256 totalInvestedPaymentToken = investment.totalInvestedPaymentToken;
 
         return Math.mulDiv(totalTokenAllocated, userTotalInvestedPaymentToken, totalInvestedPaymentToken);
     }
@@ -418,6 +420,8 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
         uint16 _investmentId
     ) public view returns (uint256) {
         uint256 totalInvestedPaymentToken = investments[_investmentId].totalInvestedPaymentToken;
+        if (totalInvestedPaymentToken == 0) return 0;
+
         uint256 totalTokensClaimed = investments[_investmentId].totalTokensClaimed;
         uint256 userTotalInvestedPaymentToken = userInvestments[_kycAddress][_investmentId]
             .totalInvestedPaymentToken;
