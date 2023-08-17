@@ -12,7 +12,8 @@ Excuse my learning invariant testing during this project :)
 
 Notes:
 Following https://mirror.xyz/horsefacts.eth/Jex2YVaO65dda6zEyfM_-DXlXhOWCAoSpOx5PLocYgw to invariant test the InvestmentHandler contract.
-Also, the structure of tests here makes sense as if all r/w operations are done in setUp, and only assertions tested in the invariant tests themselves. Each unique setup needs another test contract.
+
+The structure of tests here makes sense as if all r/w operations are done in setUp, and only assertions tested in the invariant tests themselves. Each unique setup needs another test contract.
 
 Invariants:
 1. The paymentToken balance of the InvestmentHandler contract should be equal to the total amount of paymentTokens deposited by all users.
@@ -99,25 +100,11 @@ contract InvestmentHandlerInvariantTests_Bound is InvestmentHandlerTestSetup {
             getProjectToPaymentTokenRatioRandomAddress_HandlerForInvestmentHandler(users.length - 1)
         );
     }
-
-    /**
-     * Related to invariant 3 - checks for seeing if users' ratio of claimed to invested tokens can change
-     */
-    function testFuzz_compareProjectToPaymentTokenRatio(uint16 _index) public {
-        if (_index > 1 && _index < users.length) {
-            uint256 ratio1 = getProjectToPaymentTokenRatioRandomAddress_HandlerForInvestmentHandler(
-                _index - 1
-            );
-            uint256 ratio2 = getProjectToPaymentTokenRatioRandomAddress_HandlerForInvestmentHandler(
-                _index
-            );
-            assertEq(ratio1, ratio2);
-
-            console.log("ratio1: ", ratio1);
-            console.log("ratio2: ", ratio2);
-        }
-    }
 }
+
+//====================================================================================================
+// OPEN INVARIANT AND OTHER FUZZ TESTS
+//====================================================================================================
 
 contract InvestmentHandlerInvariantTests_Open is InvestmentHandlerTestSetup {
     function setUp() public {
@@ -188,6 +175,38 @@ contract InvestmentHandlerInvariantTests_Open is InvestmentHandlerTestSetup {
             getProjectToPaymentTokenRatioRandomAddress(users.length - 1)
         );
     }
+}
+
+//====================================================================================================
+// Misc Fuzz Tests
+//====================================================================================================
+
+contract InvestmentHandlerFuzzTests is InvestmentHandlerTestSetup {
+    function setUp() public {
+        vm.startPrank(deployer, deployer);
+        investmentHandler = new InvestmentHandler(
+            defaultAdminController,
+            pauser,
+            investmentManager,
+            contributionManager,
+            refundManager
+        );
+        mockStable = new MockERC20(6); //usdc decimals
+        mockProject = new MockERC20(18); //project token
+        vm.stopPrank();
+
+        targetContract(address(investmentHandler));
+
+        generateUserAddressListAndDealEtherAndMockStable();
+        createInvestment();
+        usersInvestRandomAmounts();
+        transferProjectTokensToInvestmentHandler(1_000_000 * 1e6);
+        usersClaimRandomAmounts();
+
+        (, , , , investedTotal, , , ) = investmentHandler.investments(
+            investmentHandler.latestInvestmentId()
+        );
+    }
 
     /**
      * Related to invariant 3 - checks for seeing if users' ratio of claimed to invested tokens can change
@@ -201,5 +220,225 @@ contract InvestmentHandlerInvariantTests_Open is InvestmentHandlerTestSetup {
             console.log("ratio1: ", ratio1);
             console.log("ratio2: ", ratio2);
         }
+    }
+
+    /**
+     * Fuzz claim
+     * Expects revert for all calls, since there is a low chance of guessing all inputs correctly
+     */
+    function testFuzz_claim(
+        uint16 _investmentId,
+        uint256 _claimAmount,
+        address _tokenRecipient,
+        address _kycAddress
+    ) public {
+        vm.expectRevert();
+        investmentHandler.claim(_investmentId, _claimAmount, _tokenRecipient, _kycAddress);
+    }
+
+    /**
+     * Fuzz invest
+     * Expects revert for all calls, since there is a low chance of guessing all inputs correctly
+     */
+    function testFuzz_invest(
+        uint16 investmentId,
+        uint120 thisInvestmentAmount,
+        uint120 maxInvestableAmount,
+        uint8 userPhase,
+        address kycAddress,
+        bytes calldata signature
+    ) public {
+        InvestmentHandler.InvestParams memory params = InvestmentHandler.InvestParams(
+            investmentId,
+            thisInvestmentAmount,
+            maxInvestableAmount,
+            userPhase,
+            kycAddress,
+            signature
+        );
+
+        vm.expectRevert();
+        investmentHandler.invest(params);
+    }
+
+    /**
+     * Fuzz computeUserTotalAllocationForInvesment
+     * Just showing a non-revert
+     */
+    function testFuzz_computeUserTotalAllocationForInvesment(
+        address _kycAddress,
+        uint16 _investmentId
+    ) public {
+        uint256 allocation = investmentHandler.computeUserTotalAllocationForInvesment(
+            _kycAddress,
+            _investmentId
+        );
+    }
+
+    /**
+     * Fuzz computeUserClaimableAllocationForInvestment
+     * Just showing a non-revert
+     */
+    function testFuzz_computeUserClaimableAllocationForInvestment(
+        address _kycAddress,
+        uint16 _investmentId
+    ) public {
+        uint256 allocation = investmentHandler.computeUserTotalAllocationForInvesment(
+            _kycAddress,
+            _investmentId
+        );
+    }
+
+    /**
+     * Fuzz investmentIsOpen
+     * Just showing a non-revert
+     */
+    function testFuzz_investmentIsOpen(uint16 _investmentId, uint8 _userPhase) public {
+        bool isOpen = investmentHandler.investmentIsOpen(_investmentId, _userPhase);
+    }
+
+    /**
+     * Fuzz addInvestment
+     * Just showing a revert since function is not called with correct admin user except by chance, so shouldn't happen
+     */
+    function testFuzz_addInvestment(
+        address _signer,
+        address _paymentToken,
+        uint128 _totalAllocatedPaymentToken,
+        bool _pauseAfterCall
+    ) public {
+        vm.expectRevert();
+        investmentHandler.addInvestment(
+            _signer,
+            _paymentToken,
+            _totalAllocatedPaymentToken,
+            _pauseAfterCall
+        );
+    }
+
+    /**
+     * Fuzz setInvestmentContributionPhase
+     * Just showing a revert since function is not called with correct admin user except by chance, so shouldn't happen
+     */
+    function testFuzz_setInvestmentContributionPhase(
+        uint16 _investmentId,
+        uint8 _contributionPhase,
+        bool _pauseAfterCall
+    ) public {
+        vm.expectRevert();
+        investmentHandler.setInvestmentContributionPhase(
+            _investmentId,
+            _contributionPhase,
+            _pauseAfterCall
+        );
+    }
+
+    /**
+     * Fuzz setInvestmentPaymentTokenAddress
+     * Just showing a revert since function is not called with correct admin user except by chance, so shouldn't happen
+     */
+    function testFuzz_setInvestmentPaymentTokenAddress(
+        uint16 _investmentId,
+        address _paymentToken,
+        bool _pauseAfterCall
+    ) public {
+        vm.expectRevert();
+        investmentHandler.setInvestmentPaymentTokenAddress(_investmentId, _paymentToken, _pauseAfterCall);
+    }
+
+    /**
+     * Fuzz setInvestmentProjectTokenAddress
+     * Just showing a revert since function is not called with correct admin user except by chance, so shouldn't happen
+     */
+    function testFuzz_setInvestmentProjectTokenAddress(
+        uint16 _investmentId,
+        address _projectToken,
+        bool _pauseAfterCall
+    ) public {
+        vm.expectRevert();
+        investmentHandler.setInvestmentProjectTokenAddress(_investmentId, _projectToken, _pauseAfterCall);
+    }
+
+    /**
+     * Fuzz setInvestmentProjectTokenAllocation
+     * Just showing a revert since function is not called with correct admin user except by chance, so shouldn't happen
+     */
+    function testFuzz_setInvestmentProjectTokenAllocation(
+        uint16 _investmentId,
+        uint256 _totalAllocatedProjectToken,
+        bool _pauseAfterCall
+    ) public {
+        vm.expectRevert();
+        investmentHandler.setInvestmentProjectTokenAllocation(
+            _investmentId,
+            _totalAllocatedProjectToken,
+            _pauseAfterCall
+        );
+    }
+
+    /**
+     * Fuzz manualAddContribution
+     * Just showing a revert since function is not called with correct admin user except by chance, so shouldn't happen
+     */
+    function testFuzz_manualAddContribution(
+        address _kycAddress,
+        uint16 _investmentId,
+        uint128 _thisInvestmentAmount,
+        bool _pauseAfterCall
+    ) public {
+        vm.expectRevert();
+        investmentHandler.manualAddContribution(
+            _kycAddress,
+            _investmentId,
+            _thisInvestmentAmount,
+            _pauseAfterCall
+        );
+    }
+
+    /**
+     * Fuzz refundUser
+     * Just showing a revert since function is not called with correct admin user except by chance, so shouldn't happen
+     */
+    function testFuzz_refundUser(
+        address _kycAddress,
+        uint16 _investmentId,
+        uint128 _thisInvestmentAmount,
+        bool _pauseAfterCall
+    ) public {
+        vm.expectRevert();
+        investmentHandler.refundUser(_kycAddress, _investmentId, _thisInvestmentAmount, _pauseAfterCall);
+    }
+
+    /**
+     * Fuzz transferPaymentToken
+     * Just showing a revert since function is not called with correct admin user except by chance, so shouldn't happen
+     */
+    function testFuzz_transferPaymentToken(
+        uint16 _investmentId,
+        address _destinationAddress,
+        uint128 _paymentTokenAmount,
+        bool _pauseAfterCall
+    ) public {
+        vm.expectRevert();
+        investmentHandler.transferPaymentToken(
+            _investmentId,
+            _destinationAddress,
+            _paymentTokenAmount,
+            _pauseAfterCall
+        );
+    }
+
+    /**
+     * Fuzz recoverERC20
+     * Just showing a revert since function is not called with correct admin user except by chance, so shouldn't happen
+     */
+    function testFuzz_recoverERC20(
+        address _tokenAddress,
+        address _destinationAddress,
+        uint256 _tokenAmount,
+        bool _pauseAfterCall
+    ) public {
+        vm.expectRevert();
+        investmentHandler.recoverERC20(_tokenAddress, _destinationAddress, _tokenAmount, _pauseAfterCall);
     }
 }
