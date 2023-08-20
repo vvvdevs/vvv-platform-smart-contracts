@@ -6,7 +6,7 @@ Branch for some minor adds moving into requesting audit quotes.
 1. Requirements: 
     - audit/Requirements.md
 2. Audit Scope: 
-    - contracts/InvestmentHandler.sol (465 LOC)
+    - contracts/InvestmentHandler.sol (454 LOC)
     - node_modules/@uintgroup/pausable-selective/src/PausableSelective.sol (58 LOC)
 3. Concerns: 
     - audit/PreAuditConcerns.md
