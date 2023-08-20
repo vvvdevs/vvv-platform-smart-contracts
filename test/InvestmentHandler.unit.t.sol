@@ -209,7 +209,15 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         );
 
         vm.startPrank(sampleUser, sampleUser);
-        investmentHandler.claim(thisInvestmentId, thisClaimAmount, sampleUser, sampleKycAddress);
+
+        InvestmentHandler.ClaimParams memory params = InvestmentHandler.ClaimParams({
+            investmentId: thisInvestmentId,
+            claimAmount: uint240(thisClaimAmount),
+            tokenRecipient: sampleUser,
+            kycAddress: sampleKycAddress
+        });
+
+        investmentHandler.claim(params);
         vm.stopPrank();
 
         assertTrue(mockProject.balanceOf(sampleUser) == thisClaimAmount);
@@ -534,7 +542,7 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
                 users[i],
                 investmentId
             );
-            userClaim(users[i], users[i], claimAmount);
+            userClaim(users[i], users[i], uint240(claimAmount));
             assertTrue(mockProject.balanceOf(users[i]) == claimAmount);
             advanceBlockNumberAndTimestamp(i);
         }
@@ -544,7 +552,7 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
                 users[i],
                 investmentId
             );
-            userClaim(users[i], users[i], claimAmount);
+            userClaim(users[i], users[i], uint240(claimAmount));
             assertTrue(mockProject.balanceOf(users[i]) == claimAmount);
             advanceBlockNumberAndTimestamp(i);
         }
