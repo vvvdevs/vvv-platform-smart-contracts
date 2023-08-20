@@ -28,12 +28,9 @@ contract HandlerForInvestmentHandler is Test {
 
     function claim(
         address _caller,
-        uint16 _investmentId,
-        uint256 _claimAmount,
-        address _tokenRecipient,
-        address _kycAddress
+        InvestmentHandler.ClaimParams memory _params
     ) public useActor(_caller) {
-        investmentHandler.claim(_investmentId, _claimAmount, _tokenRecipient, _kycAddress);
+        investmentHandler.claim(_params);
     }
 
     function invest(

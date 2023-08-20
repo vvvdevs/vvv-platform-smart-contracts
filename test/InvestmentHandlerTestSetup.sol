@@ -228,18 +228,24 @@ contract InvestmentHandlerTestSetup is Test {
         ghost_open_userInvestedTotal[ghost_open_latestInvestmentId][_caller] += _amount;
     }
 
-    function userClaim(address _caller, address _kycAddress, uint256 _amount) public {
+    function userClaim(address _caller, address _kycAddress, uint240 _amount) public {
         uint256 claimableAmount = investmentHandler.computeUserClaimableAllocationForInvestment(
             _kycAddress,
             investmentHandler.latestInvestmentId()
         );
 
         if (_amount == 0) {
-            _amount = claimableAmount;
+            _amount = uint240(claimableAmount);
         }
 
         vm.startPrank(_caller, _caller);
-        investmentHandler.claim(investmentHandler.latestInvestmentId(), _amount, _caller, _kycAddress);
+        InvestmentHandler.ClaimParams memory params = InvestmentHandler.ClaimParams({
+            investmentId: investmentHandler.latestInvestmentId(),
+            claimAmount: _amount,
+            tokenRecipient: _caller,
+            kycAddress: _kycAddress
+        });
+        investmentHandler.claim(params);
         vm.stopPrank();
 
         //update ghosts
@@ -254,7 +260,7 @@ contract InvestmentHandlerTestSetup is Test {
                 investmentHandler.latestInvestmentId()
             );
             if (claimableAmount == 0) {
-                userClaim(users[i], users[i], claimableAmount);
+                userClaim(users[i], users[i], uint240(claimableAmount));
             }
         }
     }
@@ -374,7 +380,7 @@ contract InvestmentHandlerTestSetup is Test {
     function userClaim_HandlerForInvestmentHandler(
         address _caller,
         address _kycAddress,
-        uint256 _amount
+        uint240 _amount
     ) public {
         uint256 claimableAmount = handler.computeUserClaimableAllocationForInvestment(
             _kycAddress,
@@ -382,10 +388,17 @@ contract InvestmentHandlerTestSetup is Test {
         );
 
         if (_amount == 0) {
-            _amount = claimableAmount;
+            _amount = uint240(claimableAmount);
         }
 
-        handler.claim(_caller, ghost_bound_latestInvestmentId, _amount, _caller, _kycAddress);
+        InvestmentHandler.ClaimParams memory params = InvestmentHandler.ClaimParams({
+            investmentId: ghost_bound_latestInvestmentId,
+            claimAmount: _amount,
+            tokenRecipient: _caller,
+            kycAddress: _kycAddress
+        });
+
+        handler.claim(_caller, params);
 
         //update ghosts
         ghost_bound_claimedTotal[ghost_bound_latestInvestmentId] += _amount;
@@ -399,7 +412,7 @@ contract InvestmentHandlerTestSetup is Test {
                 ghost_bound_latestInvestmentId
             );
             if (claimableAmount > 0) {
-                userClaim_HandlerForInvestmentHandler(users[i], users[i], claimableAmount);
+                userClaim_HandlerForInvestmentHandler(users[i], users[i], uint240(claimableAmount));
             }
         }
     }
