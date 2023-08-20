@@ -14,7 +14,7 @@ Branch for some minor adds moving into requesting audit quotes.
     - audit/OperationNotes.md
 5. Relevant Code Metrics: 
     - audit/solidity-metrics.html
-    - cloc returns 523 total LOC
+    - cloc returns 512 total LOC
 
 ### Changes to code this branch
 1. Packed `claim()` call input arguments into a `ClaimParams` struct.
