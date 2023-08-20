@@ -5,9 +5,6 @@ pragma solidity 0.8.21;
  * @title InvestmentHandler
  * @author @vvvfund (@curi0n-s + @c0dejax + @kcper), audits by @marko1010, and [eventual audit firm/site(s)]
  * @notice Handles the investment process for vVv allocations' investments and claims
- *
- * @dev Assumptions:
- * 1. Project tokens deposited to this contract cannot be rebasing tokens/balances must remain static to ensure fair distribution of tokens to users regardless of time and frequency of token claims
  */
 
 import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
@@ -244,9 +241,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
             (
                 !isInKycAddressNetwork[_params.kycAddress][_params.tokenRecipient] && 
                 _params.tokenRecipient != _params.kycAddress
-            ) 
-            ||
-            (
+            ) || (
                 !isInKycAddressNetwork[_params.kycAddress][msg.sender] && 
                 msg.sender != _params.kycAddress
             )
