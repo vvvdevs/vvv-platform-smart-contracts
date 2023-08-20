@@ -119,7 +119,6 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
         address indexed recipient,
         uint256 amount
     );
-    event FunctionIsPausedUpdate(bytes4 indexed functionId, bool indexed isPaused);
     event InvestmentAdded(uint256 indexed investmentId);
     event InvestmentPaymentTokenAddressSet(uint256 indexed investmentId, address indexed paymentToken);
     event InvestmentPhaseSet(uint256 indexed investmentId, uint256 indexed phase);
@@ -128,13 +127,6 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
     event UserInvestmentContribution(
         address indexed sender,
         address indexed kycAddress,
-        uint256 indexed investmentId,
-        uint256 amount
-    );
-    event UserInvestmentTransfer(
-        address sender,
-        address indexed oldKycAddress,
-        address indexed newKycAddress,
         uint256 indexed investmentId,
         uint256 amount
     );
@@ -177,12 +169,9 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
     error InvestmentIsNotOpen();
     error InvestmentTokenAlreadyDeposited();
     error NotInKycAddressNetwork();
-    error NotKycAddress();
     error RefundAmountExceedsUserBalance();
-    error SignerAlreadyUsed();
     error TooLateForRefund();
     error TransferAmountExceedsInvestmentBalance();
-    error UserAlreadyClaimedTokens();
 
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
     // INITIALIZATION & MODIFIERS
