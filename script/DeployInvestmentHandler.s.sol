@@ -11,7 +11,6 @@ contract DeployInvestmentHandler is Script {
     // Admin Role Addresses: Testing is msg.sender, Production is a multisig or hardware wallet for each role
     address public deployer = vm.addr(vm.envUint("PRIVATE_KEY"));
 
-
     address public defaultAdminController = deployer;
     address public pauser = deployer;
     address public investmentManager = deployer;
