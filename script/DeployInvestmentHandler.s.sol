@@ -9,13 +9,18 @@ contract DeployInvestmentHandler is Script {
     InvestmentHandler public investmentHandler;
     
     // Admin Role Addresses: Testing is msg.sender, Production is a multisig or hardware wallet for each role
-    address public defaultAdminController = msg.sender;
-    address public pauser = msg.sender;
-    address public investmentManager = msg.sender;
-    address public contributionAndRefundManager = msg.sender;
-    address public refunder = msg.sender;
+    address public deployer = vm.addr(vm.envUint("PRIVATE_KEY"));
+
+
+    address public defaultAdminController = deployer;
+    address public pauser = deployer;
+    address public investmentManager = deployer;
+    address public contributionAndRefundManager = deployer;
+    address public refunder = deployer;
 
     function run() public {
+        vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
+
         investmentHandler = new InvestmentHandler(
             defaultAdminController,
             pauser,
@@ -25,6 +30,7 @@ contract DeployInvestmentHandler is Script {
         );
 
         console.log("InvestmentHandler deployed at address: %s", address(investmentHandler));
+        vm.stopBroadcast();
     }
 }
 
