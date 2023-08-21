@@ -3,6 +3,7 @@ require("@nomicfoundation/hardhat-foundry");
 require("@openzeppelin/hardhat-upgrades");
 require("dotenv").config();
 require("hardhat-gas-reporter");
+require('hardhat-abi-exporter');
 
 const dev_wallet_key = process.env.PRIVATE_KEY;
 const etherscan_api_key = process.env.ETHERSCAN_API_KEY;
@@ -12,7 +13,7 @@ const etherscan_api_key = process.env.ETHERSCAN_API_KEY;
  */
 
 module.exports = {
-    solidity: "0.8.20",
+    solidity: "0.8.21",
     compilerOptions: {
         optimize: true,
         runs: 200,
@@ -49,4 +50,10 @@ module.exports = {
         gasPrice: 30,
         url: "localhost:8545"
     },
+    abiExporter: {
+        path: './abi',
+        clear: true,
+        flat: true,
+        format: "minimal"
+    }
 };
