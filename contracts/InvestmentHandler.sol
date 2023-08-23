@@ -5,15 +5,11 @@ pragma solidity 0.8.21;
  * @title InvestmentHandler
  * @author @vvvfund (@curi0n-s + @c0dejax + @kcper), audits by @marko1010, and [eventual audit firm/site(s)]
  * @notice Handles the investment process for vVv allocations' investments and claims
- *
- * @dev Assumptions:
- * 1. Project tokens deposited to this contract cannot be rebasing tokens/balances must remain static to ensure fair distribution of tokens to users regardless of time and frequency of token claims
  */
 
 import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -24,8 +20,6 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
     // STORAGE & SETUP
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
-
-    using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
     /// @dev role for adding and modifying investment data
@@ -73,6 +67,20 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
     }
 
     /**
+     * @dev struct for the parameters for each claim
+     * @param investmentId id of the investment
+     * @param claimAmount amount of project token the user is claiming in this transaction
+     * @param tokenRecipient address of the user's in-network kyc'd address
+     * @param kycAddress address of the user's in-network kyc'd address
+     */
+    struct ClaimParams {
+        uint16 investmentId;
+        uint240 claimAmount;
+        address tokenRecipient;
+        address kycAddress;
+    }
+
+    /**
      * @dev struct for the parameters for each investment
      * @param investmentId id of the investment
      * @param maxInvestableAmount max amount of payment token the user can invest in this investment
@@ -111,7 +119,6 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
         address indexed recipient,
         uint256 amount
     );
-    event FunctionIsPausedUpdate(bytes4 indexed functionId, bool indexed isPaused);
     event InvestmentAdded(uint256 indexed investmentId);
     event InvestmentPaymentTokenAddressSet(uint256 indexed investmentId, address indexed paymentToken);
     event InvestmentPhaseSet(uint256 indexed investmentId, uint256 indexed phase);
@@ -120,13 +127,6 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
     event UserInvestmentContribution(
         address indexed sender,
         address indexed kycAddress,
-        uint256 indexed investmentId,
-        uint256 amount
-    );
-    event UserInvestmentTransfer(
-        address sender,
-        address indexed oldKycAddress,
-        address indexed newKycAddress,
         uint256 indexed investmentId,
         uint256 amount
     );
@@ -169,12 +169,9 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
     error InvestmentIsNotOpen();
     error InvestmentTokenAlreadyDeposited();
     error NotInKycAddressNetwork();
-    error NotKycAddress();
     error RefundAmountExceedsUserBalance();
-    error SignerAlreadyUsed();
     error TooLateForRefund();
     error TransferAmountExceedsInvestmentBalance();
-    error UserAlreadyClaimedTokens();
 
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
     // INITIALIZATION & MODIFIERS
@@ -213,28 +210,30 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
 
     /**
      * @dev modifier to check addresses involved in claim
-     * @dev msg.sender and _tokenRecipient must be in network of _kycAddress
+     * @dev msg.sender and _params.tokenRecipient must be in network of _kycAddress
      */
     modifier claimChecks(
-        uint16 _investmentId,
-        uint256 _thisClaimAmount,
-        address _tokenRecipient,
-        address _kycAddress
+        ClaimParams memory _params
     ) {
-        uint256 claimableTokens = computeUserClaimableAllocationForInvestment(_kycAddress, _investmentId);
+        uint256 claimableTokens = computeUserClaimableAllocationForInvestment(_params.kycAddress, _params.investmentId);
 
         //function requirements
-        if (_thisClaimAmount == 0) {
+        if (_params.claimAmount == 0) {
             revert CantClaimZero();
         }
 
-        if (_thisClaimAmount > claimableTokens) {
+        if (_params.claimAmount > claimableTokens) {
             revert ClaimAmountExceedsTotalClaimable();
         }
 
         if (
-            (!isInKycAddressNetwork[_kycAddress][_tokenRecipient] && _tokenRecipient != _kycAddress) ||
-            (!isInKycAddressNetwork[_kycAddress][msg.sender] && msg.sender != _kycAddress)
+            (
+                !isInKycAddressNetwork[_params.kycAddress][_params.tokenRecipient] && 
+                _params.tokenRecipient != _params.kycAddress
+            ) || (
+                !isInKycAddressNetwork[_params.kycAddress][msg.sender] && 
+                msg.sender != _params.kycAddress
+            )
         ) {
             revert NotInKycAddressNetwork();
         }
@@ -275,30 +274,25 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
      * @notice allows any in-network address to claim tokens to any address on behalf of the kyc address
      * @notice UI can grab _kycAddress via correspondingKycAddress[msg.sender]
      * @notice both msg.sender and _tokenRecipient must be in network of _kycAddress, and msg.sender can be the same as _tokenRecipient
-     * @param _investmentId the id of the investment the user is claiming from
-     * @param _claimAmount the amount of tokens the user is claiming
-     * @param _tokenRecipient the address the address which will receive the tokens
+     * @param _params is a ClaimParams struct containing the parameters for the claim
      */
     function claim(
-        uint16 _investmentId,
-        uint256 _claimAmount,
-        address _tokenRecipient,
-        address _kycAddress
+        ClaimParams memory _params
     )
         external
         nonReentrant
         whenNotPausedSelective(false)
-        claimChecks(_investmentId, _claimAmount, _tokenRecipient, _kycAddress)
+        claimChecks(_params)
     {
-        UserInvestment storage userInvestment = userInvestments[_kycAddress][_investmentId];
-        Investment storage investment = investments[_investmentId];
+        UserInvestment storage userInvestment = userInvestments[_params.kycAddress][_params.investmentId];
+        Investment storage investment = investments[_params.investmentId];
 
-        userInvestment.totalTokensClaimed += _claimAmount;
-        investment.totalTokensClaimed += _claimAmount;
+        userInvestment.totalTokensClaimed += _params.claimAmount;
+        investment.totalTokensClaimed += _params.claimAmount;
 
-        investment.projectToken.safeTransfer(_tokenRecipient, _claimAmount);
+        investment.projectToken.safeTransfer(_params.tokenRecipient, _params.claimAmount);
 
-        emit UserTokenClaim(msg.sender, _tokenRecipient, _kycAddress, _investmentId, _claimAmount);
+        emit UserTokenClaim(msg.sender, _params.tokenRecipient, _params.kycAddress, _params.investmentId, _params.claimAmount);
     }
 
     /**

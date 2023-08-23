@@ -228,12 +228,18 @@ contract InvestmentHandlerFuzzTests is InvestmentHandlerTestSetup {
      */
     function testFuzz_claim(
         uint16 _investmentId,
-        uint256 _claimAmount,
+        uint240 _claimAmount,
         address _tokenRecipient,
         address _kycAddress
     ) public {
         vm.expectRevert();
-        investmentHandler.claim(_investmentId, _claimAmount, _tokenRecipient, _kycAddress);
+        InvestmentHandler.ClaimParams memory params = InvestmentHandler.ClaimParams(
+            _investmentId,
+            _claimAmount,
+            _tokenRecipient,
+            _kycAddress
+        );
+        investmentHandler.claim(params);
     }
 
     /**
