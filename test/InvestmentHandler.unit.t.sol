@@ -557,4 +557,82 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
             advanceBlockNumberAndTimestamp(i);
         }
     }
+
+
+    /**
+        @dev tests that no user can invest with false info. i.e. the signature check is functioning as expected.
+        @dev getSignature() is the equivalent of what would be run on the backend, and requires security of the signer's private key
+     */
+    function testInvestWithConflictingInfo() public {
+        // tests only investment amount being 1 uint off
+
+        uint120 maxInvestAmount = 100 * 1e6;
+        uint8 thisPhase = 1;
+
+        bytes memory thisSignature = getSignature(
+            uint16(investmentHandler.latestInvestmentId()),
+            sampleUser,
+            maxInvestAmount,
+            thisPhase
+        );
+
+        InvestmentHandler.InvestParams memory investParams1 = InvestmentHandler.InvestParams({
+            investmentId: uint16(investmentHandler.latestInvestmentId() + 1),
+            thisInvestmentAmount: maxInvestAmount,
+            maxInvestableAmount: uint120(maxInvestAmount + 1),
+            userPhase: 1,
+            kycAddress: sampleUser,
+            signature: thisSignature
+        });
+
+        InvestmentHandler.InvestParams memory investParams2 = InvestmentHandler.InvestParams({
+            investmentId: uint16(investmentHandler.latestInvestmentId()),
+            thisInvestmentAmount: maxInvestAmount + 1,
+            maxInvestableAmount: uint120(maxInvestAmount),
+            userPhase: 1,
+            kycAddress: sampleUser,
+            signature: thisSignature
+        });
+
+        InvestmentHandler.InvestParams memory investParams3 = InvestmentHandler.InvestParams({
+            investmentId: uint16(investmentHandler.latestInvestmentId()),
+            thisInvestmentAmount: maxInvestAmount,
+            maxInvestableAmount: uint120(maxInvestAmount + 1),
+            userPhase: 1,
+            kycAddress: sampleUser,
+            signature: thisSignature
+        });
+
+        InvestmentHandler.InvestParams memory investParams4 = InvestmentHandler.InvestParams({
+            investmentId: uint16(investmentHandler.latestInvestmentId()),
+            thisInvestmentAmount: maxInvestAmount,
+            maxInvestableAmount: uint120(maxInvestAmount),
+            userPhase: 1 + 1,
+            kycAddress: sampleUser,
+            signature: thisSignature
+        });
+
+        InvestmentHandler.InvestParams memory investParams5 = InvestmentHandler.InvestParams({
+            investmentId: uint16(investmentHandler.latestInvestmentId()),
+            thisInvestmentAmount: maxInvestAmount,
+            maxInvestableAmount: uint120(maxInvestAmount),
+            userPhase: 1,
+            kycAddress: users[13], //random user
+            signature: thisSignature
+        });
+
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(bytes4(keccak256("InvalidSignature()")));
+        investmentHandler.invest(investParams1);
+        vm.expectRevert(bytes4(keccak256("InvalidSignature()")));
+        investmentHandler.invest(investParams2);
+        vm.expectRevert(bytes4(keccak256("InvalidSignature()")));
+        investmentHandler.invest(investParams3);
+        vm.expectRevert(bytes4(keccak256("InvalidSignature()")));
+        investmentHandler.invest(investParams4);
+        vm.expectRevert(bytes4(keccak256("InvalidSignature()")));
+        investmentHandler.invest(investParams5);
+        vm.stopPrank();
+
+    }
 }
