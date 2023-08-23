@@ -1,11 +1,5 @@
 # Requirements
 
-- Administrators should be able to add investments and specify the maximum allocation per phase.
-- Administrators should have the ability to modify or overwrite these settings before the investment goes live.
-- Investments should go live according to a predetermined schedule.
-- Calculation of claimable tokens should be automated during the claiming process.
-- We aim to track metrics that are typically challenging to monitor off-chain.
-
 ### Users Can:
 1. invest a pre-approved amount of paymentToken (i.e. $USDC) in an investment of investmentId pending signature validation, which validates that the caller is a KYC'd address, and attempting to invest within the bounds set for that user.
 2. claim their share of project tokens according to the amount of paymentToken they invested (i.e. invest 100 USDC in a pool of 1000 USDC, 1000 project tokens are deposited, user can immediately claim 100).
