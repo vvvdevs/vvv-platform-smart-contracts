@@ -198,9 +198,7 @@ contract InvestmentHandlerTestSetup is Test {
         address _kycAddress,
         uint120 _amount
     ) public {
-        // vm.startPrank(signer, signer);
         bytes memory thisSignature = getSignature(_investmentId, _kycAddress, _amount, phase);
-        // vm.stopPrank();
 
         if (_caller != _kycAddress) {
             vm.startPrank(_kycAddress, _kycAddress);
