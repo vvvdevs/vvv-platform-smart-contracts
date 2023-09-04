@@ -42,4 +42,3 @@ contract VVVTokenUInitTests is VVVTokenTestBase {
         assertEq(actual, expected);
     }
 }
-
