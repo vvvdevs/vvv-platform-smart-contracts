@@ -1,12 +1,12 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.21;
 
-import {VvvTokenUInitTests} from "src/VvvTokenUInitTests.sol";
+import {VVVTokenTestBase} from "./VvvTokenTestBase.sol";
 
-contract VvvTokenUInitTests {
+contract VVVTokenUInitTests {
 
     function setUp() public {
-        vm.startPrank(deployer, deployer)
+        vm.startPrank(deployer, deployer);
         vvvToken = new VvvToken(cap, initialSupply);
         vm.stopPrank();
 
