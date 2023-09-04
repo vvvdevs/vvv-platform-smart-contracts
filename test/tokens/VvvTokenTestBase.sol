@@ -16,7 +16,7 @@ contract VVVTokenTestBase is Test {
     uint256 public cap = initialSupply * 10;
 
     uint256 public deployerKey = 1234;
-    address deployer = vm.addr(deployerKey);
+    address public deployer = vm.addr(deployerKey);
 }
 
 
