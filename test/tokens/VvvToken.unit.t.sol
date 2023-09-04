@@ -2,12 +2,13 @@
 pragma solidity ^0.8.21;
 
 import {VVVTokenTestBase} from "./VvvTokenTestBase.sol";
+import { VVVToken } from "contracts/tokens/VVVToken.sol";
 
-contract VVVTokenUInitTests {
+contract VVVTokenUInitTests is VVVTokenTestBase {
 
     function setUp() public {
         vm.startPrank(deployer, deployer);
-        vvvToken = new VvvToken(cap, initialSupply);
+        vvvToken = new VVVToken(cap, initialSupply);
         vm.stopPrank();
 
         targetContract(address(vvvToken));
