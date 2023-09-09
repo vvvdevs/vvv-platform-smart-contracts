@@ -2,7 +2,7 @@
 pragma solidity ^0.8.21;
 
 import {VVVTokenTestBase} from "./VvvTokenTestBase.sol";
-import { VVVToken } from "contracts/tokens/VVVToken.sol";
+import { VVVToken } from "contracts/tokens/VvvToken.sol";
 
 contract VVVTokenUInitTests is VVVTokenTestBase {
 
@@ -24,7 +24,6 @@ contract VVVTokenUInitTests is VVVTokenTestBase {
     /**
      * @dev test initial supply
      */
-
     function testInitialSupply() public {
         uint256 expected = initialSupply;
         uint256 actual = vvvToken.totalSupply();

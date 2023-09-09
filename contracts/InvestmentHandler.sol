@@ -3,7 +3,7 @@ pragma solidity 0.8.21;
 
 /**
  * @title InvestmentHandler
- * @author @vvvfund (@curi0n-s + @c0dejax + kcper), audits by @marko1010, and [eventual audit firm/site(s)]
+ * @author @vvvfund (@curi0n-s + @c0dejax + @kcper), audits by @marko1010, and [eventual audit firm/site(s)]
  * @notice Handles the investment process for vVv allocations' investments and claims
  */
 
