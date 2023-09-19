@@ -22,7 +22,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
     using SafeERC20 for IERC20;
 
-    /// @dev role for adding and modifying investment data
+    /// @dev admin roles for pausing functions, adding contributions, managing investment data, transferring payment tokens, and processing refunds
     bytes32 private constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     bytes32 private constant ADD_CONTRIBUTION_ROLE = keccak256("ADD_CONTRIBUTION_ROLE");
     bytes32 private constant INVESTMENT_MANAGER_ROLE = keccak256("ADD_INVESTMENT_ROLE");
@@ -33,13 +33,13 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
     uint16 public latestInvestmentId;
 
     /**
-     * @notice Investment struct
+     * @notice Investment data struct
      * @param signer address of the signer for this investment
-     * @param contributionPhase phase index (0 = closed, 1 = whales, etc.)
      * @param projectToken address of the project token
      * @param paymentToken address of the payment token
+     * @param contributionPhase phase index
+     * @param allocatedPaymentTokenForPhase array of payment token amounts allocated for each phase
      * @param totalInvestedPaymentToken total amount of payment token invested in this investment
-     * @param totalAllocatedPaymentToken total amount of payment token allocated to this investment
      * @param totalTokensClaimed total amount of project token claimed from this investment
      * @param totalTokensAllocated total amount of project token allocated to this investment
      */
@@ -48,8 +48,9 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
         IERC20 projectToken;
         IERC20 paymentToken;
         uint8 contributionPhase;
+        uint128[] allocatedPaymentTokenForPhase;
+        uint128[] investedPaymentTokenForPhase;
         uint128 totalInvestedPaymentToken;
-        uint128 totalAllocatedPaymentToken;
         uint256 totalTokensClaimed;
         uint256 totalTokensAllocated;
     }
@@ -57,12 +58,10 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
     /**
      * @dev struct for a single user's activity for one investment
      * @param totalInvestedPaymentToken total amount of payment token invested by user in this investment
-     * @param pledgeDebt = pledgedAmount - totalInvestedPaymentToken for this investment
      * @param totalTokensClaimed total amount of project token claimed by user from this investment
      */
     struct UserInvestment {
         uint128 totalInvestedPaymentToken;
-        uint128 pledgeDebt;
         uint256 totalTokensClaimed;
     }
 
@@ -109,9 +108,6 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
     mapping(address => mapping(address => bool)) public isInKycAddressNetwork;
     mapping(address => address) public correspondingKycAddress;
 
-    /// @dev signer address => bool, checks whether address has already been used as an investment's signer
-    mapping(address => bool) public isSigner;
-
     // Events
     event ERC20Recovered(
         address indexed sender,
@@ -128,7 +124,8 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
         address indexed sender,
         address indexed kycAddress,
         uint256 indexed investmentId,
-        uint256 amount
+        uint256 amount,
+        uint256 maxInvestableAmount
     );
     event UserTokenClaim(
         address indexed sender,
@@ -212,10 +209,11 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
      * @dev modifier to check addresses involved in claim
      * @dev msg.sender and _params.tokenRecipient must be in network of _kycAddress
      */
-    modifier claimChecks(
-        ClaimParams memory _params
-    ) {
-        uint256 claimableTokens = computeUserClaimableAllocationForInvestment(_params.kycAddress, _params.investmentId);
+    modifier claimChecks(ClaimParams memory _params) {
+        uint256 claimableTokens = computeUserClaimableAllocationForInvestment(
+            _params.kycAddress,
+            _params.investmentId
+        );
 
         //function requirements
         if (_params.claimAmount == 0) {
@@ -227,13 +225,9 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
         }
 
         if (
-            (
-                !isInKycAddressNetwork[_params.kycAddress][_params.tokenRecipient] && 
-                _params.tokenRecipient != _params.kycAddress
-            ) || (
-                !isInKycAddressNetwork[_params.kycAddress][msg.sender] && 
-                msg.sender != _params.kycAddress
-            )
+            (!isInKycAddressNetwork[_params.kycAddress][_params.tokenRecipient] &&
+                _params.tokenRecipient != _params.kycAddress) ||
+            (!isInKycAddressNetwork[_params.kycAddress][msg.sender] && msg.sender != _params.kycAddress)
         ) {
             revert NotInKycAddressNetwork();
         }
@@ -278,12 +272,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
      */
     function claim(
         ClaimParams memory _params
-    )
-        external
-        nonReentrant
-        whenNotPausedSelective(false)
-        claimChecks(_params)
-    {
+    ) external nonReentrant whenNotPausedSelective(false) claimChecks(_params) {
         UserInvestment storage userInvestment = userInvestments[_params.kycAddress][_params.investmentId];
         Investment storage investment = investments[_params.investmentId];
 
@@ -292,13 +281,19 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
 
         investment.projectToken.safeTransfer(_params.tokenRecipient, _params.claimAmount);
 
-        emit UserTokenClaim(msg.sender, _params.tokenRecipient, _params.kycAddress, _params.investmentId, _params.claimAmount);
+        emit UserTokenClaim(
+            msg.sender,
+            _params.tokenRecipient,
+            _params.kycAddress,
+            _params.investmentId,
+            _params.claimAmount
+        );
     }
 
     /**
      * @notice this function will be called by the user to invest in the project
      * @param _params the parameters for the investment as specified in InvestParams
-     * @notice adds to users total usd invested for investment + total usd in investment overall
+     * @notice adds to users total paymentToken invested for investment + total paymentToken in investment overall + total paymentToken in investment for phase
      * @notice adjusts user's pledge debt (pledged - contributed)
      */
     function invest(
@@ -308,10 +303,9 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
         Investment storage investment = investments[_params.investmentId];
 
         investment.totalInvestedPaymentToken += _params.thisInvestmentAmount;
+        investment.investedPaymentTokenForPhase[_params.userPhase] += _params.thisInvestmentAmount;
+
         userInvestment.totalInvestedPaymentToken += uint128(_params.thisInvestmentAmount);
-        userInvestment.pledgeDebt = uint128(
-            _params.maxInvestableAmount - userInvestment.totalInvestedPaymentToken
-        );
 
         userInvestmentIds[_params.kycAddress].push(_params.investmentId);
         investment.paymentToken.safeTransferFrom(msg.sender, address(this), _params.thisInvestmentAmount);
@@ -320,7 +314,8 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
             msg.sender,
             _params.kycAddress,
             _params.investmentId,
-            _params.thisInvestmentAmount
+            _params.thisInvestmentAmount,
+            _params.maxInvestableAmount
         );
     }
 
@@ -490,15 +485,17 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
     }
 
     /**
-     * @dev confirms the calling address's payment token allocation is sufficient for the amount they're trying to invest
+     * @dev confirms the calling address's payment token allocation and remaining claimable allocation for the current phase are sufficient for the amount they're trying to invest
      * @dev accuracy of maxInvestableAmount relies on integrity of _signatureCheck, in which maxInvestableAmount is validated before this function is called
      * @return bool true if the sum of the proposed contribution to investment of investmentId and any existing contribution to the same investment is less than or equal to the maximum allowed investable amount for that user
      */
     function _contributionLimitCheck(InvestParams memory _params) private view returns (bool) {
         uint256 proposedTotalContribution = _params.thisInvestmentAmount +
             userInvestments[_params.kycAddress][_params.investmentId].totalInvestedPaymentToken;
-        bool withinLimit = proposedTotalContribution <= _params.maxInvestableAmount;
-        return withinLimit;
+        bool withinPersonalLimit = proposedTotalContribution <= _params.maxInvestableAmount;
+        bool withinPhaseLimit = proposedTotalContribution <=
+            investments[_params.investmentId].allocatedPaymentTokenForPhase[_params.userPhase];
+        return withinPersonalLimit && withinPhaseLimit;
     }
 
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
@@ -512,22 +509,24 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
      * @dev signer, payment token, and total allocated payment token are set at the time of investment creation, rest are default amounts to be added before claim is opened (phase=closed=0, everything else 0's)
      * @param _signer is the admin address whose private key will be used to generate signatures for validating user's investment permissions
      * @param _paymentToken is the address of the token used to collect investment funds. this will usually be USDC (ETH: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48)
-     * @param _totalAllocatedPaymentToken is the total amount of payment token allocated by a project for the entire investment. amount in the defined decimals of _paymentToken
      */
     function addInvestment(
         address _signer,
         address _paymentToken,
-        uint128 _totalAllocatedPaymentToken,
+        uint128[] memory _allocatedPaymentTokenForPhase,
         bool _pauseAfterCall
     ) external nonReentrant whenNotPausedSelective(_pauseAfterCall) onlyRole(INVESTMENT_MANAGER_ROLE) {
+        uint128[] memory _investedPaymentTokenForPhase = new uint128[](_allocatedPaymentTokenForPhase.length);
+        
         //increment latestInvestmentId while creating new Investment struct with default parameters other than those specified in function inputs
         investments[++latestInvestmentId] = Investment({
             signer: _signer,
             projectToken: IERC20(address(0)),
             paymentToken: IERC20(_paymentToken),
             contributionPhase: 0,
+            allocatedPaymentTokenForPhase: _allocatedPaymentTokenForPhase,
+            investedPaymentTokenForPhase: _investedPaymentTokenForPhase,
             totalInvestedPaymentToken: 0,
-            totalAllocatedPaymentToken: _totalAllocatedPaymentToken,
             totalTokensClaimed: 0,
             totalTokensAllocated: 0
         });
@@ -630,7 +629,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
         );
         investments[_investmentId].totalInvestedPaymentToken += _paymentTokenAmount;
 
-        emit UserInvestmentContribution(msg.sender, _kycAddress, _investmentId, _paymentTokenAmount);
+        emit UserInvestmentContribution(msg.sender, _kycAddress, _investmentId, _paymentTokenAmount, 0);
     }
 
     /// @dev batch version of manualAddContribution for larger past activity imports
