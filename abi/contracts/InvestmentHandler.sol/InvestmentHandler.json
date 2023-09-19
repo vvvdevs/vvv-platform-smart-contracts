@@ -456,6 +456,12 @@
         "internalType": "uint256",
         "name": "amount",
         "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "maxInvestableAmount",
+        "type": "uint256"
       }
     ],
     "name": "UserInvestmentContribution",
@@ -568,9 +574,9 @@
         "type": "address"
       },
       {
-        "internalType": "uint128",
-        "name": "_totalAllocatedPaymentToken",
-        "type": "uint128"
+        "internalType": "uint128[]",
+        "name": "_allocatedPaymentTokenForPhase",
+        "type": "uint128[]"
       },
       {
         "internalType": "bool",
@@ -964,11 +970,6 @@
         "type": "uint128"
       },
       {
-        "internalType": "uint128",
-        "name": "totalAllocatedPaymentToken",
-        "type": "uint128"
-      },
-      {
         "internalType": "uint256",
         "name": "totalTokensClaimed",
         "type": "uint256"
@@ -996,25 +997,6 @@
       }
     ],
     "name": "isInKycAddressNetwork",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "name": "isSigner",
     "outputs": [
       {
         "internalType": "bool",
@@ -1370,11 +1352,6 @@
       {
         "internalType": "uint128",
         "name": "totalInvestedPaymentToken",
-        "type": "uint128"
-      },
-      {
-        "internalType": "uint128",
-        "name": "pledgeDebt",
         "type": "uint128"
       },
       {
