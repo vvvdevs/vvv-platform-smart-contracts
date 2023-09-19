@@ -180,6 +180,21 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
     }
 
     /**
+     * @dev test investing from kyc wallet
+     */
+    function testInvestFromKycWallet() public {
+        createInvestment();
+
+        uint120 investAmount = 1000000 * 1e6;
+        userInvest(investmentHandler.latestInvestmentId(), sampleKycAddress, sampleKycAddress, investAmount);
+
+        ( , , , , uint128 investedPaymentToken, , ) = investmentHandler.investments(
+            investmentHandler.latestInvestmentId()
+        );
+        assertTrue(investedPaymentToken == investAmount);
+    }
+
+    /**
      * @dev testCreateInvestment, then invests in it from a network wallet
      */
     function testInvestFromNetworkWallet() public {
