@@ -51,7 +51,7 @@ module.exports = {
         url: "localhost:8545"
     },
     abiExporter: {
-        path: './abi',
+        path: './abi/hardhat_abi_export',
         format: "json"
     }
 };
