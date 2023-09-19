@@ -59,6 +59,8 @@ contract InvestmentHandlerTestSetup is Test {
     uint256 blockTimestamp;
     uint128 investedTotal;
 
+    uint128[] public allocatedPaymentTokenPerPhase = new uint128[](5);
+
     struct SignatureStruct {
         address userAddress;
         uint256 pledgeAmount;
@@ -151,11 +153,20 @@ contract InvestmentHandlerTestSetup is Test {
     //==================================================================================================
 
     function createInvestment() public {
+
+        allocatedPaymentTokenPerPhase = [
+            0,
+            uint128(stableAmount * users.length),
+            uint128(stableAmount * users.length),
+            uint128(stableAmount * users.length),
+            uint128(stableAmount * users.length)
+        ];
+
         vm.startPrank(investmentManager, investmentManager);
         investmentHandler.addInvestment(
             signer,
             address(mockStable),
-            uint128(stableAmount * users.length),
+            allocatedPaymentTokenPerPhase,
             pauseAfterCall
         );
         ++ghost_open_latestInvestmentId; //during addInvestment, contract's investmentId is incremented

@@ -128,7 +128,7 @@ contract InvestmentHandlerInvariantTests_Open is InvestmentHandlerTestSetup {
         transferProjectTokensToInvestmentHandler(1_000_000 * 1e6);
         usersClaimRandomAmounts();
 
-        (, , , , investedTotal, , , ) = investmentHandler.investments(
+        (, , , , , ,investedTotal, , ) = investmentHandler.investments(
             investmentHandler.latestInvestmentId()
         );
     }
