@@ -172,6 +172,9 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
 
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
     // INITIALIZATION & MODIFIERS
+    // 1. contstructor
+    // 2. claimChecks
+    // 3. investChecks
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
 
     /// @dev constructor handles role setup
@@ -260,7 +263,11 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
     }
 
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
-    // USER WRITE FUNCTIONS (INVEST, CLAIM)
+    // USER WRITE FUNCTIONS
+    // 1. invest
+    // 2. claim
+    // 3. addAddressToKycAddressNetwork
+    // 4. removeAddressFromKycAddressNetwork
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
 
     /**
@@ -356,7 +363,11 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
     }
 
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
-    // USER READ FUNCTIONS (USER INVESTMENTS, USER CLAIMABLE ALLOCATION, USER TOTAL ALLOCATION)
+    // USER READ FUNCTIONS 
+    // 1. getTotalInvestedForInvestment
+    // 2. getTotalClaimedForInvestment
+    // 3. computeUserTotalAllocationForInvesment
+    // 4. computeUserClaimableAllocationForInvestment
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
 
     /**
@@ -428,7 +439,13 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
     }
 
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
-    // INVESTMENT READ FUNCTIONS (INVESTMENT IS OPEN)
+    // INVESTMENT READ FUNCTIONS
+    // 1. investmentIsOpen
+    // 2. remainderAvailableToInvest
+    // 3. _signatureCheck
+    // 4. _phaseCheck
+    // 5. _paymentTokenAllowanceCheck
+    // 6. _contributionLimitCheck
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
 
     /**
@@ -439,6 +456,35 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
      */
     function investmentIsOpen(uint16 _investmentId, uint8 _userPhase) public view returns (bool) {
         return investments[_investmentId].contributionPhase == _userPhase;
+    }
+
+    /**
+     * @dev for frontend - returns the remaining available allocation for an investment
+     * @param _investmentId the id of the investment the user is checking
+     * @param _phase the phase the user is assigned to for the investment
+     * @return the remaining available allocation for the investment
+     */
+    function remainderAvailableToInvest(uint16 _investmentId, uint8 _phase) external view returns (uint256) {
+        return investments[_investmentId].allocatedPaymentTokenForPhase[_phase] -
+            investments[_investmentId].investedPaymentTokenForPhase[_phase];
+    }
+
+    /**
+     * @dev for frontend - returns the investment limits for each phase
+     * @param _investmentId the id of the investment the user is checking
+     * @return an array of phase investment limits
+     */
+    function allocatedPaymentToken(uint16 _investmentId, uint8 _phase) external view returns (uint256) {
+        return investments[_investmentId].allocatedPaymentTokenForPhase[_phase];
+    }
+
+    /**
+     * @dev for frontend - returns the invested amounts for each phase
+     * @param _investmentId the id of the investment the user is checking
+     * @return an array of phase invested amounts
+     */
+    function investedPaymentToken(uint16 _investmentId, uint8 _phase) external view returns (uint256) {
+        return investments[_investmentId].investedPaymentTokenForPhase[_phase];
     }
 
     /**
@@ -501,6 +547,18 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
     // ADMIN WRITE FUNCTIONS (ADD INVESTMENT, REMOVE INVESTMENT, MODIFY INVESTMENT, SET INVESTMENT PHASE
     // ADD CONTRIBUTION MANUALLY, REFUND USER)
+    // 1. addInvestment
+    // 2. setInvestmentContributionPhase
+    // 3. setInvestmentPaymentTokenAddress
+    // 4. setInvestmentProjectTokenAddress
+    // 5. setInvestmentProjectTokenAllocation
+    // 6. setFunctionIsPaused
+    // 7. batchSetFunctionIsPaused
+    // 8. manualAddContribution
+    // 9. batchManualAddContribution
+    // 10. refundUser
+    // 11. transferPaymentToken
+    // 12. recoverERC20
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
 
     /**
