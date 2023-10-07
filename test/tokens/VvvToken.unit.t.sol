@@ -2,13 +2,21 @@
 pragma solidity ^0.8.21;
 
 import {VVVTokenTestBase} from "./VvvTokenTestBase.sol";
-import { VVVToken } from "contracts/tokens/VvvToken.sol";
+import { ERC20_UniV3 } from "contracts/tokens/VvvToken.sol";
 
 contract VVVTokenUInitTests is VVVTokenTestBase {
 
     function setUp() public {
         vm.startPrank(deployer, deployer);
-        vvvToken = new VVVToken(cap, initialSupply);
+
+        vvvToken = new ERC20_UniV3(
+            "VVV Token",
+            "VVV",
+            cap, 
+            initialDeployerSupply,
+            initialLiquiditySupply,
+            positionRecipient
+        );
         vm.stopPrank();
 
         targetContract(address(vvvToken));
@@ -25,7 +33,7 @@ contract VVVTokenUInitTests is VVVTokenTestBase {
      * @dev test initial supply
      */
     function testInitialSupply() public {
-        uint256 expected = initialSupply;
+        uint256 expected = initialDeployerSupply + initialLiquiditySupply;
         uint256 actual = vvvToken.totalSupply();
 
         assertEq(actual, expected);
