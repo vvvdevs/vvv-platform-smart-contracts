@@ -41,14 +41,15 @@ contract DeployUtilityToken is Script {
         1. Calculate the price ratio: priceRatio = 1000 (1000 Tokens/ETH)
         2. Take the square root of the price ratio: sqrtPriceRatio = sqrt(1000) = 31.6227766017
         3. Multiply by 2^96 to get sqrtPriceX96: sqrtPriceX96 = 31.6227766017 * 2^96 = 2505413655765166104103837312489
+        4. Depending on address order, the sqrtPriceX96 will be either be sqrt(1000) or sqrt(1/1000) * 2^96
          */
-        //-887220/887220 is the tick values from frontend
+        //-887220/887220 is the tick values from frontend for ticks, hardcoded into contract for now at least, don't see why these would change
 
-        uint160 SQRTX96_PRICE = 2505413655765166104103837312489;
+        uint160 SQRTX96_PRICE_01 = 2505413655765166104103837312489;
+        uint160 SQRTX96_PRICE_10 = 2505414483750479155158843392;
         utilityToken.addLiquidity{value: ETH_FOR_POOL}(
-            SQRTX96_PRICE,
-            int24(-887220),
-            int24(887220)        
+            SQRTX96_PRICE_01,
+            SQRTX96_PRICE_10 
         );
 
         console.log("Liquidity added to pool at address: %s", address(utilityToken.poolAddress()));

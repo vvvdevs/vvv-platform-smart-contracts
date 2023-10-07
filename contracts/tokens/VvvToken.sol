@@ -86,38 +86,43 @@ contract ERC20_UniV3 is ERC20Capped, Ownable {
     ///@notice follows calls contained within the multicall that wouldbe carried out by uniswap v3 frontend when initializing a pool
     ///@notice requires calculation of sqrtPriceX96 for a given price ratio and input of tick range
     function addLiquidity(
-        uint160 _sqrtPriceX96,
-        int24 _tickLower,
-        int24 _tickUpper
+        uint160 _sqrtPriceX96_01,
+        uint160 _sqrtPriceX96_10
     ) external payable onlyOwner {
         if (liquidityAddedToPool) {
             revert LiquidityAlreadyAdded();
         }
 
         uint256 ethInput = msg.value;
+        address token0 = address(WETH);
+        address token1 = address(this);
+        uint160 _sqrtPriceX96 = _sqrtPriceX96_01;
+        if(token0 > token1){
+            (token0, token1) = (token1, token0);
+            _sqrtPriceX96 = _sqrtPriceX96_10;
+        }
 
         // Approve WETH to spend this contract's ETH (TESTING)
         WETH.approve(address(UNIV3_POSITION_MANAGER), type(uint256).max);
         WETH.deposit{value: ethInput}();
  
         // Approve Uniswap V3 Position Manager to spend this contract's tokens / senders tokens (TESTING)
-        approve(address(UNIV3_POSITION_MANAGER), type(uint256).max);
         _approve(address(this), address(UNIV3_POSITION_MANAGER), type(uint256).max);
 
         UNIV3_POSITION_MANAGER.createAndInitializePoolIfNecessary(
-            address(WETH),
-            address(this),
+            token0,
+            token1,
             POOL_FEE_RATE,
             _sqrtPriceX96
         );
         
         UNIV3_POSITION_MANAGER.mint(
             INonfungiblePositionManager.MintParams({
-                token0: address(WETH),
-                token1: address(this),
+                token0: token0,
+                token1: token1,
                 fee: POOL_FEE_RATE,
-                tickLower: _tickLower,
-                tickUpper: _tickUpper,
+                tickLower: int24(-887220),
+                tickUpper: int24(887220),
                 amount0Desired: initialLiquiditySupply,
                 amount1Desired: ethInput,
                 amount0Min: 0,
