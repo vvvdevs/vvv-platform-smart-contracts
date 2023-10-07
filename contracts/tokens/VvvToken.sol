@@ -27,15 +27,9 @@ contract ERC20_UniV3 is ERC20Capped, Ownable {
     //==========================================================================================
     // STORAGE
     //==========================================================================================
-    IUniswapV3Factory private constant UNIV3_FACTORY =
-        IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
-    INonfungiblePositionManager private constant UNIV3_POSITION_MANAGER =
-        INonfungiblePositionManager(0xC36442b4a4522E871399CD717aBDD847Ab11FE88);
-    
-    //GOERLI
-    IWETH9 private constant WETH = IWETH9(0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6);
-    //MAINNET
-    // IWETH9 private constant WETH = IWETH9(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+    IUniswapV3Factory private immutable UNIV3_FACTORY;
+    INonfungiblePositionManager private immutable UNIV3_POSITION_MANAGER;
+    IWETH9 private immutable WETH;
 
     address private positionRecipient;
     address public poolAddress;
@@ -62,12 +56,20 @@ contract ERC20_UniV3 is ERC20Capped, Ownable {
         uint256 _cap, 
         uint256 _initialDeployerSupply,
         uint256 _initialLiquiditySupply,
-        address _positionRecipient
+        address _positionRecipient,
+        address _univ3FactoryAddress,
+        address _univ3PositionManagerAddress,
+        address _wethAddress
     ) ERC20(_name, _symbol) ERC20Capped(_cap) {
         //mint initial supply to deployer and to this contract
         _mint(msg.sender, _initialDeployerSupply);
         initialLiquiditySupply = _initialLiquiditySupply;
         _mint(address(this), initialLiquiditySupply);
+
+        // Set pool-related addresses
+        UNIV3_FACTORY = IUniswapV3Factory(_univ3FactoryAddress);
+        UNIV3_POSITION_MANAGER = INonfungiblePositionManager(_univ3PositionManagerAddress);
+        WETH = IWETH9(_wethAddress);
 
         // Create Uniswap V3 Pool
         poolAddress = UNIV3_FACTORY.createPool(address(WETH), address(this), POOL_FEE_RATE);
@@ -83,8 +85,11 @@ contract ERC20_UniV3 is ERC20Capped, Ownable {
         _;
     }
 
-    ///@notice follows calls contained within the multicall that wouldbe carried out by uniswap v3 frontend when initializing a pool
-    ///@notice requires input of sqrtPriceX96 for both token0 or token1 as the base token, depending on which is larger
+    /**
+        @notice follows calls contained within the multicall that wouldbe carried out by uniswap v3 frontend when initializing a pool
+        @notice requires input of sqrtPriceX96 for both token0 or token1 as the base token, depending on which is larger
+        @notice -887220/887220 are the tick values from frontend for ticks when the entire token price r ange is selected
+     */
     function addLiquidity(
         uint160 _sqrtPriceX96_01,
         uint160 _sqrtPriceX96_10
@@ -92,23 +97,27 @@ contract ERC20_UniV3 is ERC20Capped, Ownable {
         if (liquidityAddedToPool) {
             revert LiquidityAlreadyAdded();
         }
+        liquidityAddedToPool = true;
 
         uint256 ethInput = msg.value;
         address token0 = address(WETH);
         address token1 = address(this);
         uint160 _sqrtPriceX96 = _sqrtPriceX96_01;
+        
+        // If token1 is larger than token0, swap them as would be done by uniswap
         if(token0 > token1){
             (token0, token1) = (token1, token0);
             _sqrtPriceX96 = _sqrtPriceX96_10;
         }
 
-        // Approve WETH to spend this contract's ETH (TESTING)
+        // Approve WETH to spend this contract's ETH
         WETH.approve(address(UNIV3_POSITION_MANAGER), type(uint256).max);
         WETH.deposit{value: ethInput}();
  
-        // Approve Uniswap V3 Position Manager to spend this contract's tokens / senders tokens (TESTING)
+        // Approve Uniswap V3 Position Manager to spend this contract's tokens / senders tokens
         _approve(address(this), address(UNIV3_POSITION_MANAGER), type(uint256).max);
 
+        // Initialize pool, as it is already created
         UNIV3_POSITION_MANAGER.createAndInitializePoolIfNecessary(
             token0,
             token1,
@@ -116,6 +125,7 @@ contract ERC20_UniV3 is ERC20Capped, Ownable {
             _sqrtPriceX96
         );
         
+        // Mint a liquidity position over the entire range of the pool to set initial price
         UNIV3_POSITION_MANAGER.mint(
             INonfungiblePositionManager.MintParams({
                 token0: token0,
@@ -133,8 +143,6 @@ contract ERC20_UniV3 is ERC20Capped, Ownable {
         );
 
         UNIV3_POSITION_MANAGER.refundETH();
-
-        liquidityAddedToPool = true;
 
         emit InitialLiquidityAdded(initialLiquiditySupply, ethInput, block.timestamp);
     }

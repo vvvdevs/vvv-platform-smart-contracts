@@ -12,6 +12,12 @@ contract DeployUtilityToken is Script {
     address public deployer = vm.addr(vm.envUint("PRIVATE_KEY"));
     address public positionRecipient = deployer;
 
+    address public UNIV3_FACTORY = 0x1F98431c8aD98523631AE4a59f267346ea31F984;
+    address public UNIV3_POSITION_MANAGER = 0xC36442b4a4522E871399CD717aBDD847Ab11FE88;
+    
+    //0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6=Goerli, 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2=Mainnet
+    address public WETH = 0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6;
+
     //TOKEN PARAMS
     uint256 public SUPPLY_CAP = 10_000_000 * 1e18;
     uint256 public INITIAL_DEPLOYER_SUPPLY = 2_000_000 * 1e18;
@@ -29,13 +35,15 @@ contract DeployUtilityToken is Script {
             SUPPLY_CAP,
             INITIAL_DEPLOYER_SUPPLY,
             INITIAL_LIQUIDITY_SUPPLY,
-            positionRecipient
+            positionRecipient,
+            UNIV3_FACTORY,
+            UNIV3_POSITION_MANAGER,
+            WETH
         );
 
         console.log("Utility Token deployed at address: %s", address(utilityToken));
         
         //add liquidity
-
         /**
         Calculating the sqrtPriceX96 for a given price ratio
         1. Calculate the price ratio: priceRatio = 1000 (1000 Tokens/ETH)
