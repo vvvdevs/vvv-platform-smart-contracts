@@ -9,13 +9,17 @@ contract VVVTokenUInitTests is VVVTokenTestBase {
     function setUp() public {
         vm.startPrank(deployer, deployer);
 
+        //replace last 3 args with mock addresses from new deployments if going this route
         vvvToken = new ERC20_UniV3(
             "VVV Token",
             "VVV",
             cap, 
             initialDeployerSupply,
             initialLiquiditySupply,
-            positionRecipient
+            positionRecipient,
+            UNIV3_FACTORY,
+            UNIV3_POSITION_MANAGER,
+            WETH
         );
         vm.stopPrank();
 
