@@ -89,7 +89,11 @@ contract LinearVestingWithLinearPenalty is Ownable {
         return (_amount * totalVestingTime) / elapsedVestingTime();
     }
 
+    ///@dev returns either the total vesting time or the time elapsed since vesting began if less than totalVestingTime
     function elapsedVestingTime() public view returns (uint256) {
+        if(block.timestamp >= endTimestamp) {
+            return totalVestingTime;
+        }
         return block.timestamp - startTimestamp;
     }
 

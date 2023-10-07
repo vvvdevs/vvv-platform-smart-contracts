@@ -76,6 +76,20 @@ contract LinearVestingWithLinearPenaltyUnitTests is LinearVestingWithLinearPenal
         vm.stopPrank();
 
     }
+
+    /// @dev ensures no truncation occurrs if waiting full vesting period
+    function testFullAmountAtEndOfVesting() public {
+        uint256 nominalTotalAmount = 1000e18;
+        bytes memory signature = getSignature(users[0], nominalTotalAmount);
+
+        vm.startPrank(users[0], users[0]);
+
+        advanceBlockNumberAndTimestampByTimestamp(VESTING_LENGTH * 10);
+        uint256 thisClaimAmount = vestingContract.claimableNow(nominalTotalAmount, msg.sender);
+        vestingContract.claim(users[0], thisClaimAmount, nominalTotalAmount, signature);
+
+        assertTrue(vestingContract.claimedActualTokens(users[0]) == nominalTotalAmount);
+    }
     
 
 }
