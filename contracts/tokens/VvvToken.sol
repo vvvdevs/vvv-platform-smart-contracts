@@ -84,7 +84,7 @@ contract ERC20_UniV3 is ERC20Capped, Ownable {
     }
 
     ///@notice follows calls contained within the multicall that wouldbe carried out by uniswap v3 frontend when initializing a pool
-    ///@notice requires calculation of sqrtPriceX96 for a given price ratio and input of tick range
+    ///@notice requires input of sqrtPriceX96 for both token0 or token1 as the base token, depending on which is larger
     function addLiquidity(
         uint160 _sqrtPriceX96_01,
         uint160 _sqrtPriceX96_10
