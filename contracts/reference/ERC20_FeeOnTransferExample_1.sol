@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 
-// This is a tax token used for degen projects. It works for swapping taxed tokens back to eth. 
-// One vulnerability is that the slippage tolerance for swapping back to eth internally is 0
+// ERC20 with Buy+Sell Tax
+// Used for memecoins with a tax on buy and sell
+// Features: buy/sell tax, txn limits, wallet limits, manual unclog
 
 pragma solidity 0.8.21;
 
@@ -43,7 +44,6 @@ interface IERC20 {
         uint256 value
     );
 }
-
 abstract contract Context {
     function _msgSender() internal view virtual returns (address payable) {
         return payable(msg.sender);
@@ -54,7 +54,6 @@ abstract contract Context {
         return msg.data;
     }
 }
-
 contract Ownable is Context {
     address public _owner;
 
@@ -95,14 +94,12 @@ contract Ownable is Context {
         _owner = newOwner;
     }
 }
-
 interface IUniswapV2Factory {
     function createPair(
         address tokenA,
         address tokenB
     ) external returns (address pair);
 }
-
 interface IUniswapV2Router02 {
     function factory() external pure returns (address);
 
@@ -154,13 +151,13 @@ interface IUniswapV2Router02 {
         uint deadline
     ) external;
 }
-
 interface IUniswapV2Pair {
     function sync() external;
 }
 
-contract ERC20_FeeOnBuySell is Ownable, IERC20 {
+contract ERC20_BuySellTax is Ownable, IERC20 {
     IUniswapV2Router02 public router;
+    IUniswapV2Pair private pairContract;
 
     address public pair;
     address WETH;
@@ -171,93 +168,99 @@ contract ERC20_FeeOnBuySell is Ownable, IERC20 {
     bool liquidityAdded;
     bool inSwap;
 
-    string public tokenName;
-    string public tokenSymbol;
+    string public _name;
+    string public _symbol;
 
     uint256 private constant DENOMINATOR = 10000;
-    uint256 public totalTokenSupply = 10_000_000 * 1e18;
-    uint256 public maxTxAmount = (totalTokenSupply * 50) / DENOMINATOR;
-    uint256 public maxWalletTokens = (totalTokenSupply * 50) / DENOMINATOR;
-    uint256 public sellTax = 3000;
-    uint256 public buyTax = 3000;
-    uint256 public swapThreshold = (totalTokenSupply * 50) / DENOMINATOR;
-    uint256 public lpAddSlippageTolerance = 1000; // 10% slippage tolerance
-    uint256 public swapSlippageTolerance = 1000;
+    uint256 private constant PROPORTION_TO_LP = 9500;
+    uint256 private constant PROPORTION_TO_DISTRIBUTION = 500;
+    uint256 public constant TOTAL_SUPPLY = 10_000_000 * 1e18;
+    uint256 public maxTxAmount = 10_000 * 1e18;
+    uint256 public maxWalletTokens = 10_000 * 1e18;
+    uint256 public sellTax = 2000;
+    uint256 public buyTax = 2000;
+    uint256 public swapThreshold = 0;
 
     mapping(address => uint256) _balances;
     mapping(address => mapping(address => uint256)) _allowances;
-    mapping(address => bool) _isExemptFromFees;
-    mapping(address => bool) _isExemptFromMaxTx;
+    mapping(address => bool) isExemptFromFees;
+    mapping(address => bool) isExemptFromMaxTx;
 
+    event EditTax(uint8 Buy, uint8 Sell);
+    event ClearStuck(uint256 amount);
     event ClearTokenAndEth(address tokenAddress, uint256 tokenAmount, uint256 ethAmount);
+    event OutputAddressSet(address outputAddress);
     event MaxWalletTokensSet(uint256 maxWalletTokens);
+    event SwapThresholdSet(uint256 amount);
 
     error InsufficientBalance();
     error TransactionLimitExceeded();
     error TransferFailed();
-    error WalletLimitExceeded();
     
     constructor(
-        string memory _tokentokenName,
+        string memory _tokenName,
         string memory _tokenSymbol,
         address _outputAddress,
-        address[] memory _teamAddresses,
-        uint256[] memory _teamAmounts,
         address _router
     ) payable {
+
+        _name = _tokenName;
+        _symbol = _tokenSymbol;
+                        
+        outputAddress = _outputAddress;
+
         router = IUniswapV2Router02(_router);
         WETH = router.WETH();
         pair = IUniswapV2Factory(router.factory()).createPair(
             WETH,
             address(this)
         );
-
-        outputAddress = _outputAddress;
-        tokenName = _tokentokenName;
-        tokenSymbol = _tokenSymbol;
-
+        pairContract = IUniswapV2Pair(pair);
         _allowances[address(this)][address(router)] = type(uint256).max;
 
-        _isExemptFromFees[msg.sender] = true;
-        _isExemptFromFees[address(this)] = true;
-        _isExemptFromMaxTx[msg.sender] = true;
-        _isExemptFromMaxTx[pair] = true;
-        _isExemptFromMaxTx[outputAddress] = true;
-        _isExemptFromMaxTx[address(this)] = true;
+        //set exemptions
+        isExemptFromFees[msg.sender] = true;
+        isExemptFromFees[address(this)] = true;
+        isExemptFromMaxTx[msg.sender] = true;
+        isExemptFromMaxTx[pair] = true;
+        isExemptFromMaxTx[outputAddress] = true;
+        isExemptFromMaxTx[address(this)] = true;
 
-        _balances[address(this)] = (totalTokenSupply * 9000) / DENOMINATOR;
-
+        //transfer 95% of TOTAL_SUPPLY to this contract for adding to liquidity pool
+        _balances[address(this)] = (TOTAL_SUPPLY * PROPORTION_TO_LP) / DENOMINATOR;
         emit Transfer(
             address(0),
             address(this),
-            (totalTokenSupply * 9000) / DENOMINATOR
+            (TOTAL_SUPPLY * PROPORTION_TO_LP) / DENOMINATOR
         );
 
-        for (uint256 i = 0; i < _teamAddresses.length; i++) {
-            _balances[_teamAddresses[i]] = _teamAmounts[i];
-            emit Transfer(address(0), _teamAddresses[i], _teamAmounts[i]);
-        }
+        //transfer 5% of TOTAL_SUPPLY to the deployer wallet
+        _balances[msg.sender] = (TOTAL_SUPPLY * PROPORTION_TO_DISTRIBUTION) / DENOMINATOR;
+        emit Transfer(
+            address(0),
+            msg.sender,
+            (TOTAL_SUPPLY * PROPORTION_TO_DISTRIBUTION) / DENOMINATOR
+        );
     }
 
-    modifier preventRecursiveSwap() {
+    modifier swapping() {
         inSwap = true;
         _;
         inSwap = false;
     }
 
-    function addLiquidity() public onlyOwner {
-        //add liquidity
+    receive() external payable {}
+
+    //95% of TOTAL_SUPPLY to LP (will be contract balance at this point)
+    function addLiquidity() external onlyOwner {
         _allowances[address(this)][address(router)] = type(uint256).max;
         emit Approval(address(this), address(router), type(uint256).max);
-
-        uint256 minTokens = (totalTokenSupply * (DENOMINATOR - lpAddSlippageTolerance)) / DENOMINATOR;
-        uint256 minETH = address(this).balance;
 
         router.addLiquidityETH{value: address(this).balance}(
             address(this),
             balanceOf(address(this)),
-            minTokens, 
-            minETH,
+            0,
+            0,
             msg.sender,
             block.timestamp
         );
@@ -265,43 +268,9 @@ contract ERC20_FeeOnBuySell is Ownable, IERC20 {
         liquidityAdded = true;
     }
 
-    receive() external payable {}
-
-    function totalSupply() external view override returns (uint256) {
-        return totalTokenSupply;
-    }
-
-    function decimals() external pure override returns (uint8) {
-        return uint8(18);
-    }
-
-    function symbol() external view override returns (string memory) {
-        return tokenSymbol;
-    }
-
-    function name() external view override returns (string memory) {
-        return tokenName;
-    }
-
-    function getOwner() external view override returns (address) {
-        return owner();
-    }
-
-    function balanceOf(address account) public view override returns (uint256) {
-        return _balances[account];
-    }
-
-    function nonBurnedSupply() public view returns (uint256) {
-        return totalTokenSupply - balanceOf(DEAD) - balanceOf(ZERO);
-    }
-
-    function allowance(
-        address holder,
-        address spender
-    ) external view override returns (uint256) {
-        return _allowances[holder][spender];
-    }
-
+    //=========================================
+    // TRANSFER-RELATED LOGIC
+    //=========================================
     function approve(
         address spender,
         uint256 amount
@@ -333,17 +302,6 @@ contract ERC20_FeeOnBuySell is Ownable, IERC20 {
         return _transferFrom(sender, recipient, amount);
     }
 
-    function setMaxWalletTokens(uint256 maxWalletTokens_) external onlyOwner {
-        require(maxWalletTokens_ >= 1);
-        maxWalletTokens = maxWalletTokens_;
-        emit MaxWalletTokensSet(maxWalletTokens);
-    }
-
-    function removeLimits() external onlyOwner {
-        maxTxAmount = totalTokenSupply;
-        maxWalletTokens = totalTokenSupply;
-    }
-
     function _transferFrom(
         address sender,
         address recipient,
@@ -360,21 +318,21 @@ contract ERC20_FeeOnBuySell is Ownable, IERC20 {
             recipient != address(DEAD) &&
             recipient != pair &&
             recipient != outputAddress &&
-            !_isExemptFromMaxTx[recipient]
+            !isExemptFromMaxTx[recipient]
         ) {
             uint256 heldTokens = balanceOf(recipient);
 
-            if((heldTokens + amount) > maxWalletTokens){
-                revert WalletLimitExceeded();
+            if((heldTokens + amount) > maxWalletTokens) {
+                revert TransactionLimitExceeded();
             }
         }
 
-        if (amount > maxTxAmount && !_isExemptFromMaxTx[sender]) {
+        if (amount > maxTxAmount && !isExemptFromMaxTx[sender]) {
             revert TransactionLimitExceeded();
         }
 
-        if (shouldSwapBack()) {
-            swapBack();
+        if (_shouldSwapBack()) {
+            _swapBack();
         }
 
         if (_balances[sender] < amount) {
@@ -382,10 +340,10 @@ contract ERC20_FeeOnBuySell is Ownable, IERC20 {
         }
         _balances[sender] -= amount;
 
-        uint256 amountReceived = (_isExemptFromFees[sender] ||
-            _isExemptFromFees[recipient])
+        uint256 amountReceived = (isExemptFromFees[sender] ||
+            isExemptFromFees[recipient])
             ? amount
-            : takeFee(sender, amount, recipient);
+            : _takeFee(sender, amount, recipient);
         _balances[recipient] += amountReceived;
 
         emit Transfer(sender, recipient, amountReceived);
@@ -406,7 +364,7 @@ contract ERC20_FeeOnBuySell is Ownable, IERC20 {
         return true;
     }
 
-    function takeFee(
+    function _takeFee(
         address sender,
         uint256 amount,
         address recipient
@@ -426,12 +384,82 @@ contract ERC20_FeeOnBuySell is Ownable, IERC20 {
         return amount - feeAmount;
     }
 
-    function shouldSwapBack() internal view returns (bool) {
+    function _shouldSwapBack() internal view returns (bool) {
         return
             msg.sender != pair &&
             liquidityAdded &&
             !inSwap &&
             _balances[address(this)] >= swapThreshold;
+    }
+
+    function _swapBack() internal swapping {
+        uint256 amountToSwap = balanceOf(address(this));
+
+        address[] memory path = new address[](2);
+        path[0] = address(this);
+        path[1] = WETH;
+
+        router.swapExactTokensForETHSupportingFeeOnTransferTokens(
+            amountToSwap,
+            0,
+            path,
+            outputAddress,
+            block.timestamp
+        );
+    }
+
+    //=========================================
+    // VIEW FUNCTIONS
+    //=========================================
+    function allowance(
+        address holder,
+        address spender
+    ) external view override returns (uint256) {
+        return _allowances[holder][spender];
+    }
+
+    function totalSupply() external view override returns (uint256) {
+        return TOTAL_SUPPLY;
+    }
+
+    function decimals() external pure override returns (uint8) {
+        return uint8(18);
+    }
+
+    function symbol() external view override returns (string memory) {
+        return _symbol;
+    }
+
+    function name() external view override returns (string memory) {
+        return _name;
+    }
+
+    function getOwner() external view override returns (address) {
+        return owner();
+    }
+
+    function balanceOf(address account) public view override returns (uint256) {
+        return _balances[account];
+    }
+
+    //=========================================
+    // SETTERS
+    //=========================================
+    function removeLimits() external onlyOwner {
+        maxTxAmount = TOTAL_SUPPLY;
+        maxWalletTokens = TOTAL_SUPPLY;
+        emit MaxWalletTokensSet(maxWalletTokens);
+    }  
+
+    function setMaxWalletAndTransactionTokens(
+        uint256 _maxWalletTokens, 
+        uint256 _maxTxAmount
+    ) external onlyOwner {
+        require(_maxWalletTokens >= 1);
+        require(_maxTxAmount >= 1);
+        maxWalletTokens = _maxWalletTokens;
+        maxTxAmount = _maxTxAmount;
+        emit MaxWalletTokensSet(_maxWalletTokens);
     }
 
     function setFees(
@@ -442,38 +470,30 @@ contract ERC20_FeeOnBuySell is Ownable, IERC20 {
         sellTax = _sellTax;
     }
 
-    function swapBack() internal preventRecursiveSwap {
-        uint256 amountToSwap = balanceOf(address(this));
+    function setOutputAddress(address _outputAddress) external onlyOwner {
+        outputAddress = _outputAddress;
+        emit OutputAddressSet(outputAddress);
+    }
+
+    function setSwapBackSettings(uint256 _amount) external onlyOwner {
+        swapThreshold = _amount;
+        emit SwapThresholdSet(swapThreshold);
+    }
+
+    function manualUnclog(uint256 _percentageUnclog) external onlyOwner {
+        uint256 amountToSwap = (balanceOf(address(this)) * _percentageUnclog) / DENOMINATOR;
 
         address[] memory path = new address[](2);
         path[0] = address(this);
         path[1] = WETH;
 
-        uint256 amountOutmMin = (amountToSwap * (DENOMINATOR - swapSlippageTolerance)) / DENOMINATOR;
-
         router.swapExactTokensForETHSupportingFeeOnTransferTokens(
             amountToSwap,
-            amountOutmMin,
+            0,
             path,
             outputAddress,
             block.timestamp
         );
-    }
-
-    function setOutputAddress(address _outputAddress) external onlyOwner {
-        outputAddress = _outputAddress;
-    }
-
-    function setSwapBackSettings(uint256 _amount) external onlyOwner {
-        swapThreshold = _amount;
-    }
-
-    function setLpAddSlippage(uint256 _slippage) external onlyOwner {
-        lpAddSlippageTolerance = _slippage;
-    }
-
-    function setSwapBackSlippage(uint256 _slippage) external onlyOwner {
-        swapSlippageTolerance = _slippage;
     }
 
     function clearTokenAndEth(
@@ -496,7 +516,6 @@ contract ERC20_FeeOnBuySell is Ownable, IERC20 {
         if(!tokenTransferSuccess || !ethTransferSuccess){
             revert TransferFailed();
         }
-
         emit ClearTokenAndEth(_tokenAddress, contractTokenBalance, contractEthBalance);
         return true;
     }
