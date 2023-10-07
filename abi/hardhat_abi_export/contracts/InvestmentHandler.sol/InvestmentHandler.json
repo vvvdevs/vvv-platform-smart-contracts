@@ -1,0 +1,1438 @@
+[
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_defaultAdminController",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_pauser",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_investmentManager",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_contributionAndRefundManager",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_refunder",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
+    "inputs": [],
+    "name": "AddressAlreadyInKycNetwork",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "AddressNotInKycNetwork",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ArrayLengthMismatch",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "CantClaimZero",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "CantInvestZero",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "CantRefundZero",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "CantTransferZero",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ClaimAmountExceedsTotalClaimable",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ERC20AmountExceedsBalance",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InsufficientAllowance",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidSignature",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvestmentAmountExceedsMax",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvestmentDoesNotExist",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvestmentIsNotOpen",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvestmentTokenAlreadyDeposited",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NotInKycAddressNetwork",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "PausableSelective_ArrayLengthMismatch",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes4",
+        "name": "functionSelector",
+        "type": "bytes4"
+      }
+    ],
+    "name": "PausableSelective_FunctionIsPaused",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "RefundAmountExceedsUserBalance",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "TooLateForRefund",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "TransferAmountExceedsInvestmentBalance",
+    "type": "error"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "kycAddress",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "addedAddress",
+        "type": "address"
+      }
+    ],
+    "name": "AddressAddedToKycAddressNetwork",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "kycAddress",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "removedAddress",
+        "type": "address"
+      }
+    ],
+    "name": "AddressRemovedFromKycAddressNetwork",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "sender",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "recipient",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "ERC20Recovered",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "investmentId",
+        "type": "uint256"
+      }
+    ],
+    "name": "InvestmentAdded",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "investmentId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "paymentToken",
+        "type": "address"
+      }
+    ],
+    "name": "InvestmentPaymentTokenAddressSet",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "investmentId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "phase",
+        "type": "uint256"
+      }
+    ],
+    "name": "InvestmentPhaseSet",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "investmentId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "projectToken",
+        "type": "address"
+      }
+    ],
+    "name": "InvestmentProjectTokenAddressSet",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "investmentId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "InvestmentProjectTokenAllocationSet",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "sender",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "bytes4",
+        "name": "functionSelector",
+        "type": "bytes4"
+      },
+      {
+        "indexed": true,
+        "internalType": "bool",
+        "name": "isPaused",
+        "type": "bool"
+      }
+    ],
+    "name": "PausableSelective_FunctionIsPausedUpdate",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "sender",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "investmentId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "recipient",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "PaymentTokenTransferred",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "role",
+        "type": "bytes32"
+      },
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "previousAdminRole",
+        "type": "bytes32"
+      },
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "newAdminRole",
+        "type": "bytes32"
+      }
+    ],
+    "name": "RoleAdminChanged",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "role",
+        "type": "bytes32"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "sender",
+        "type": "address"
+      }
+    ],
+    "name": "RoleGranted",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "role",
+        "type": "bytes32"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "sender",
+        "type": "address"
+      }
+    ],
+    "name": "RoleRevoked",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "sender",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "kycAddress",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "investmentId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "maxInvestableAmount",
+        "type": "uint256"
+      }
+    ],
+    "name": "UserInvestmentContribution",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "sender",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "kycAddress",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "investmentId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "UserRefunded",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "sender",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "tokenRecipient",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "kycAddress",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "investmentId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "UserTokenClaim",
+    "type": "event"
+  },
+  {
+    "inputs": [],
+    "name": "DEFAULT_ADMIN_ROLE",
+    "outputs": [
+      {
+        "internalType": "bytes32",
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_newAddress",
+        "type": "address"
+      }
+    ],
+    "name": "addAddressToKycAddressNetwork",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_signer",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_paymentToken",
+        "type": "address"
+      },
+      {
+        "internalType": "uint128[]",
+        "name": "_allocatedPaymentTokenForPhase",
+        "type": "uint128[]"
+      },
+      {
+        "internalType": "bool",
+        "name": "_pauseAfterCall",
+        "type": "bool"
+      }
+    ],
+    "name": "addInvestment",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "_investmentId",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint8",
+        "name": "_phase",
+        "type": "uint8"
+      }
+    ],
+    "name": "allocatedPaymentToken",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address[]",
+        "name": "_kycAddresses",
+        "type": "address[]"
+      },
+      {
+        "internalType": "uint16[]",
+        "name": "_investmentIds",
+        "type": "uint16[]"
+      },
+      {
+        "internalType": "uint128[]",
+        "name": "_paymentTokenAmount",
+        "type": "uint128[]"
+      },
+      {
+        "internalType": "bool",
+        "name": "_pauseAfterCall",
+        "type": "bool"
+      }
+    ],
+    "name": "batchManualAddContribution",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes4[]",
+        "name": "_selectors",
+        "type": "bytes4[]"
+      },
+      {
+        "internalType": "bool[]",
+        "name": "_isPaused",
+        "type": "bool[]"
+      }
+    ],
+    "name": "batchSetFunctionIsPaused",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint16",
+            "name": "investmentId",
+            "type": "uint16"
+          },
+          {
+            "internalType": "uint240",
+            "name": "claimAmount",
+            "type": "uint240"
+          },
+          {
+            "internalType": "address",
+            "name": "tokenRecipient",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "kycAddress",
+            "type": "address"
+          }
+        ],
+        "internalType": "struct InvestmentHandler.ClaimParams",
+        "name": "_params",
+        "type": "tuple"
+      }
+    ],
+    "name": "claim",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_kycAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "uint16",
+        "name": "_investmentId",
+        "type": "uint16"
+      }
+    ],
+    "name": "computeUserClaimableAllocationForInvestment",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_kycAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "uint16",
+        "name": "_investmentId",
+        "type": "uint16"
+      }
+    ],
+    "name": "computeUserTotalAllocationForInvesment",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "correspondingKycAddress",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes4",
+        "name": "",
+        "type": "bytes4"
+      }
+    ],
+    "name": "functionIsPaused",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "role",
+        "type": "bytes32"
+      }
+    ],
+    "name": "getRoleAdmin",
+    "outputs": [
+      {
+        "internalType": "bytes32",
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_kycAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "uint16",
+        "name": "_investmentId",
+        "type": "uint16"
+      }
+    ],
+    "name": "getTotalClaimedForInvestment",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_kycAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "uint16",
+        "name": "_investmentId",
+        "type": "uint16"
+      }
+    ],
+    "name": "getTotalInvestedForInvestment",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "role",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "grantRole",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "role",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "hasRole",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint16",
+            "name": "investmentId",
+            "type": "uint16"
+          },
+          {
+            "internalType": "uint120",
+            "name": "thisInvestmentAmount",
+            "type": "uint120"
+          },
+          {
+            "internalType": "uint120",
+            "name": "maxInvestableAmount",
+            "type": "uint120"
+          },
+          {
+            "internalType": "uint8",
+            "name": "userPhase",
+            "type": "uint8"
+          },
+          {
+            "internalType": "address",
+            "name": "kycAddress",
+            "type": "address"
+          },
+          {
+            "internalType": "bytes",
+            "name": "signature",
+            "type": "bytes"
+          }
+        ],
+        "internalType": "struct InvestmentHandler.InvestParams",
+        "name": "_params",
+        "type": "tuple"
+      }
+    ],
+    "name": "invest",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "_investmentId",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint8",
+        "name": "_phase",
+        "type": "uint8"
+      }
+    ],
+    "name": "investedPaymentToken",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "_investmentId",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint8",
+        "name": "_userPhase",
+        "type": "uint8"
+      }
+    ],
+    "name": "investmentIsOpen",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "investments",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "signer",
+        "type": "address"
+      },
+      {
+        "internalType": "contract IERC20",
+        "name": "projectToken",
+        "type": "address"
+      },
+      {
+        "internalType": "contract IERC20",
+        "name": "paymentToken",
+        "type": "address"
+      },
+      {
+        "internalType": "uint8",
+        "name": "contributionPhase",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint128",
+        "name": "totalInvestedPaymentToken",
+        "type": "uint128"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalTokensClaimed",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalTokensAllocated",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "isInKycAddressNetwork",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "latestInvestmentId",
+    "outputs": [
+      {
+        "internalType": "uint16",
+        "name": "",
+        "type": "uint16"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_kycAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "uint16",
+        "name": "_investmentId",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint128",
+        "name": "_paymentTokenAmount",
+        "type": "uint128"
+      },
+      {
+        "internalType": "bool",
+        "name": "_pauseAfterCall",
+        "type": "bool"
+      }
+    ],
+    "name": "manualAddContribution",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_tokenAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_destinationAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_tokenAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "_pauseAfterCall",
+        "type": "bool"
+      }
+    ],
+    "name": "recoverERC20",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_kycAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "uint16",
+        "name": "_investmentId",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint128",
+        "name": "_paymentTokenAmount",
+        "type": "uint128"
+      },
+      {
+        "internalType": "bool",
+        "name": "_pauseAfterCall",
+        "type": "bool"
+      }
+    ],
+    "name": "refundUser",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "_investmentId",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint8",
+        "name": "_phase",
+        "type": "uint8"
+      }
+    ],
+    "name": "remainderAvailableToInvest",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_networkAddress",
+        "type": "address"
+      }
+    ],
+    "name": "removeAddressFromKycAddressNetwork",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "role",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "renounceRole",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "role",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "revokeRole",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes4",
+        "name": "_selector",
+        "type": "bytes4"
+      },
+      {
+        "internalType": "bool",
+        "name": "_isPaused",
+        "type": "bool"
+      }
+    ],
+    "name": "setFunctionIsPaused",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "_investmentId",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint8",
+        "name": "_investmentPhase",
+        "type": "uint8"
+      },
+      {
+        "internalType": "bool",
+        "name": "_pauseAfterCall",
+        "type": "bool"
+      }
+    ],
+    "name": "setInvestmentContributionPhase",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "_investmentId",
+        "type": "uint16"
+      },
+      {
+        "internalType": "address",
+        "name": "_paymentTokenAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "bool",
+        "name": "_pauseAfterCall",
+        "type": "bool"
+      }
+    ],
+    "name": "setInvestmentPaymentTokenAddress",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "_investmentId",
+        "type": "uint16"
+      },
+      {
+        "internalType": "address",
+        "name": "projectTokenAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "bool",
+        "name": "_pauseAfterCall",
+        "type": "bool"
+      }
+    ],
+    "name": "setInvestmentProjectTokenAddress",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "_investmentId",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalTokensAllocated",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "_pauseAfterCall",
+        "type": "bool"
+      }
+    ],
+    "name": "setInvestmentProjectTokenAllocation",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes4",
+        "name": "interfaceId",
+        "type": "bytes4"
+      }
+    ],
+    "name": "supportsInterface",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "_investmentId",
+        "type": "uint16"
+      },
+      {
+        "internalType": "address",
+        "name": "_destinationAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "uint128",
+        "name": "_paymentTokenAmount",
+        "type": "uint128"
+      },
+      {
+        "internalType": "bool",
+        "name": "_pauseAfterCall",
+        "type": "bool"
+      }
+    ],
+    "name": "transferPaymentToken",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "userInvestmentIds",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "userInvestments",
+    "outputs": [
+      {
+        "internalType": "uint128",
+        "name": "totalInvestedPaymentToken",
+        "type": "uint128"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalTokensClaimed",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  }
+]
