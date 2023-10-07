@@ -89,6 +89,8 @@ contract LinearVestingWithLinearPenaltyUnitTests is LinearVestingWithLinearPenal
         vestingContract.claim(users[0], thisClaimAmount, nominalTotalAmount, signature);
 
         assertTrue(vestingContract.claimedActualTokens(users[0]) == nominalTotalAmount);
+
+        vm.stopPrank();
     }
     
 
