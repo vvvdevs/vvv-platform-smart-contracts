@@ -22,6 +22,8 @@ contract LinearVestingWithLinearPenaltyBase is Test {
     uint256 chainid = 5;
 
     uint256 VESTING_LENGTH = 100_000;
+    uint256[] NON_PENALIZED_PROPORTIONS = [0, 1000, 2000, 3000, 4000]; //testing "@TGE" claimable amounts without penalty
+
     address[] public users = new address[](333);
     bool logging = false;
     // Helpers-----------------------------------------------------------------------------
@@ -52,10 +54,11 @@ contract LinearVestingWithLinearPenaltyBase is Test {
 
     function getSignature(
         address _user,
-        uint256 _amount
+        uint256 _amount,
+        uint256 _round
     ) public returns (bytes memory) {
         chainid = block.chainid;
-        bytes32 messageHash = keccak256(abi.encodePacked(_user, _amount, chainid));
+        bytes32 messageHash = keccak256(abi.encodePacked(_user, _amount, _round, chainid));
         bytes32 prefixedHash = prefixed(messageHash);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerKey, prefixedHash);
         bytes memory signature = toBytesConcat(r, s, v);
