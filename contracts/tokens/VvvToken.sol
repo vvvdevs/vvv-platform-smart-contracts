@@ -30,13 +30,16 @@ contract ERC20_UniV3 is ERC20Capped, Ownable {
     IUniswapV3Factory private immutable UNIV3_FACTORY;
     INonfungiblePositionManager private immutable UNIV3_POSITION_MANAGER;
     IWETH9 private immutable WETH;
-
+    
+    address public constant DEAD = 0x000000000000000000000000000000000000dEaD;
     address private positionRecipient;
     address public poolAddress;
     address public vestingContractAddress;
     bool public liquidityAddedToPool;
     uint24 public constant POOL_FEE_RATE = 3000; // 0.3% to LPs - recommended for most pools
     uint256 public immutable initialLiquiditySupply;
+    uint256 public maxWalletBalance;
+    uint256 public maxTransactionAmount;
 
     event InitialLiquidityAdded(
         uint256 indexed _amount0,
@@ -46,6 +49,7 @@ contract ERC20_UniV3 is ERC20Capped, Ownable {
 
     error CallerIsNotOwnerOrVestingContract();
     error LiquidityAlreadyAdded();
+    error MaxWalletOrTransactionAmountExceeded();
 
     //==========================================================================================
     // SETUP - MINTING, POOL CREATION, LIQUIDITY ADDITION
@@ -86,7 +90,7 @@ contract ERC20_UniV3 is ERC20Capped, Ownable {
     }
 
     /**
-        @notice follows calls contained within the multicall that wouldbe carried out by uniswap v3 frontend when initializing a pool
+        @notice follows calls contained within the multicall that would be carried out by uniswap v3 frontend when initializing a pool
         @notice requires input of sqrtPriceX96 for both token0 or token1 as the base token, depending on which is larger
         @notice -887220/887220 are the tick values from frontend for ticks when the entire token price r ange is selected
      */
@@ -166,4 +170,22 @@ contract ERC20_UniV3 is ERC20Capped, Ownable {
         vestingContractAddress = _vestingContractAddress;
     }
 
+    function _beforeTokenTransfer(
+        address _from,
+        address _to,
+        uint256 _amount
+    ) internal override(ERC20) {
+        if (
+            liquidityAddedToPool &&
+            _to != poolAddress &&
+            _to != address(this) &&
+            _to != address(DEAD) &&
+            _amount + balanceOf(_to) > maxWalletBalance &&
+            _amount + balanceOf(_to) > maxTransactionAmount
+        ) {
+            revert MaxWalletOrTransactionAmountExceeded();
+        }
+
+        super._beforeTokenTransfer(_from, _to, _amount);
+    }
 }
