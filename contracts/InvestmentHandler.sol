@@ -154,6 +154,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
     error AddressNotInKycNetwork();
     error ArrayLengthMismatch();
     error CantClaimZero();
+    error CantDecreaseExistingActivePhase();
     error CantInvestZero();
     error CantRefundZero();
     error CantTransferZero();
@@ -459,14 +460,17 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
     }
 
     /**
-     * @dev for frontend - returns the remaining available allocation for an investment
+     * @dev for frontend - returns the invested allocation for an investment by phase
      * @param _investmentId the id of the investment the user is checking
-     * @param _phase the phase the user is assigned to for the investment
-     * @return the remaining available allocation for the investment
+     * @return an array of phase invested amounts
      */
-    function remainderAvailableToInvest(uint16 _investmentId, uint8 _phase) external view returns (uint256) {
-        return investments[_investmentId].allocatedPaymentTokenForPhase[_phase] -
-            investments[_investmentId].investedPaymentTokenForPhase[_phase];
+    function investedPaymentToken(uint16 _investmentId) external view returns (uint256[] memory) {
+        uint256 totalPhases = investments[_investmentId].investedPaymentTokenForPhase.length;
+        uint256[] memory thisInvestedPaymentToken = new uint256[](totalPhases);
+        for (uint256 i = 0; i < totalPhases; i++) {
+            thisInvestedPaymentToken[i] = investments[_investmentId].investedPaymentTokenForPhase[i];
+        }
+        return thisInvestedPaymentToken;
     }
 
     /**
@@ -474,8 +478,13 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
      * @param _investmentId the id of the investment the user is checking
      * @return an array of phase investment limits
      */
-    function allocatedPaymentToken(uint16 _investmentId, uint8 _phase) external view returns (uint256) {
-        return investments[_investmentId].allocatedPaymentTokenForPhase[_phase];
+    function allocatedPaymentToken(uint16 _investmentId) external view returns (uint256[] memory) {
+        uint256 totalPhases = investments[_investmentId].allocatedPaymentTokenForPhase.length;
+        uint256[] memory thisAllocatedPaymentToken = new uint256[](totalPhases);
+        for (uint256 i = 0; i < totalPhases; i++) {
+            thisAllocatedPaymentToken[i] = investments[_investmentId].allocatedPaymentTokenForPhase[i];
+        } 
+        return thisAllocatedPaymentToken;
     }
 
     /**
@@ -620,6 +629,24 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
         investments[_investmentId].paymentToken = IERC20(_paymentTokenAddress);
 
         emit InvestmentPaymentTokenAddressSet(_investmentId, _paymentTokenAddress);
+    }
+
+    /**
+     * @notice sets the payment token phase allocation for a given phase _investmentId and _phase
+     * @notice checks that the phase is greater than the current/active phase
+     */
+    function setInvestmentPaymentTokenAllocationForPhase(
+        uint16 _investmentId,
+        uint8 _phase,
+        uint128 _allocatedPaymentTokenForPhase,
+        bool _pauseAfterCall
+    ) external nonReentrant whenNotPausedSelective(_pauseAfterCall) onlyRole(INVESTMENT_MANAGER_ROLE) {
+        uint8 currentPhase = investments[_investmentId].contributionPhase;
+        if(_phase <= currentPhase) {
+            revert CantDecreaseExistingActivePhase();
+        }
+
+        investments[_investmentId].allocatedPaymentTokenForPhase[_phase] = _allocatedPaymentTokenForPhase;
     }
 
     /**

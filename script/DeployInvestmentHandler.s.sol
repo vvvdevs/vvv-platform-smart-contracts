@@ -40,4 +40,5 @@ contract DeployInvestmentHandler is Script {
 
     deploys 
     0x01D1a93e9CC5f2Ab537Fcb35De4efBB5605fb808
+    0x6b59209840641161b6B33BEfeC87d74c42b71838
  */

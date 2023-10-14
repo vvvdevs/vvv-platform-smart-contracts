@@ -10,10 +10,15 @@ const dev_wallet_key = process.env.PRIVATE_KEY;
 const etherscan_api_key = process.env.ETHERSCAN_API_KEY;
 
 module.exports = {
-    solidity: "0.8.21",
-    compilerOptions: {
-        optimize: true,
-        runs: 100,
+    solidity: {
+        version: "0.8.21",
+        settings: {
+            optimizer: {
+                enabled: true,
+                runs: 200,
+            },
+        },
+        allowUnlimitedContractSize: false,
     },
     defaultNetwork: "hardhat",
     networks: {
@@ -51,4 +56,9 @@ module.exports = {
         path: './abi/hardhat_abi_export',
         format: "json"
     },
+    contractSizer: {
+        alphaSort: true,
+        runOnCompile: true,
+        disambiguatePaths: false,
+    }
 };

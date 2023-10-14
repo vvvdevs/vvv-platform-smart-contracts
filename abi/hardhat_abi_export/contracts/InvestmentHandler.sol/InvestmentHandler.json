@@ -52,6 +52,11 @@
   },
   {
     "inputs": [],
+    "name": "CantDecreaseExistingActivePhase",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "CantInvestZero",
     "type": "error"
   },
@@ -592,6 +597,25 @@
   {
     "inputs": [
       {
+        "internalType": "uint16",
+        "name": "_investmentId",
+        "type": "uint16"
+      }
+    ],
+    "name": "allocatedPaymentToken",
+    "outputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "",
+        "type": "uint256[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "address[]",
         "name": "_kycAddresses",
         "type": "address[]"
@@ -919,6 +943,49 @@
       },
       {
         "internalType": "uint8",
+        "name": "_phase",
+        "type": "uint8"
+      }
+    ],
+    "name": "investedPaymentToken",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "_investmentId",
+        "type": "uint16"
+      }
+    ],
+    "name": "investedPaymentToken",
+    "outputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "",
+        "type": "uint256[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "_investmentId",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint8",
         "name": "_userPhase",
         "type": "uint8"
       }
@@ -1213,6 +1280,34 @@
       }
     ],
     "name": "setInvestmentPaymentTokenAddress",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "_investmentId",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint8",
+        "name": "_phase",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint128",
+        "name": "_allocatedPaymentTokenForPhase",
+        "type": "uint128"
+      },
+      {
+        "internalType": "bool",
+        "name": "_pauseAfterCall",
+        "type": "bool"
+      }
+    ],
+    "name": "setInvestmentPaymentTokenAllocationForPhase",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
