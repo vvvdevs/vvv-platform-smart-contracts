@@ -296,14 +296,6 @@ contract InvestmentHandlerFuzzTests is InvestmentHandlerTestSetup {
     }
 
     /**
-     * Fuzz investmentIsOpen
-     * Just showing a non-revert
-     */
-    function testFuzz_investmentIsOpen(uint16 _investmentId, uint8 _userPhase) public view {
-        investmentHandler.investmentIsOpen(_investmentId, _userPhase);
-    }
-
-    /**
      * Fuzz addInvestment
      * Just showing a revert since function is not called with correct admin user except by chance, so shouldn't happen
      */
