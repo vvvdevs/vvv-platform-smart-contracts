@@ -441,8 +441,8 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
 
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
     // INVESTMENT READ FUNCTIONS
-    // 1. investmentIsOpen
-    // 2. remainderAvailableToInvest
+    // 1. getInvestedPaymentTokenByPhase
+    // 2. getAllocatedPaymentTokenByPhase
     // 3. _signatureCheck
     // 4. _phaseCheck
     // 5. _paymentTokenAllowanceCheck
@@ -450,21 +450,11 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
 
     /**
-     * @dev for frontend and _phaseCheck use, returns true if investment is open for a user based on their assigned phase
-     * @param _investmentId the id of the investment the user is checking
-     * @param _userPhase the phase the user is assigned to for the investment
-     * @return true if the user's assigned phase matches the investment at _investmentId's current investment phase, false otherwise
-     */
-    function investmentIsOpen(uint16 _investmentId, uint8 _userPhase) public view returns (bool) {
-        return investments[_investmentId].contributionPhase == _userPhase;
-    }
-
-    /**
      * @dev for frontend - returns the invested allocation for an investment by phase
      * @param _investmentId the id of the investment the user is checking
      * @return an array of phase invested amounts
      */
-    function investedPaymentToken(uint16 _investmentId) external view returns (uint256[] memory) {
+    function getInvestedPaymentTokenByPhase(uint16 _investmentId) external view returns (uint256[] memory) {
         uint256 totalPhases = investments[_investmentId].investedPaymentTokenForPhase.length;
         uint256[] memory thisInvestedPaymentToken = new uint256[](totalPhases);
         for (uint256 i = 0; i < totalPhases; i++) {
@@ -478,22 +468,13 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
      * @param _investmentId the id of the investment the user is checking
      * @return an array of phase investment limits
      */
-    function allocatedPaymentToken(uint16 _investmentId) external view returns (uint256[] memory) {
+    function getAllocatedPaymentTokenByPhase(uint16 _investmentId) external view returns (uint256[] memory) {
         uint256 totalPhases = investments[_investmentId].allocatedPaymentTokenForPhase.length;
         uint256[] memory thisAllocatedPaymentToken = new uint256[](totalPhases);
         for (uint256 i = 0; i < totalPhases; i++) {
             thisAllocatedPaymentToken[i] = investments[_investmentId].allocatedPaymentTokenForPhase[i];
         } 
         return thisAllocatedPaymentToken;
-    }
-
-    /**
-     * @dev for frontend - returns the invested amounts for each phase
-     * @param _investmentId the id of the investment the user is checking
-     * @return an array of phase invested amounts
-     */
-    function investedPaymentToken(uint16 _investmentId, uint8 _phase) external view returns (uint256) {
-        return investments[_investmentId].investedPaymentTokenForPhase[_phase];
     }
 
     /**
@@ -526,7 +507,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
      * @return bool true if current phase of user's desired investment matches the user's assigned investment phase for that same investment, else false
      */
     function _phaseCheck(InvestParams memory _params) private view returns (bool) {
-        return investmentIsOpen(_params.investmentId, _params.userPhase);
+        return _params.userPhase == investments[_params.investmentId].contributionPhase;
     }
 
     /**
@@ -654,11 +635,11 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
      */
     function setInvestmentProjectTokenAddress(
         uint16 _investmentId,
-        address projectTokenAddress,
+        address _projectTokenAddress,
         bool _pauseAfterCall
     ) external nonReentrant whenNotPausedSelective(_pauseAfterCall) onlyRole(INVESTMENT_MANAGER_ROLE) {
-        investments[_investmentId].projectToken = IERC20(projectTokenAddress);
-        emit InvestmentProjectTokenAddressSet(_investmentId, projectTokenAddress);
+        investments[_investmentId].projectToken = IERC20(_projectTokenAddress);
+        emit InvestmentProjectTokenAddressSet(_investmentId, _projectTokenAddress);
     }
 
     /**
@@ -666,11 +647,11 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
      */
     function setInvestmentProjectTokenAllocation(
         uint16 _investmentId,
-        uint256 totalTokensAllocated,
+        uint256 _totalTokensAllocated,
         bool _pauseAfterCall
     ) external nonReentrant whenNotPausedSelective(_pauseAfterCall) onlyRole(INVESTMENT_MANAGER_ROLE) {
-        investments[_investmentId].totalTokensAllocated = totalTokensAllocated;
-        emit InvestmentProjectTokenAllocationSet(_investmentId, totalTokensAllocated);
+        investments[_investmentId].totalTokensAllocated = _totalTokensAllocated;
+        emit InvestmentProjectTokenAllocationSet(_investmentId, _totalTokensAllocated);
     }
 
     /**
