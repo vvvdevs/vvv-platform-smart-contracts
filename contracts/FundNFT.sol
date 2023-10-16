@@ -74,7 +74,7 @@ contract VVV_FUND is ERC1155, AccessControl, ReentrancyGuard {
             revert ArrayLengthMismatch();
         }
 
-        for(uint256 i = 0; i < _ids.length; i++) {
+        for(uint16 i = 0; i < _ids.length; ++i) {
             mintBySignature(_ids[i], _signatures[i]);
         }
     }
