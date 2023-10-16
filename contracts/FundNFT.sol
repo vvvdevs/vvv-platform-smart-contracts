@@ -15,9 +15,11 @@ contract VVV_FUND is ERC721A, AccessControl, ReentrancyGuard {
     address public signer;
     string public baseURI;
     uint256 public constant MAX_SUPPLY = 10_000;
+    uint256 public constant WHITELIST_MINT_PRICE = 0.05 ether;
     mapping(address => uint256) public mintedBySignature;
 
     error ArrayLengthMismatch();
+    error InsufficientFunds();
     error InvalidSignature();
     error MaxAllocationWouldBeExceeded();
     error MaxSupplyWouldBeExceeded();
@@ -92,6 +94,10 @@ contract VVV_FUND is ERC721A, AccessControl, ReentrancyGuard {
 
         if(mintedBySignature[msg.sender] + _quantity > _maxQuantity) {
             revert MaxAllocationWouldBeExceeded();
+        }
+
+        if(msg.value < WHITELIST_MINT_PRICE * _quantity) {
+            revert InsufficientFunds();
         }
 
         mintedBySignature[msg.sender] += _quantity;
