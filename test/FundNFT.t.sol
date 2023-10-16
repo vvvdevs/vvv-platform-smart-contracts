@@ -51,10 +51,9 @@ contract InvestmentHandlerTestSetup is Test {
         fundnft = new VVV_FUND(
             address(s1nft),
             signer,
-            custodian,
             "VVV Fund",
             "VVVF",
-            "https://vvv.fund/api/token/{id}.json"
+            "https://vvv.fund/api/token/"
         );
 
         vm.stopPrank();
@@ -101,10 +100,10 @@ contract InvestmentHandlerTestSetup is Test {
 
     function getSignature(
         address _minter,
-        uint256 _id
+        uint256 _maxQuantity
     ) public returns (bytes memory) {
         chainid = block.chainid;
-        bytes32 messageHash = keccak256(abi.encodePacked(_minter, _id, chainid));
+        bytes32 messageHash = keccak256(abi.encodePacked(_minter, _maxQuantity, chainid));
         bytes32 prefixedHash = prefixed(messageHash);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerKey, prefixedHash);
         bytes memory signature = toBytesConcat(r, s, v);
@@ -135,17 +134,39 @@ contract InvestmentHandlerTestSetup is Test {
     function testMintViaSignature() public {
         bytes memory signature = getSignature(sampleUser, 1);
         vm.startPrank(sampleUser, sampleUser);
-        fundnft.mintBySignature(1, signature);
+        fundnft.mintBySignature(sampleUser, 1, 1, signature);
         vm.stopPrank();
-        assertTrue(fundnft.balanceOf(custodian, 1) == 1);
+        assertTrue(fundnft.ownerOf(1) == sampleUser);
     }
 
     function testMintViaTradeIn() public {
         vm.startPrank(sampleUser, sampleUser);
         s1nft.setApprovalForAll(address(fundnft), true);
-        fundnft.mintByTradeIn(1); //sampleUser is minted ID 1
+
+        uint256[] memory ids = new uint256[](1);
+        ids[0] = 1;
+        fundnft.mintByTradeIn(sampleUser, ids, 1); //sampleUser is minted ID 1
         vm.stopPrank();
-        assertTrue(fundnft.balanceOf(custodian, 1) == 1);
+        assertTrue(fundnft.ownerOf(1) == sampleUser);
+    }
+
+    function testFailMintViaSignature() public {
+        bytes memory signature = getSignature(sampleUser, 1);
+        vm.startPrank(sampleUser, sampleUser);
+        fundnft.mintBySignature(sampleUser, 1, 2, signature);
+        vm.stopPrank();
+        assertTrue(fundnft.ownerOf(1) == sampleUser);
+    }
+
+    function testFailMintViaTradeIn() public {
+        vm.startPrank(sampleUser, sampleUser);
+        s1nft.setApprovalForAll(address(fundnft), true);
+
+        uint256[] memory ids = new uint256[](1);
+        ids[0] = 11;
+        fundnft.mintByTradeIn(sampleUser, ids, 1); //sampleUser is minted ID 1
+        vm.stopPrank();
+        assertTrue(fundnft.ownerOf(1) == sampleUser);        
     }
 
 }
