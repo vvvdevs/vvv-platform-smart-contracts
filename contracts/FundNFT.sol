@@ -69,7 +69,7 @@ contract VVV_FUND is ERC1155, AccessControl, ReentrancyGuard {
         address _to,
         uint256[] memory _ids,
         bytes[] memory _signatures
-    ) public nonReentrant {
+    ) external nonReentrant {
         if(_ids.length != _signatures.length) {
             revert ArrayLengthMismatch();
         }
