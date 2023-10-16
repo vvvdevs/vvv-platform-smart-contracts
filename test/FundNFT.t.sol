@@ -134,7 +134,7 @@ contract InvestmentHandlerTestSetup is Test {
     function testMintViaSignature() public {
         bytes memory signature = getSignature(sampleUser, 1);
         vm.startPrank(sampleUser, sampleUser);
-        fundnft.mintBySignature(sampleUser, 1, 1, signature);
+        fundnft.mintBySignature{value: 0.05 ether}(sampleUser, 1, 1, signature);
         vm.stopPrank();
         assertTrue(fundnft.ownerOf(1) == sampleUser);
     }
@@ -153,7 +153,7 @@ contract InvestmentHandlerTestSetup is Test {
     function testFailMintViaSignature() public {
         bytes memory signature = getSignature(sampleUser, 1);
         vm.startPrank(sampleUser, sampleUser);
-        fundnft.mintBySignature(sampleUser, 1, 2, signature);
+        fundnft.mintBySignature{value: 0.0499 ether}(sampleUser, 1, 1, signature);
         vm.stopPrank();
         assertTrue(fundnft.ownerOf(1) == sampleUser);
     }
