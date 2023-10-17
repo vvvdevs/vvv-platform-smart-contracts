@@ -92,7 +92,7 @@ contract VVV_FUND is ERC721A, AccessControl, ReentrancyGuard {
             revert MaxSupplyWouldBeExceeded();
         }
 
-        if(mintedBySignature[msg.sender] + _quantity > _maxQuantity) {
+        if(mintedBySignature[msg.sender] > _maxQuantity) {
             revert MaxAllocationWouldBeExceeded();
         }
 
