@@ -129,7 +129,7 @@ contract VVV_FUND is ERC721A, AccessControl, ReentrancyGuard {
         address _minter,
         uint256 _maxQuantity,
         bytes memory _signature
-    ) private view returns (bool) {
+    ) internal view returns (bool) {
         return
             SignatureChecker.isValidSignatureNow(
                 signer,
