@@ -27,6 +27,7 @@ contract VVV_FUND is ERC721A, AccessControl, ReentrancyGuard {
     error MaxSupplyWouldBeExceeded();
     error NotTokenOwner();
     error maxPublicMintsWouldBeExceeded();
+    error UnableToWithdraw();
 
     constructor(
         address _s1nft,
@@ -167,6 +168,11 @@ contract VVV_FUND is ERC721A, AccessControl, ReentrancyGuard {
                 ),
                 _signature
             );
+    }
+
+    function withdraw() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        (bool success, ) = msg.sender.call{value: address(this).balance}("");
+        if (!success) { revert UnableToWithdraw(); }
     }
 
     //==================================================================================================

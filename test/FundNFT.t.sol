@@ -224,4 +224,16 @@ contract InvestmentHandlerTestSetup is Test {
         vm.stopPrank();
         assertTrue(fundnft.ownerOf(1) == sampleUser);        
     }
+
+    function testWithdraw() public {
+        uint256 balance = address(deployer).balance;
+        vm.startPrank(sampleUser, sampleUser);
+        fundnft.publicMint{value: 0.25 ether}(5);
+        vm.stopPrank();
+        vm.startPrank(deployer, deployer);
+        fundnft.withdraw();
+        vm.stopPrank();
+        uint newBalance = address(deployer).balance;
+        assertTrue(newBalance == balance + 0.25 ether);
+    }
 }
