@@ -248,4 +248,21 @@ contract InvestmentHandlerTestSetup is Test {
         vm.stopPrank();
         assertTrue(!fundnft.paused());
     }
+
+    function testPublicMintWhenPaused() public {
+        vm.startPrank(deployer, deployer);
+        fundnft.pause();
+        vm.expectRevert();
+        fundnft.publicMint{value: 0.05 ether}(1);
+        vm.stopPrank();
+    }
+
+    function testSignatureMintWhenPaused() public {
+        bytes memory signature = getSignature(sampleUser, 1);
+        vm.startPrank(deployer, deployer);
+        fundnft.pause();
+        vm.expectRevert();
+        fundnft.mintBySignature{value: 0.05 ether}(sampleUser, 1, 1, signature);
+        vm.stopPrank();
+    }
 }
