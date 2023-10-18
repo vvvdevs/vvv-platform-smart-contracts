@@ -232,4 +232,20 @@ contract InvestmentHandlerTestSetup is Test {
         vm.stopPrank();
         assertTrue(fundnft.ownerOf(1) == sampleUser);        
     }
+
+    function testPause() public {
+        vm.startPrank(deployer, deployer);
+        fundnft.pause();
+        vm.stopPrank();
+        assertTrue(fundnft.paused());
+    }
+
+    function testUnPause() public {
+        vm.startPrank(deployer, deployer);
+        fundnft.pause();
+        assertTrue(fundnft.paused());
+        fundnft.unpause();
+        vm.stopPrank();
+        assertTrue(!fundnft.paused());
+    }
 }
