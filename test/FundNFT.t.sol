@@ -137,6 +137,31 @@ contract InvestmentHandlerTestSetup is Test {
         assertTrue(fundnft.ownerOf(1) == sampleUser);
     }
 
+    function testPublicMint() public {
+        vm.startPrank(sampleUser, sampleUser);
+        fundnft.publicMint{value: 0.05 ether}(1);
+        vm.stopPrank();
+        assertTrue(fundnft.ownerOf(1) == sampleUser);
+    }
+
+    function testPublicMintMax() public {
+        vm.startPrank(sampleUser, sampleUser);
+        fundnft.publicMint{value: 0.25 ether}(5);
+        vm.stopPrank();
+        assertTrue(fundnft.ownerOf(1) == sampleUser);
+        assertTrue(fundnft.ownerOf(2) == sampleUser);
+        assertTrue(fundnft.ownerOf(3) == sampleUser);
+        assertTrue(fundnft.ownerOf(4) == sampleUser);
+        assertTrue(fundnft.ownerOf(5) == sampleUser);
+    }
+
+    function testPublicMintMaxExceeded() public {
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVV_FUND.maxPublicMintsWouldBeExceeded.selector);
+        fundnft.publicMint{value: 0.30 ether}(6);
+        vm.stopPrank();
+    }
+
     function testMintMaxSupplyExceeded() public {
         bytes memory signature = getSignature(sampleUser, 1);
         vm.startPrank(deployer, deployer);

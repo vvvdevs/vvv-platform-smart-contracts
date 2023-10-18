@@ -10,14 +10,15 @@ import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/Sig
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 contract VVV_FUND is ERC721A, AccessControl, ReentrancyGuard {
-
     IERC721 public immutable S1NFT;
     address public signer;
     string public baseURI;
     uint256 public constant MAX_SUPPLY = 10_000;
     uint256 public constant MAX_MINTABLE_SUPPLY = MAX_SUPPLY - 1;
     uint256 public constant WHITELIST_MINT_PRICE = 0.05 ether;
+    uint256 public constant MAX_PUBLIC_MINTS_PER_ADDRESS = 5;
     mapping(address => uint256) public mintedBySignature;
+    mapping(address => uint8) public publicMintsByAddress;
 
     error ArrayLengthMismatch();
     error InsufficientFunds();
@@ -25,6 +26,7 @@ contract VVV_FUND is ERC721A, AccessControl, ReentrancyGuard {
     error MaxAllocationWouldBeExceeded();
     error MaxSupplyWouldBeExceeded();
     error NotTokenOwner();
+    error maxPublicMintsWouldBeExceeded();
 
     constructor(
         address _s1nft,
@@ -84,7 +86,6 @@ contract VVV_FUND is ERC721A, AccessControl, ReentrancyGuard {
         uint256 _maxQuantity,
         bytes memory _signature
     ) external payable nonReentrant {
-
         if(!_isSignatureValid(msg.sender, _maxQuantity, _signature)) {
             revert InvalidSignature();
         }
@@ -92,7 +93,6 @@ contract VVV_FUND is ERC721A, AccessControl, ReentrancyGuard {
         if(_quantity + totalSupply() > MAX_MINTABLE_SUPPLY) {
             revert MaxSupplyWouldBeExceeded();
         }
-
 
         if(msg.value < WHITELIST_MINT_PRICE * _quantity) {
             revert InsufficientFunds();
@@ -105,6 +105,28 @@ contract VVV_FUND is ERC721A, AccessControl, ReentrancyGuard {
         
         _mint(_to, _quantity);
     }
+
+
+    /**
+     * @notice public mint function that opens after specified date
+     * @param _amount amount of tokens to mint
+     */
+    function publicMint(uint8 _amount) external payable nonReentrant {
+        publicMintsByAddress[msg.sender] += uint8(_amount);
+        if(publicMintsByAddress[msg.sender] > MAX_PUBLIC_MINTS_PER_ADDRESS) {
+            revert maxPublicMintsWouldBeExceeded();
+        }
+        if(_amount + totalSupply() > MAX_MINTABLE_SUPPLY) {
+            revert MaxSupplyWouldBeExceeded();
+        }
+
+        if(msg.value < WHITELIST_MINT_PRICE * _amount) {
+            revert InsufficientFunds();
+        }
+
+        _mint(msg.sender, _amount);
+    }
+
 
     //==================================================================================================
     // ADMIN FUNCTIONS
@@ -157,6 +179,5 @@ contract VVV_FUND is ERC721A, AccessControl, ReentrancyGuard {
     function _startTokenId() internal pure override returns (uint256) {
         return 1;
     }
-
 }
 
