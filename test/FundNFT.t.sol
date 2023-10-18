@@ -162,6 +162,18 @@ contract InvestmentHandlerTestSetup is Test {
         vm.stopPrank();
     }
 
+    function testPublicMintMaxSupplyExceded() public {
+        vm.startPrank(deployer, deployer);
+        for (uint256 i = 0; i < 9999; i++) {
+            fundnft.adminMint(deployer, 1);
+        }
+        vm.stopPrank();
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVV_FUND.MaxSupplyWouldBeExceeded.selector);
+        fundnft.publicMint{value: 0.05 ether}(1);
+        vm.stopPrank();
+    }
+
     function testMintMaxSupplyExceeded() public {
         bytes memory signature = getSignature(sampleUser, 1);
         vm.startPrank(deployer, deployer);
