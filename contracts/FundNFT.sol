@@ -8,8 +8,9 @@ import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import { Pausable } from  "@openzeppelin/contracts/security/Pausable.sol";
 
-contract VVV_FUND is ERC721A, AccessControl, ReentrancyGuard {
+contract VVV_FUND is ERC721A, AccessControl, ReentrancyGuard, Pausable {
     IERC721 public immutable S1NFT;
     address public signer;
     string public baseURI;
@@ -20,13 +21,16 @@ contract VVV_FUND is ERC721A, AccessControl, ReentrancyGuard {
     mapping(address => uint256) public mintedBySignature;
     mapping(address => uint8) public publicMintsByAddress;
 
+    uint256 public publicMintStartTime;
+
     error ArrayLengthMismatch();
     error InsufficientFunds();
     error InvalidSignature();
     error MaxAllocationWouldBeExceeded();
     error MaxSupplyWouldBeExceeded();
     error NotTokenOwner();
-    error maxPublicMintsWouldBeExceeded();
+    error MaxPublicMintsWouldBeExceeded();
+    error PublicMintNotStarted();
 
     constructor(
         address _s1nft,
@@ -39,6 +43,10 @@ contract VVV_FUND is ERC721A, AccessControl, ReentrancyGuard {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         signer = _signer;
         setBaseURI(_baseUri);
+
+        // should be updated to the actual start time after deployment
+        publicMintStartTime = block.timestamp;
+        _pause();
     }
 
     function supportsInterface(bytes4 interfaceId) public view override(ERC721A, AccessControl) returns (bool) {
@@ -58,7 +66,7 @@ contract VVV_FUND is ERC721A, AccessControl, ReentrancyGuard {
         address _to,
         uint256[] memory _ids,
         uint256 _quantity
-    ) public nonReentrant {
+    ) public nonReentrant whenNotPaused {
         if(_ids.length != _quantity){
             revert ArrayLengthMismatch();
         }
@@ -85,7 +93,7 @@ contract VVV_FUND is ERC721A, AccessControl, ReentrancyGuard {
         uint256 _quantity,
         uint256 _maxQuantity,
         bytes memory _signature
-    ) external payable nonReentrant {
+    ) external payable nonReentrant whenNotPaused {
         if(!_isSignatureValid(msg.sender, _maxQuantity, _signature)) {
             revert InvalidSignature();
         }
@@ -111,10 +119,14 @@ contract VVV_FUND is ERC721A, AccessControl, ReentrancyGuard {
      * @notice public mint function that opens after specified date
      * @param _amount amount of tokens to mint
      */
-    function publicMint(uint8 _amount) external payable nonReentrant {
+    function publicMint(uint8 _amount) external payable nonReentrant whenNotPaused {
         publicMintsByAddress[msg.sender] += uint8(_amount);
+        if(block.timestamp < publicMintStartTime) {
+            revert PublicMintNotStarted();
+        }
+
         if(publicMintsByAddress[msg.sender] > MAX_PUBLIC_MINTS_PER_ADDRESS) {
-            revert maxPublicMintsWouldBeExceeded();
+            revert MaxPublicMintsWouldBeExceeded();
         }
         if(_amount + totalSupply() > MAX_MINTABLE_SUPPLY) {
             revert MaxSupplyWouldBeExceeded();
@@ -143,6 +155,14 @@ contract VVV_FUND is ERC721A, AccessControl, ReentrancyGuard {
 
     function setBaseURI(string memory _uri) public onlyRole(DEFAULT_ADMIN_ROLE) {
         baseURI = _uri;
+    }
+
+    function pause() public onlyRole(DEFAULT_ADMIN_ROLE) {
+        _pause();
+    }
+
+    function unpause() public onlyRole(DEFAULT_ADMIN_ROLE) {
+        _unpause();
     }
 
     //==================================================================================================
