@@ -195,6 +195,14 @@ contract InvestmentHandlerTestSetup is Test {
         vm.stopPrank();
     }
 
+    function testSetPublicMintStartTime() public {
+        vm.startPrank(deployer, deployer);
+        uint256 newStartTime = blockTimestamp + 1000;
+        fundnft.setPublicMintStartTime(newStartTime);
+        vm.stopPrank();
+        assertTrue(fundnft.publicMintStartTime() == newStartTime);
+    }
+
     function testMintViaTradeIn() public {
         vm.startPrank(sampleUser, sampleUser);
         s1nft.setApprovalForAll(address(fundnft), true);

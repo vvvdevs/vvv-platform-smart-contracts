@@ -165,6 +165,10 @@ contract VVV_FUND is ERC721A, AccessControl, ReentrancyGuard, Pausable {
         _unpause();
     }
 
+    function setPublicMintStartTime(uint256 _startTime) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        publicMintStartTime = _startTime;
+    }
+
     //==================================================================================================
     // INTERNAL FUNCTIONS
     //==================================================================================================
