@@ -66,8 +66,6 @@ contract InvestmentHandlerTestSetup is Test {
 
     // generate list of random addresses
     function generateUserAddressListAndDealEther() public {
-
-
         for (uint256 i = 0; i < users.length; i++) {
             users[i] = address(uint160(uint256(keccak256(abi.encodePacked(block.timestamp, i)))));
             vm.deal(users[i], 1 ether); // and YOU get an ETH
@@ -137,6 +135,20 @@ contract InvestmentHandlerTestSetup is Test {
         fundnft.mintBySignature{value: 0.05 ether}(sampleUser, 1, 1, signature);
         vm.stopPrank();
         assertTrue(fundnft.ownerOf(1) == sampleUser);
+    }
+
+    function testMintMaxSupplyExceeded() public {
+        bytes memory signature = new bytes(65);
+        vm.startPrank(deployer, deployer);
+        // loop so that we mint 9999 nfts
+        for (uint256 i = 0; i < 9999; i++) {
+            fundnft.adminMint(deployer, 1);
+        }
+        vm.stopPrank();
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVV_FUND.MaxSupplyWouldBeExceeded.selector);
+        fundnft.mintBySignature{value: 0.05 ether}(sampleUser, 1, 1, signature);
+        vm.stopPrank();
     }
 
     function testMintViaTradeIn() public {
