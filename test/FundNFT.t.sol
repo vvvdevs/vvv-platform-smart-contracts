@@ -55,7 +55,7 @@ contract InvestmentHandlerTestSetup is Test {
             "VVVF",
             "https://vvv.fund/api/token/"
         );
-
+        fundnft.unpause(); 
         vm.stopPrank();
 
         generateUserAddressListAndDealEther();
@@ -157,7 +157,7 @@ contract InvestmentHandlerTestSetup is Test {
 
     function testPublicMintMaxExceeded() public {
         vm.startPrank(sampleUser, sampleUser);
-        vm.expectRevert(VVV_FUND.maxPublicMintsWouldBeExceeded.selector);
+        vm.expectRevert(VVV_FUND.MaxPublicMintsWouldBeExceeded.selector);
         fundnft.publicMint{value: 0.30 ether}(6);
         vm.stopPrank();
     }
