@@ -174,6 +174,13 @@ contract InvestmentHandlerTestSetup is Test {
         vm.stopPrank();
     }
 
+    function testPublicMintInsuffecientFunds() public {
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVV_FUND.InsufficientFunds.selector);
+        fundnft.publicMint{value: 0.01 ether}(1);
+        vm.stopPrank();
+    }
+
     function testMintMaxSupplyExceeded() public {
         bytes memory signature = getSignature(sampleUser, 1);
         vm.startPrank(deployer, deployer);
