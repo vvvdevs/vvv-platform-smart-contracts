@@ -138,7 +138,7 @@ contract InvestmentHandlerTestSetup is Test {
     }
 
     function testMintMaxSupplyExceeded() public {
-        bytes memory signature = new bytes(65);
+        bytes memory signature = getSignature(sampleUser, 1);
         vm.startPrank(deployer, deployer);
         // loop so that we mint 9999 nfts
         for (uint256 i = 0; i < 9999; i++) {
@@ -180,5 +180,4 @@ contract InvestmentHandlerTestSetup is Test {
         vm.stopPrank();
         assertTrue(fundnft.ownerOf(1) == sampleUser);        
     }
-
 }
