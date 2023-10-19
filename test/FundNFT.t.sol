@@ -238,7 +238,7 @@ contract InvestmentHandlerTestSetup is Test {
 
     function testAdminMint() public{
         vm.startPrank(deployer, deployer);
-            fundNft_ERC721.adminMint(deployer, 1);
+        fundNft_ERC721.adminMint(deployer, 1);
         vm.stopPrank();
         uint256 idOffset = fundNft_ERC721.currentNonReservedId();
         assertTrue(fundNft_ERC721.ownerOf(idOffset) == deployer);
@@ -287,5 +287,14 @@ contract InvestmentHandlerTestSetup is Test {
         vm.stopPrank();
         uint newBalance = address(deployer).balance;
         assertTrue(newBalance == balance + 0.25 ether);
+    }
+
+    function testTokenURI() public {
+        vm.startPrank(deployer, deployer);
+        fundNft_ERC721.adminMint(deployer, 1);
+        vm.stopPrank();
+
+        string memory tokenURI = fundNft_ERC721.tokenURI(3501);
+        assertTrue(keccak256(abi.encodePacked(tokenURI)) == keccak256(abi.encodePacked("https://vvv.fund/api/token/3501.json")));
     }
 }
