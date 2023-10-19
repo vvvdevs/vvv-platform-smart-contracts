@@ -19,6 +19,7 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard {
     uint256 public constant MAX_SUPPLY = 10_000;
     
     address public signer;
+    string public baseURI;
     uint256 public currentNonReservedId = 3500;
     uint256 public totalSupply;
     uint256 public whitelistMintPrice = 0.05 ether;    
@@ -138,6 +139,10 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard {
         whitelistMintPrice = _whitelistMintPrice;
     }
 
+    function setBaseURI(string memory _uri) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        baseURI = _uri;
+    }
+
     //==================================================================================================
     // INTERNAL FUNCTIONS
     //==================================================================================================
@@ -165,7 +170,9 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard {
     //==================================================================================================
     // OVERRIDES
     //==================================================================================================
-
+    function _baseURI() internal view override returns (string memory) {
+        return baseURI;
+    }
 
 }
 
