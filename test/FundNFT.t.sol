@@ -290,7 +290,7 @@ contract InvestmentHandlerTestSetup is Test {
     function testWithdraw() public {
         uint256 balance = address(deployer).balance;
         vm.startPrank(sampleUser, sampleUser);
-        fundNft_ERC721.publicMint{value: 0.25 ether}(5);
+        fundNft_ERC721.publicMint{value: 0.25 ether}(sampleUser, 5);
         vm.stopPrank();
         vm.startPrank(deployer, deployer);
         fundNft_ERC721.withdraw();
