@@ -144,7 +144,7 @@ contract InvestmentHandlerTestSetup is Test {
 
     function testPublicMint() public {
         vm.startPrank(sampleUser, sampleUser);
-        fundNft_ERC721.publicMint{value: 0.05 ether}(1);
+        fundNft_ERC721.publicMint{value: 0.05 ether}(sampleUser, 1);
         vm.stopPrank();
 
         uint256 idOffset = fundNft_ERC721.currentNonReservedId();
@@ -153,7 +153,7 @@ contract InvestmentHandlerTestSetup is Test {
 
     function testPublicMintMax() public {
         vm.startPrank(sampleUser, sampleUser);
-        fundNft_ERC721.publicMint{value: 0.25 ether}(5);
+        fundNft_ERC721.publicMint{value: 0.25 ether}(sampleUser, 5);
         vm.stopPrank();
         uint256 idOffset = fundNft_ERC721.currentNonReservedId();
         assertTrue(fundNft_ERC721.ownerOf(idOffset - 4)== sampleUser);
@@ -166,7 +166,17 @@ contract InvestmentHandlerTestSetup is Test {
     function testPublicMintMaxExceeded() public {
         vm.startPrank(sampleUser, sampleUser);
         vm.expectRevert(VVV_FUND_ERC721.MaxPublicMintsWouldBeExceeded.selector);
-        fundNft_ERC721.publicMint{value: 0.30 ether}(6);
+        fundNft_ERC721.publicMint{value: 0.30 ether}(sampleUser, 6);
+        vm.stopPrank();
+    }
+
+    function testPublicMintSetMax() public {
+        vm.startPrank(deployer, deployer);
+        fundNft_ERC721.setMaxPublicMintsPerAddress(1);
+        vm.stopPrank();
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVV_FUND_ERC721.MaxPublicMintsWouldBeExceeded.selector);
+        fundNft_ERC721.publicMint{value: 0.05 ether}(sampleUser, 2);
         vm.stopPrank();
     }
 
@@ -178,14 +188,14 @@ contract InvestmentHandlerTestSetup is Test {
         vm.stopPrank();
         vm.startPrank(sampleUser, sampleUser);
         vm.expectRevert(VVV_FUND_ERC721.MaxSupplyWouldBeExceeded.selector);
-        fundNft_ERC721.publicMint{value: 0.05 ether}(1);
+        fundNft_ERC721.publicMint{value: 0.05 ether}(sampleUser, 1);
         vm.stopPrank();
     }
 
     function testPublicMintInsuffecientFunds() public {
         vm.startPrank(sampleUser, sampleUser);
         vm.expectRevert(VVV_FUND_ERC721.InsufficientFunds.selector);
-        fundNft_ERC721.publicMint{value: 0.01 ether}(1);
+        fundNft_ERC721.publicMint{value: 0.01 ether}(sampleUser, 1);
         vm.stopPrank();
     }
 
@@ -264,7 +274,7 @@ contract InvestmentHandlerTestSetup is Test {
         vm.startPrank(deployer, deployer);
         fundNft_ERC721.pause();
         vm.expectRevert();
-        fundNft_ERC721.publicMint{value: 0.05 ether}(1);
+        fundNft_ERC721.publicMint{value: 0.05 ether}(sampleUser, 1);
         vm.stopPrank();
     }
 

@@ -18,17 +18,18 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
     
     uint256 public constant MAX_SUPPLY = 10_000;
     uint256 public constant MAX_MINTABLE_SUPPLY = MAX_SUPPLY - 1;
-    uint256 public constant MAX_PUBLIC_MINTS_PER_ADDRESS = 5;
     
     address public signer;
+    string public baseURI;
     uint256 public currentNonReservedId = 3500;
     uint256 public totalSupply;
     uint256 public whitelistMintPrice = 0.05 ether;
     uint256 public publicMintPrice = 0.05 ether;
     uint256 public publicMintStartTime;
+    uint256 maxPublicMintsPerAddress = 5;
 
     mapping(address => uint256) public mintedBySignature;
-    mapping(address => uint8) public publicMintsByAddress;
+    mapping(address => uint256) public publicMintsByAddress;
 
     error ArrayLengthMismatch();
     error InsufficientFunds();
@@ -126,13 +127,13 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
      * @notice public mint function that opens after specified date
      * @param _amount amount of tokens to mint
      */
-    function publicMint(uint8 _amount) external payable nonReentrant whenNotPaused {
-        publicMintsByAddress[msg.sender] += uint8(_amount);
+    function publicMint(address _to, uint256 _amount) external payable nonReentrant whenNotPaused {
+        publicMintsByAddress[msg.sender] += _amount;
         if(block.timestamp < publicMintStartTime) {
             revert PublicMintNotStarted();
         }
 
-        if(publicMintsByAddress[msg.sender] > MAX_PUBLIC_MINTS_PER_ADDRESS) {
+        if(publicMintsByAddress[msg.sender] > maxPublicMintsPerAddress) {
             revert MaxPublicMintsWouldBeExceeded();
         }
         if(_amount + totalSupply > MAX_MINTABLE_SUPPLY) {
@@ -146,7 +147,7 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
         totalSupply += _amount;
         for (uint256 i = 0; i < _amount; ++i) {
             ++currentNonReservedId;
-            _mint(msg.sender, currentNonReservedId);
+            _mint(_to, currentNonReservedId);
         }
     }
 
@@ -181,6 +182,10 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
         publicMintPrice = _publicMintPrice;
     }
 
+    function setMaxPublicMintsPerAddress(uint256 _publicMintMax) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        maxPublicMintsPerAddress = _publicMintMax;
+    }
+
     function pause() public onlyRole(DEFAULT_ADMIN_ROLE) {
         _pause();
     }
@@ -191,6 +196,10 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
 
     function setPublicMintStartTime(uint256 _startTime) public onlyRole(DEFAULT_ADMIN_ROLE) {
         publicMintStartTime = _startTime;
+    }
+
+    function setBaseURI(string memory _uri) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        baseURI = _uri;
     }
 
     //==================================================================================================
@@ -225,4 +234,7 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
     //==================================================================================================
     // OVERRIDES
     //==================================================================================================
+    function _baseURI() internal view override returns (string memory) {
+        return baseURI;
+    }
 }
