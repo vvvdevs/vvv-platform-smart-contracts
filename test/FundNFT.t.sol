@@ -297,4 +297,15 @@ contract InvestmentHandlerTestSetup is Test {
         string memory tokenURI = fundNft_ERC721.tokenURI(3501);
         assertTrue(keccak256(abi.encodePacked(tokenURI)) == keccak256(abi.encodePacked("https://vvv.fund/api/token/3501.json")));
     }
+
+    function testSetBaseExtension() public {
+        vm.startPrank(deployer, deployer);
+        fundNft_ERC721.setBaseExtension(".html");
+        fundNft_ERC721.adminMint(deployer, 1);
+        vm.stopPrank();
+
+        string memory tokenURI = fundNft_ERC721.tokenURI(3501);
+        assertTrue(keccak256(abi.encodePacked(tokenURI)) == keccak256(abi.encodePacked("https://vvv.fund/api/token/3501.html")));
+
+    }
 }
