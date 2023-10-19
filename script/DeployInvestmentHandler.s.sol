@@ -37,4 +37,8 @@ contract DeployInvestmentHandler is Script {
     forge script script/DeployInvestmentHandler.s.sol:DeployInvestmentHandler --fork-url $ETH_GOERLI_URL --private-key $PRIVATE_KEY --etherscan-api-key $ETHERSCAN_API_KEY 
     
     (optionally) --broadcast --verify
+
+    deploys 
+    0x01D1a93e9CC5f2Ab537Fcb35De4efBB5605fb808
+    0x6b59209840641161b6B33BEfeC87d74c42b71838
  */
