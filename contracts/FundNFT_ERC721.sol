@@ -21,7 +21,6 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
     
     uint256 public constant MAX_SUPPLY = 10_000;
     uint256 public constant MAX_MINTABLE_SUPPLY = MAX_SUPPLY - 1;
-    uint256 public constant MAX_PUBLIC_MINTS_PER_ADDRESS = 5;
     
     address public signer;
     string public baseURI;
@@ -31,9 +30,10 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
     uint256 public whitelistMintPrice = 0.05 ether;
     uint256 public publicMintPrice = 0.05 ether;
     uint256 public publicMintStartTime;
+    uint256 maxPublicMintsPerAddress = 5;
 
     mapping(address => uint256) public mintedBySignature;
-    mapping(address => uint8) public publicMintsByAddress;
+    mapping(address => uint256) public publicMintsByAddress;
 
     error ArrayLengthMismatch();
     error InsufficientFunds();
@@ -133,13 +133,13 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
      * @notice public mint function that opens after specified date
      * @param _amount amount of tokens to mint
      */
-    function publicMint(uint8 _amount) external payable nonReentrant whenNotPaused {
-        publicMintsByAddress[msg.sender] += uint8(_amount);
+    function publicMint(address _to, uint256 _amount) external payable nonReentrant whenNotPaused {
+        publicMintsByAddress[msg.sender] += _amount;
         if(block.timestamp < publicMintStartTime) {
             revert PublicMintNotStarted();
         }
 
-        if(publicMintsByAddress[msg.sender] > MAX_PUBLIC_MINTS_PER_ADDRESS) {
+        if(publicMintsByAddress[msg.sender] > maxPublicMintsPerAddress) {
             revert MaxPublicMintsWouldBeExceeded();
         }
         if(_amount + totalSupply > MAX_MINTABLE_SUPPLY) {
@@ -153,7 +153,7 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
         totalSupply += _amount;
         for (uint256 i = 0; i < _amount; ++i) {
             ++currentNonReservedId;
-            _mint(msg.sender, currentNonReservedId);
+            _mint(_to, currentNonReservedId);
         }
     }
 
@@ -186,6 +186,10 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
 
     function setPublicMintPrice(uint256 _publicMintPrice) public onlyRole(DEFAULT_ADMIN_ROLE) {
         publicMintPrice = _publicMintPrice;
+    }
+
+    function setMaxPublicMintsPerAddress(uint256 _publicMintMax) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        maxPublicMintsPerAddress = _publicMintMax;
     }
 
     function pause() public onlyRole(DEFAULT_ADMIN_ROLE) {
