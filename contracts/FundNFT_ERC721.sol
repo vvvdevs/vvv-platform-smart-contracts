@@ -1,22 +1,32 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import { ERC721A } from "erc721a/contracts/ERC721A.sol";
+import { ERC721 } from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import { Pausable } from  "@openzeppelin/contracts/security/Pausable.sol";
 
-contract VVV_FUND is ERC721A, AccessControl, ReentrancyGuard {
+/// @title VVV_FUND_ERC721
+/// @notice relative to ERC721A version, includes reserved IDs for non-S1 collection IDs (example, assuming above 3500, would need to know this number ahead of deployment)
+
+contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
     IERC721 public immutable S1NFT;
-    address public signer;
-    string public baseURI;
+    
     uint256 public constant MAX_SUPPLY = 10_000;
     uint256 public constant MAX_MINTABLE_SUPPLY = MAX_SUPPLY - 1;
-    uint256 public constant WHITELIST_MINT_PRICE = 0.05 ether;
     uint256 public constant MAX_PUBLIC_MINTS_PER_ADDRESS = 5;
+    
+    address public signer;
+    uint256 public currentNonReservedId = 3500;
+    uint256 public totalSupply;
+    uint256 public whitelistMintPrice = 0.05 ether;
+    uint256 public publicMintPrice = 0.05 ether;
+    uint256 public publicMintStartTime;
+
     mapping(address => uint256) public mintedBySignature;
     mapping(address => uint8) public publicMintsByAddress;
 
@@ -26,7 +36,8 @@ contract VVV_FUND is ERC721A, AccessControl, ReentrancyGuard {
     error MaxAllocationWouldBeExceeded();
     error MaxSupplyWouldBeExceeded();
     error NotTokenOwner();
-    error maxPublicMintsWouldBeExceeded();
+    error MaxPublicMintsWouldBeExceeded();
+    error PublicMintNotStarted();
     error UnableToWithdraw();
 
     constructor(
@@ -35,14 +46,17 @@ contract VVV_FUND is ERC721A, AccessControl, ReentrancyGuard {
         string memory _name,
         string memory _symbol,
         string memory _baseUri
-    ) ERC721A(_name, _symbol) {
+    ) ERC721(_name, _symbol) {
         S1NFT = IERC721(_s1nft);
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         signer = _signer;
-        setBaseURI(_baseUri);
+
+        // should be updated to the actual start time after deployment
+        publicMintStartTime = block.timestamp;
+        _pause();
     }
 
-    function supportsInterface(bytes4 interfaceId) public view override(ERC721A, AccessControl) returns (bool) {
+    function supportsInterface(bytes4 interfaceId) public view override(ERC721, AccessControl) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 
@@ -57,21 +71,17 @@ contract VVV_FUND is ERC721A, AccessControl, ReentrancyGuard {
      */ 
     function mintByTradeIn(
         address _to,
-        uint256[] memory _ids,
-        uint256 _quantity
+        uint256[] memory _ids
     ) public nonReentrant {
-        if(_ids.length != _quantity){
-            revert ArrayLengthMismatch();
-        }
-
-        for(uint256 i = 0; i < _ids.length; ++i) {
+        uint256 quantity = _ids.length;
+        totalSupply += quantity;
+        for(uint256 i = 0; i < quantity; ++i) {
             if(S1NFT.ownerOf(_ids[i]) != msg.sender) {
                 revert NotTokenOwner();
             }
             S1NFT.transferFrom(msg.sender, address(this), _ids[i]);
+            _mint(_to, _ids[i]);
         }
-
-        _safeMint(_to, _quantity);
     }
 
     //==================================================================================================
@@ -86,16 +96,16 @@ contract VVV_FUND is ERC721A, AccessControl, ReentrancyGuard {
         uint256 _quantity,
         uint256 _maxQuantity,
         bytes memory _signature
-    ) external payable nonReentrant {
+    ) external payable nonReentrant whenNotPaused {
         if(!_isSignatureValid(msg.sender, _maxQuantity, _signature)) {
             revert InvalidSignature();
         }
 
-        if(_quantity + totalSupply() > MAX_MINTABLE_SUPPLY) {
+        if(_quantity + totalSupply > MAX_MINTABLE_SUPPLY) {
             revert MaxSupplyWouldBeExceeded();
         }
 
-        if(msg.value < WHITELIST_MINT_PRICE * _quantity) {
+        if(msg.value < whitelistMintPrice * _quantity) {
             revert InsufficientFunds();
         }
 
@@ -104,7 +114,11 @@ contract VVV_FUND is ERC721A, AccessControl, ReentrancyGuard {
             revert MaxAllocationWouldBeExceeded();
         }
         
-        _mint(_to, _quantity);
+        totalSupply += _quantity;
+        for(uint256 i = 0; i < _quantity; ++i) {
+            ++currentNonReservedId;
+            _mint(_to, currentNonReservedId);
+        }
     }
 
 
@@ -112,20 +126,28 @@ contract VVV_FUND is ERC721A, AccessControl, ReentrancyGuard {
      * @notice public mint function that opens after specified date
      * @param _amount amount of tokens to mint
      */
-    function publicMint(uint8 _amount) external payable nonReentrant {
+    function publicMint(uint8 _amount) external payable nonReentrant whenNotPaused {
         publicMintsByAddress[msg.sender] += uint8(_amount);
-        if(publicMintsByAddress[msg.sender] > MAX_PUBLIC_MINTS_PER_ADDRESS) {
-            revert maxPublicMintsWouldBeExceeded();
+        if(block.timestamp < publicMintStartTime) {
+            revert PublicMintNotStarted();
         }
-        if(_amount + totalSupply() > MAX_MINTABLE_SUPPLY) {
+
+        if(publicMintsByAddress[msg.sender] > MAX_PUBLIC_MINTS_PER_ADDRESS) {
+            revert MaxPublicMintsWouldBeExceeded();
+        }
+        if(_amount + totalSupply > MAX_MINTABLE_SUPPLY) {
             revert MaxSupplyWouldBeExceeded();
         }
 
-        if(msg.value < WHITELIST_MINT_PRICE * _amount) {
+        if(msg.value < publicMintPrice * _amount) {
             revert InsufficientFunds();
         }
 
-        _mint(msg.sender, _amount);
+        totalSupply += _amount;
+        for (uint256 i = 0; i < _amount; ++i) {
+            ++currentNonReservedId;
+            _mint(msg.sender, currentNonReservedId);
+        }
     }
 
 
@@ -136,14 +158,39 @@ contract VVV_FUND is ERC721A, AccessControl, ReentrancyGuard {
         address _to,
         uint256 _quantity
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if(_quantity + totalSupply() > MAX_SUPPLY) {
+        if(_quantity + totalSupply > MAX_SUPPLY) {
             revert MaxSupplyWouldBeExceeded();
         }
-        _mint(_to, _quantity);
+
+        totalSupply += _quantity;
+        for(uint256 i = 0; i < _quantity; ++i) {
+            ++currentNonReservedId;
+            _mint(_to, currentNonReservedId);
+        }
+    }    
+    
+    function setSigner(address _signer) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        signer = _signer;
     }
 
-    function setBaseURI(string memory _uri) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        baseURI = _uri;
+    function setWhitelistMintPrice(uint256 _whitelistMintPrice) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        whitelistMintPrice = _whitelistMintPrice;
+    }
+
+    function setPublicMintPrice(uint256 _publicMintPrice) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        publicMintPrice = _publicMintPrice;
+    }
+
+    function pause() public onlyRole(DEFAULT_ADMIN_ROLE) {
+        _pause();
+    }
+
+    function unpause() public onlyRole(DEFAULT_ADMIN_ROLE) {
+        _unpause();
+    }
+
+    function setPublicMintStartTime(uint256 _startTime) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        publicMintStartTime = _startTime;
     }
 
     //==================================================================================================
@@ -178,12 +225,4 @@ contract VVV_FUND is ERC721A, AccessControl, ReentrancyGuard {
     //==================================================================================================
     // OVERRIDES
     //==================================================================================================
-    function _baseURI() internal view override returns (string memory) {
-        return baseURI;
-    }
-
-    function _startTokenId() internal pure override returns (uint256) {
-        return 1;
-    }
 }
-
