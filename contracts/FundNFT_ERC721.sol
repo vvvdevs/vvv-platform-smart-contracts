@@ -146,7 +146,7 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
         totalSupply += _amount;
         for (uint256 i = 0; i < _amount; ++i) {
             ++currentNonReservedId;
-            _mint(msg.sender, currentNonReservedId);
+            _mint(_to, currentNonReservedId);
         }
     }
 
