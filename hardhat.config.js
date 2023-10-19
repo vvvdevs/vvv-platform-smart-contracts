@@ -4,19 +4,21 @@ require("@openzeppelin/hardhat-upgrades");
 require("dotenv").config();
 require("hardhat-gas-reporter");
 require('hardhat-abi-exporter');
+require("hardhat-contract-sizer");
 
 const dev_wallet_key = process.env.PRIVATE_KEY;
 const etherscan_api_key = process.env.ETHERSCAN_API_KEY;
 
-/**
- * @type import('hardhat/config').HardhatUserConfig
- */
-
 module.exports = {
-    solidity: "0.8.21",
-    compilerOptions: {
-        optimize: true,
-        runs: 200,
+    solidity: {
+        version: "0.8.21",
+        settings: {
+            optimizer: {
+                enabled: true,
+                runs: 200,
+            },
+        },
+        allowUnlimitedContractSize: false,
     },
     defaultNetwork: "hardhat",
     networks: {
@@ -51,7 +53,12 @@ module.exports = {
         url: "localhost:8545"
     },
     abiExporter: {
-        path: './abi',
+        path: './abi/hardhat_abi_export',
         format: "json"
+    },
+    contractSizer: {
+        alphaSort: true,
+        runOnCompile: true,
+        disambiguatePaths: false,
     }
 };

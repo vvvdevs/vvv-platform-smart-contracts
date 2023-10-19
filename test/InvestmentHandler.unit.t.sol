@@ -100,7 +100,7 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         uint256 projectToPaymentRatio = IERC20(mockProject).balanceOf(address(investmentHandler)) /
             IERC20(mockStable).balanceOf(address(investmentHandler));
 
-        (uint128 investedPaymentToken, , ) = investmentHandler.userInvestments(
+        (uint128 investedPaymentToken, ) = investmentHandler.userInvestments(
             sampleKycAddress,
             thisInvestmentId
         );
@@ -170,7 +170,6 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
             uint8 currentPhase,
             ,
             ,
-            ,
             uint256 tokensAllocated
         ) = investmentHandler.investments(latestId);
 
@@ -178,6 +177,21 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         assertTrue(address(projectToken) == newProjectTokenAddress);
         assertTrue(currentPhase == desiredContributionPhase);
         assertTrue(tokensAllocated == newTokensAllocated);
+    }
+
+    /**
+     * @dev test investing from kyc wallet
+     */
+    function testInvestFromKycWallet() public {
+        createInvestment();
+
+        uint120 investAmount = 1000000 * 1e6;
+        userInvest(investmentHandler.latestInvestmentId(), sampleKycAddress, sampleKycAddress, investAmount);
+
+        ( , , , , uint128 investedPaymentToken, , ) = investmentHandler.investments(
+            investmentHandler.latestInvestmentId()
+        );
+        assertTrue(investedPaymentToken == investAmount);
     }
 
     /**
@@ -189,7 +203,7 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         uint120 investAmount = 1000000 * 1e6;
         userInvest(investmentHandler.latestInvestmentId(), sampleUser, sampleKycAddress, investAmount);
 
-        (, , , , uint128 investedPaymentToken, , , ) = investmentHandler.investments(
+        ( , , , , uint128 investedPaymentToken, , ) = investmentHandler.investments(
             investmentHandler.latestInvestmentId()
         );
         assertTrue(investedPaymentToken == investAmount);
@@ -245,7 +259,7 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         );
         vm.stopPrank();
 
-        (uint128 investedPaymentToken, , ) = investmentHandler.userInvestments(_kycAddress, _investmentId);
+        (uint128 investedPaymentToken , ) = investmentHandler.userInvestments(_kycAddress, _investmentId);
         assertTrue(investedPaymentToken == _paymentTokenAmount);
     }
 
@@ -294,7 +308,7 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         vm.stopPrank();
 
         for (uint256 i = 0; i < numInvestments; i++) {
-            (uint128 investedPaymentToken, , ) = investmentHandler.userInvestments(
+            (uint128 investedPaymentToken, ) = investmentHandler.userInvestments(
                 _kycAddresses[i],
                 _investmentIds[i]
             );
@@ -309,7 +323,7 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         uint120 _investAmount = 100000 * 1e6; // 1M USDC
         uint128 _claimAmount = 10000 * 1e6; // 100k USDC
         userInvest(_investmentId, sampleUser, sampleKycAddress, _investAmount);
-        (uint128 investedPaymentTokenBeforeRefund, , ) = investmentHandler.userInvestments(
+        (uint128 investedPaymentTokenBeforeRefund, ) = investmentHandler.userInvestments(
             sampleKycAddress,
             _investmentId
         );
@@ -342,7 +356,7 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         investmentHandler.refundUser(sampleKycAddress, _investmentId, uint120(1), pauseAfterCall);
         vm.stopPrank();
 
-        (uint128 investedPaymentTokenAfterRefund, , ) = investmentHandler.userInvestments(
+        (uint128 investedPaymentTokenAfterRefund, ) = investmentHandler.userInvestments(
             sampleKycAddress,
             _investmentId
         );
@@ -446,6 +460,15 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
      * @dev confirms each function is paused and unpaused as expected
      */
     function testFunctionIsPaused() public {
+        allocatedPaymentTokenPerPhase = [
+            0,
+            stableAmount,
+            stableAmount,
+            stableAmount,
+            stableAmount
+        ];
+
+
         //pause addInvestment
         vm.startPrank(pauser, pauser);
         investmentHandler.setFunctionIsPaused(investmentHandler.addInvestment.selector, true);
@@ -455,7 +478,7 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         vm.startPrank(investmentManager, investmentManager);
 
         vm.expectRevert();
-        investmentHandler.addInvestment(signer, address(mockStable), stableAmount, pauseAfterCall);
+        investmentHandler.addInvestment(signer, address(mockStable), allocatedPaymentTokenPerPhase, pauseAfterCall);
         vm.stopPrank();
 
         //unpause addInvestment
@@ -465,7 +488,7 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
 
         //add investment
         vm.startPrank(investmentManager, investmentManager);
-        investmentHandler.addInvestment(signer, address(mockStable), stableAmount, pauseAfterCall);
+        investmentHandler.addInvestment(signer, address(mockStable), allocatedPaymentTokenPerPhase, pauseAfterCall);
         vm.stopPrank();
     }
 
@@ -532,7 +555,7 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         // each user invests and claims in some rearranged order
         for (uint256 i = 2; i < users.length; i++) {
             userInvest(investmentHandler.latestInvestmentId(), users[i], users[i], investAmount);
-            (uint128 investedPaymentToken, , ) = investmentHandler.userInvestments(users[i], investmentId);
+            (uint128 investedPaymentToken, ) = investmentHandler.userInvestments(users[i], investmentId);
             assertTrue(investedPaymentToken == investAmount);
             advanceBlockNumberAndTimestamp(i);
         }

@@ -128,7 +128,7 @@ contract InvestmentHandlerInvariantTests_Open is InvestmentHandlerTestSetup {
         transferProjectTokensToInvestmentHandler(1_000_000 * 1e6);
         usersClaimRandomAmounts();
 
-        (, , , , investedTotal, , , ) = investmentHandler.investments(
+        ( , , , ,investedTotal, , ) = investmentHandler.investments(
             investmentHandler.latestInvestmentId()
         );
     }
@@ -203,7 +203,7 @@ contract InvestmentHandlerFuzzTests is InvestmentHandlerTestSetup {
         transferProjectTokensToInvestmentHandler(1_000_000 * 1e6);
         usersClaimRandomAmounts();
 
-        (, , , , investedTotal, , , ) = investmentHandler.investments(
+        ( , , , ,investedTotal, , ) = investmentHandler.investments(
             investmentHandler.latestInvestmentId()
         );
     }
@@ -274,8 +274,8 @@ contract InvestmentHandlerFuzzTests is InvestmentHandlerTestSetup {
     function testFuzz_computeUserTotalAllocationForInvesment(
         address _kycAddress,
         uint16 _investmentId
-    ) public {
-        uint256 allocation = investmentHandler.computeUserTotalAllocationForInvesment(
+    ) public view {
+        investmentHandler.computeUserTotalAllocationForInvesment(
             _kycAddress,
             _investmentId
         );
@@ -288,19 +288,11 @@ contract InvestmentHandlerFuzzTests is InvestmentHandlerTestSetup {
     function testFuzz_computeUserClaimableAllocationForInvestment(
         address _kycAddress,
         uint16 _investmentId
-    ) public {
-        uint256 allocation = investmentHandler.computeUserTotalAllocationForInvesment(
+    ) public view {
+        investmentHandler.computeUserTotalAllocationForInvesment(
             _kycAddress,
             _investmentId
         );
-    }
-
-    /**
-     * Fuzz investmentIsOpen
-     * Just showing a non-revert
-     */
-    function testFuzz_investmentIsOpen(uint16 _investmentId, uint8 _userPhase) public {
-        bool isOpen = investmentHandler.investmentIsOpen(_investmentId, _userPhase);
     }
 
     /**
@@ -310,14 +302,14 @@ contract InvestmentHandlerFuzzTests is InvestmentHandlerTestSetup {
     function testFuzz_addInvestment(
         address _signer,
         address _paymentToken,
-        uint128 _totalAllocatedPaymentToken,
+        uint128[] memory _allocatedPaymentTokenForPhase,
         bool _pauseAfterCall
     ) public {
         vm.expectRevert();
         investmentHandler.addInvestment(
             _signer,
             _paymentToken,
-            _totalAllocatedPaymentToken,
+            _allocatedPaymentTokenForPhase,
             _pauseAfterCall
         );
     }
