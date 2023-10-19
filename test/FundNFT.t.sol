@@ -170,6 +170,16 @@ contract InvestmentHandlerTestSetup is Test {
         vm.stopPrank();
     }
 
+    function testPublicMintSetMax() public {
+        vm.startPrank(deployer, deployer);
+        fundNft_ERC721.setMaxPublicMintsPerAddress(1);
+        vm.stopPrank();
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVV_FUND_ERC721.MaxPublicMintsWouldBeExceeded.selector);
+        fundNft_ERC721.publicMint{value: 0.05 ether}(2);
+        vm.stopPrank();
+    }
+
     function testPublicMintMaxSupplyExceded() public {
         vm.startPrank(deployer, deployer);
         for (uint256 i = 0; i < 9999; i++) {
