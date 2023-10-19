@@ -169,4 +169,13 @@ contract InvestmentHandlerTestSetup is Test {
         assertTrue(fundNft_ERC721.ownerOf(1) == sampleUser);        
     }
 
+    function testAdminMint() public{
+        vm.startPrank(deployer, deployer);
+            fundNft_ERC721.adminMint(deployer, 1);
+        vm.stopPrank();
+        uint256 idOffset = fundNft_ERC721.currentNonReservedId();
+        assertTrue(fundNft_ERC721.ownerOf(idOffset) == deployer);
+    }
+    
+
 }
