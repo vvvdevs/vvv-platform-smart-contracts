@@ -116,6 +116,21 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard {
     //==================================================================================================
     // ADMIN FUNCTIONS
     //==================================================================================================
+    function adminMint(
+        address _to,
+        uint256 _quantity
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if(_quantity + totalSupply > MAX_SUPPLY) {
+            revert MaxSupplyWouldBeExceeded();
+        }
+
+        totalSupply += _quantity;
+        for(uint256 i = 0; i < _quantity; ++i) {
+            ++currentNonReservedId;
+            _mint(_to, currentNonReservedId);
+        }
+    }    
+    
     function setSigner(address _signer) public onlyRole(DEFAULT_ADMIN_ROLE) {
         signer = _signer;
     }

@@ -142,7 +142,6 @@ contract InvestmentHandlerTestSetup is Test {
         assertTrue(fundNft_ERC721.ownerOf(idOffset) == sampleUser);
     }
 
-    // enable test once admin mint is back in the contract
     function testMintMaxSupplyExceeded() public {
         bytes memory signature = getSignature(sampleUser, 1);
         vm.startPrank(deployer, deployer);
@@ -152,8 +151,8 @@ contract InvestmentHandlerTestSetup is Test {
         }
         vm.stopPrank();
         vm.startPrank(sampleUser, sampleUser);
-        // vm.expectRevert(VVV_FUND_ERC721.MaxSupplyWouldBeExceeded.selector);
-        //fundNft_ERC721.mintBySignature{value: 0.05 ether}(sampleUser, 1, 1, signature);
+        vm.expectRevert(VVV_FUND_ERC721.MaxSupplyWouldBeExceeded.selector);
+        fundNft_ERC721.mintBySignature{value: 0.05 ether}(sampleUser, 1, 1, signature);
         vm.stopPrank();
     }
 
@@ -180,5 +179,13 @@ contract InvestmentHandlerTestSetup is Test {
             fundNft_ERC721.mintByTradeIn(sampleUser, ids); //sampleUser is minted ID 1
         vm.stopPrank();
         assertTrue(fundNft_ERC721.ownerOf(1) == sampleUser);        
+    }
+
+    function testAdminMint() public{
+        vm.startPrank(deployer, deployer);
+            fundNft_ERC721.adminMint(deployer, 1);
+        vm.stopPrank();
+        uint256 idOffset = fundNft_ERC721.currentNonReservedId();
+        assertTrue(fundNft_ERC721.ownerOf(idOffset) == deployer);
     }
 }
