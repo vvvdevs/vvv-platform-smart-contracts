@@ -29,7 +29,7 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
     uint256 maxPublicMintsPerAddress = 5;
 
     mapping(address => uint256) public mintedBySignature;
-    mapping(address => uint8) public publicMintsByAddress;
+    mapping(address => uint256) public publicMintsByAddress;
 
     error ArrayLengthMismatch();
     error InsufficientFunds();
@@ -127,8 +127,8 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
      * @notice public mint function that opens after specified date
      * @param _amount amount of tokens to mint
      */
-    function publicMint(uint8 _amount) external payable nonReentrant whenNotPaused {
-        publicMintsByAddress[msg.sender] += uint8(_amount);
+    function publicMint(address _to, uint256 _amount) external payable nonReentrant whenNotPaused {
+        publicMintsByAddress[msg.sender] += _amount;
         if(block.timestamp < publicMintStartTime) {
             revert PublicMintNotStarted();
         }
@@ -147,7 +147,7 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
         totalSupply += _amount;
         for (uint256 i = 0; i < _amount; ++i) {
             ++currentNonReservedId;
-            _mint(msg.sender, currentNonReservedId);
+            _mint(_to, currentNonReservedId);
         }
     }
 
