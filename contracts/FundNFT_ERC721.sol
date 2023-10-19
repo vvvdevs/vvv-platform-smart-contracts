@@ -39,7 +39,7 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
     error NotTokenOwner();
     error MaxPublicMintsWouldBeExceeded();
     error PublicMintNotStarted();
-    error PublicMintIsNotOpen();
+    error UnableToWithdraw();
 
     constructor(
         address _s1nft,
@@ -224,6 +224,11 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
                 ),
                 _signature
             );
+    }
+
+    function withdraw() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        (bool success, ) = msg.sender.call{value: address(this).balance}("");
+        if (!success) { revert UnableToWithdraw(); }
     }
 
     //==================================================================================================

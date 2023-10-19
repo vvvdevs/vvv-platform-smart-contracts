@@ -286,4 +286,16 @@ contract InvestmentHandlerTestSetup is Test {
         fundNft_ERC721.mintBySignature{value: 0.05 ether}(sampleUser, 1, 1, signature);
         vm.stopPrank();
     }
+
+    function testWithdraw() public {
+        uint256 balance = address(deployer).balance;
+        vm.startPrank(sampleUser, sampleUser);
+        fundNft_ERC721.publicMint{value: 0.25 ether}(sampleUser, 5);
+        vm.stopPrank();
+        vm.startPrank(deployer, deployer);
+        fundNft_ERC721.withdraw();
+        vm.stopPrank();
+        uint newBalance = address(deployer).balance;
+        assertTrue(newBalance == balance + 0.25 ether);
+    }
 }
