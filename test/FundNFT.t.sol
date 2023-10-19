@@ -68,8 +68,6 @@ contract InvestmentHandlerTestSetup is Test {
 
     // generate list of random addresses
     function generateUserAddressListAndDealEther() public {
-
-
         for (uint256 i = 0; i < users.length; i++) {
             users[i] = address(uint160(uint256(keccak256(abi.encodePacked(block.timestamp, i)))));
             vm.deal(users[i], 1 ether); // and YOU get an ETH
@@ -144,6 +142,20 @@ contract InvestmentHandlerTestSetup is Test {
         assertTrue(fundNft_ERC721.ownerOf(idOffset) == sampleUser);
     }
 
+    function testMintMaxSupplyExceeded() public {
+        bytes memory signature = getSignature(sampleUser, 1);
+        vm.startPrank(deployer, deployer);
+        // loop so that we mint 9999 nfts
+        for (uint256 i = 0; i < 9999; i++) {
+            fundNft_ERC721.adminMint(deployer, 1);
+        }
+        vm.stopPrank();
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVV_FUND_ERC721.MaxSupplyWouldBeExceeded.selector);
+        fundNft_ERC721.mintBySignature{value: 0.05 ether}(sampleUser, 1, 1, signature);
+        vm.stopPrank();
+    }
+
     function testMintViaTradeIn_ERC721() public {
         vm.startPrank(sampleUser, sampleUser);
         s1nft.setApprovalForAll(address(fundNft_ERC721), true);
@@ -176,6 +188,4 @@ contract InvestmentHandlerTestSetup is Test {
         uint256 idOffset = fundNft_ERC721.currentNonReservedId();
         assertTrue(fundNft_ERC721.ownerOf(idOffset) == deployer);
     }
-    
-
 }

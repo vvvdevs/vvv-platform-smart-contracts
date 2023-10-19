@@ -17,6 +17,7 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard {
     IERC721 public immutable S1NFT;
     
     uint256 public constant MAX_SUPPLY = 10_000;
+    uint256 public constant MAX_MINTABLE_SUPPLY = MAX_SUPPLY - 1;
     
     address public signer;
     uint256 public currentNonReservedId = 3500;
@@ -92,7 +93,7 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard {
             revert InvalidSignature();
         }
 
-        if(_quantity + totalSupply > MAX_SUPPLY) {
+        if(_quantity + totalSupply > MAX_MINTABLE_SUPPLY) {
             revert MaxSupplyWouldBeExceeded();
         }
 
