@@ -1,6 +1,0 @@
-[
-  "error PausableSelective_ArrayLengthMismatch()",
-  "error PausableSelective_FunctionIsPaused(bytes4)",
-  "event PausableSelective_FunctionIsPausedUpdate(address indexed,bytes4 indexed,bool indexed)",
-  "function functionIsPaused(bytes4) view returns (bool)"
-]

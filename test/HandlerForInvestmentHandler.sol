@@ -13,6 +13,7 @@ contract HandlerForInvestmentHandler is Test {
     InvestmentHandler public investmentHandler;
     MockERC20 public mockStable;
     MockERC20 public mockProject;
+    uint128[] public allocatedPaymentTokenPerPhase = new uint128[](5);
 
     constructor(InvestmentHandler _investmentHandler, MockERC20 _mockStable, MockERC20 _mockProject) {
         investmentHandler = _investmentHandler;
@@ -56,19 +57,27 @@ contract HandlerForInvestmentHandler is Test {
         address _caller,
         address _signer,
         address _paymentToken,
-        uint128 _totalAllocatedPaymentToken,
+        uint128 _allocatedPaymentTokenForAllPhases,
         bool _pauseAfterCall
     ) public useActor(_caller) {
         uint256 totalAllocatedPaymentToken = bound(
-            _totalAllocatedPaymentToken,
+            _allocatedPaymentTokenForAllPhases,
             10_000 * 1e6,
             10_000_000 * 1e6
         );
 
+        allocatedPaymentTokenPerPhase = [
+            0,
+            uint128(totalAllocatedPaymentToken),
+            uint128(totalAllocatedPaymentToken),
+            uint128(totalAllocatedPaymentToken),
+            uint128(totalAllocatedPaymentToken)
+        ];
+
         investmentHandler.addInvestment(
             _signer,
             _paymentToken,
-            uint128(totalAllocatedPaymentToken),
+            allocatedPaymentTokenPerPhase,
             _pauseAfterCall
         );
     }

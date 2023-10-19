@@ -52,6 +52,11 @@
   },
   {
     "inputs": [],
+    "name": "CantDecreaseExistingActivePhase",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "CantInvestZero",
     "type": "error"
   },
@@ -592,30 +597,6 @@
   {
     "inputs": [
       {
-        "internalType": "uint16",
-        "name": "_investmentId",
-        "type": "uint16"
-      },
-      {
-        "internalType": "uint8",
-        "name": "_phase",
-        "type": "uint8"
-      }
-    ],
-    "name": "allocatedPaymentToken",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
         "internalType": "address[]",
         "name": "_kycAddresses",
         "type": "address[]"
@@ -783,6 +764,44 @@
   {
     "inputs": [
       {
+        "internalType": "uint16",
+        "name": "_investmentId",
+        "type": "uint16"
+      }
+    ],
+    "name": "getAllocatedPaymentTokenByPhase",
+    "outputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "",
+        "type": "uint256[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "_investmentId",
+        "type": "uint16"
+      }
+    ],
+    "name": "getInvestedPaymentTokenByPhase",
+    "outputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "",
+        "type": "uint256[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "bytes32",
         "name": "role",
         "type": "bytes32"
@@ -932,54 +951,6 @@
     "name": "invest",
     "outputs": [],
     "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint16",
-        "name": "_investmentId",
-        "type": "uint16"
-      },
-      {
-        "internalType": "uint8",
-        "name": "_phase",
-        "type": "uint8"
-      }
-    ],
-    "name": "investedPaymentToken",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint16",
-        "name": "_investmentId",
-        "type": "uint16"
-      },
-      {
-        "internalType": "uint8",
-        "name": "_userPhase",
-        "type": "uint8"
-      }
-    ],
-    "name": "investmentIsOpen",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -1155,30 +1126,6 @@
   {
     "inputs": [
       {
-        "internalType": "uint16",
-        "name": "_investmentId",
-        "type": "uint16"
-      },
-      {
-        "internalType": "uint8",
-        "name": "_phase",
-        "type": "uint8"
-      }
-    ],
-    "name": "remainderAvailableToInvest",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
         "internalType": "address",
         "name": "_networkAddress",
         "type": "address"
@@ -1297,8 +1244,36 @@
         "type": "uint16"
       },
       {
+        "internalType": "uint8",
+        "name": "_phase",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint128",
+        "name": "_allocatedPaymentTokenForPhase",
+        "type": "uint128"
+      },
+      {
+        "internalType": "bool",
+        "name": "_pauseAfterCall",
+        "type": "bool"
+      }
+    ],
+    "name": "setInvestmentPaymentTokenAllocationForPhase",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "_investmentId",
+        "type": "uint16"
+      },
+      {
         "internalType": "address",
-        "name": "projectTokenAddress",
+        "name": "_projectTokenAddress",
         "type": "address"
       },
       {
@@ -1321,7 +1296,7 @@
       },
       {
         "internalType": "uint256",
-        "name": "totalTokensAllocated",
+        "name": "_totalTokensAllocated",
         "type": "uint256"
       },
       {
