@@ -8,8 +8,6 @@ typechain-types
 # Hardhat files
 cache
 artifacts
-broadcast
-
 cache_forge
 out
 
@@ -18,3 +16,5 @@ gitscript.sh
 
 4naly3er/
 .aider*
+
+broadcast
