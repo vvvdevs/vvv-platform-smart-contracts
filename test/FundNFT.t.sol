@@ -57,7 +57,7 @@ contract InvestmentHandlerTestSetup is Test {
             "VVVF",
             "https://vvv.fund/api/token/"
         );
-
+        fundNft_ERC721.unpause(); 
         vm.stopPrank();
 
         generateUserAddressListAndDealEther();
@@ -68,8 +68,6 @@ contract InvestmentHandlerTestSetup is Test {
 
     // generate list of random addresses
     function generateUserAddressListAndDealEther() public {
-
-
         for (uint256 i = 0; i < users.length; i++) {
             users[i] = address(uint160(uint256(keccak256(abi.encodePacked(block.timestamp, i)))));
             vm.deal(users[i], 1 ether); // and YOU get an ETH
@@ -144,6 +142,85 @@ contract InvestmentHandlerTestSetup is Test {
         assertTrue(fundNft_ERC721.ownerOf(idOffset) == sampleUser);
     }
 
+    function testPublicMint() public {
+        vm.startPrank(sampleUser, sampleUser);
+        fundNft_ERC721.publicMint{value: 0.05 ether}(sampleUser, 1);
+        vm.stopPrank();
+
+        uint256 idOffset = fundNft_ERC721.currentNonReservedId();
+        assertTrue(fundNft_ERC721.ownerOf(idOffset) == sampleUser);
+    }
+
+    function testPublicMintMax() public {
+        vm.startPrank(sampleUser, sampleUser);
+        fundNft_ERC721.publicMint{value: 0.25 ether}(sampleUser, 5);
+        vm.stopPrank();
+        uint256 idOffset = fundNft_ERC721.currentNonReservedId();
+        assertTrue(fundNft_ERC721.ownerOf(idOffset - 4)== sampleUser);
+        assertTrue(fundNft_ERC721.ownerOf(idOffset - 3) == sampleUser);
+        assertTrue(fundNft_ERC721.ownerOf(idOffset - 2) == sampleUser);
+        assertTrue(fundNft_ERC721.ownerOf(idOffset - 1) == sampleUser);
+        assertTrue(fundNft_ERC721.ownerOf(idOffset) == sampleUser);
+    }
+
+    function testPublicMintMaxExceeded() public {
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVV_FUND_ERC721.MaxPublicMintsWouldBeExceeded.selector);
+        fundNft_ERC721.publicMint{value: 0.30 ether}(sampleUser, 6);
+        vm.stopPrank();
+    }
+
+    function testPublicMintSetMax() public {
+        vm.startPrank(deployer, deployer);
+        fundNft_ERC721.setMaxPublicMintsPerAddress(1);
+        vm.stopPrank();
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVV_FUND_ERC721.MaxPublicMintsWouldBeExceeded.selector);
+        fundNft_ERC721.publicMint{value: 0.05 ether}(sampleUser, 2);
+        vm.stopPrank();
+    }
+
+    function testPublicMintMaxSupplyExceded() public {
+        vm.startPrank(deployer, deployer);
+        for (uint256 i = 0; i < 9999; i++) {
+            fundNft_ERC721.adminMint(deployer, 1);
+        }
+        vm.stopPrank();
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVV_FUND_ERC721.MaxSupplyWouldBeExceeded.selector);
+        fundNft_ERC721.publicMint{value: 0.05 ether}(sampleUser, 1);
+        vm.stopPrank();
+    }
+
+    function testPublicMintInsuffecientFunds() public {
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVV_FUND_ERC721.InsufficientFunds.selector);
+        fundNft_ERC721.publicMint{value: 0.01 ether}(sampleUser, 1);
+        vm.stopPrank();
+    }
+
+    function testMintMaxSupplyExceeded() public {
+        bytes memory signature = getSignature(sampleUser, 1);
+        vm.startPrank(deployer, deployer);
+        // loop so that we mint 9999 nfts
+        for (uint256 i = 0; i < 9999; i++) {
+            fundNft_ERC721.adminMint(deployer, 1);
+        }
+        vm.stopPrank();
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVV_FUND_ERC721.MaxSupplyWouldBeExceeded.selector);
+        fundNft_ERC721.mintBySignature{value: 0.05 ether}(sampleUser, 1, 1, signature);
+        vm.stopPrank();
+    }
+
+    function testSetPublicMintStartTime() public {
+        vm.startPrank(deployer, deployer);
+        uint256 newStartTime = blockTimestamp + 1000;
+        fundNft_ERC721.setPublicMintStartTime(newStartTime);
+        vm.stopPrank();
+        assertTrue(fundNft_ERC721.publicMintStartTime() == newStartTime);
+    }
+
     function testMintViaTradeIn_ERC721() public {
         vm.startPrank(sampleUser, sampleUser);
         s1nft.setApprovalForAll(address(fundNft_ERC721), true);
@@ -169,4 +246,56 @@ contract InvestmentHandlerTestSetup is Test {
         assertTrue(fundNft_ERC721.ownerOf(1) == sampleUser);        
     }
 
+    function testAdminMint() public{
+        vm.startPrank(deployer, deployer);
+            fundNft_ERC721.adminMint(deployer, 1);
+        vm.stopPrank();
+        uint256 idOffset = fundNft_ERC721.currentNonReservedId();
+        assertTrue(fundNft_ERC721.ownerOf(idOffset) == deployer);
+    }
+
+    function testPause() public {
+        vm.startPrank(deployer, deployer);
+        fundNft_ERC721.pause();
+        vm.stopPrank();
+        assertTrue(fundNft_ERC721.paused());
+    }
+
+    function testUnPause() public {
+        vm.startPrank(deployer, deployer);
+        fundNft_ERC721.pause();
+        assertTrue(fundNft_ERC721.paused());
+        fundNft_ERC721.unpause();
+        vm.stopPrank();
+        assertTrue(!fundNft_ERC721.paused());
+    }
+
+    function testPublicMintWhenPaused() public {
+        vm.startPrank(deployer, deployer);
+        fundNft_ERC721.pause();
+        vm.expectRevert();
+        fundNft_ERC721.publicMint{value: 0.05 ether}(sampleUser, 1);
+        vm.stopPrank();
+    }
+
+    function testSignatureMintWhenPaused() public {
+        bytes memory signature = getSignature(sampleUser, 1);
+        vm.startPrank(deployer, deployer);
+        fundNft_ERC721.pause();
+        vm.expectRevert();
+        fundNft_ERC721.mintBySignature{value: 0.05 ether}(sampleUser, 1, 1, signature);
+        vm.stopPrank();
+    }
+
+    function testWithdraw() public {
+        uint256 balance = address(deployer).balance;
+        vm.startPrank(sampleUser, sampleUser);
+        fundNft_ERC721.publicMint{value: 0.25 ether}(sampleUser, 5);
+        vm.stopPrank();
+        vm.startPrank(deployer, deployer);
+        fundNft_ERC721.withdraw();
+        vm.stopPrank();
+        uint newBalance = address(deployer).balance;
+        assertTrue(newBalance == balance + 0.25 ether);
+    }
 }
