@@ -28,7 +28,7 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
     uint256 public publicMintStartTime;
 
     mapping(address => uint256) public mintedBySignature;
-    mapping(address => uint8) public publicMintsByAddress;
+    mapping(address => uint256) public publicMintsByAddress;
 
     error ArrayLengthMismatch();
     error InsufficientFunds();
