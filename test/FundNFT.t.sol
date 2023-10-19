@@ -154,4 +154,18 @@ contract InvestmentHandlerTestSetup is Test {
         assertTrue(fundNft_ERC721.ownerOf(1) == sampleUser);
     }
 
+    function testMigrateFifteenNfts() public {
+        vm.startPrank(sampleUser, sampleUser);
+            s1nft.setApprovalForAll(address(fundNft_ERC721), true);
+
+            uint256[] memory ids = new uint256[](15);
+            for(uint256 i=0; i<ids.length; i++){
+                ids[i] = i+1;
+            }
+
+            fundNft_ERC721.mintByTradeIn(sampleUser, ids); //sampleUser is minted ID 1
+        vm.stopPrank();
+        assertTrue(fundNft_ERC721.ownerOf(1) == sampleUser);        
+    }
+
 }
