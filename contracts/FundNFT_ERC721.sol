@@ -127,7 +127,7 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
      * @param _amount amount of tokens to mint
      */
     function publicMint(uint8 _amount) external payable nonReentrant whenNotPaused {
-        publicMintsByAddress[msg.sender] += uint8(_amount);
+        publicMintsByAddress[msg.sender] += _amount;
         if(block.timestamp < publicMintStartTime) {
             revert PublicMintNotStarted();
         }
