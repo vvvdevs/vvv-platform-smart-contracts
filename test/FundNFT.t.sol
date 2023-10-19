@@ -77,8 +77,9 @@ contract InvestmentHandlerTestSetup is Test {
         vm.deal(defaultAdminController, 1 ether); // and YOU get an ETH
         sampleKycAddress = users[0];
         sampleUser = users[1];
-        s1nft.safeMint(sampleUser);
-        s1nft.safeMint(sampleUser); //will def have ID 1
+        for (uint256 i=0; i < 20; i++){
+            s1nft.safeMint(sampleUser);
+        }
 
         for (uint256 i = 0; i < users.length; i++) {
             s1nft.safeMint(users[i]);
