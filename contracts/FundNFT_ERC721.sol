@@ -19,11 +19,7 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard {
     uint256 public constant MAX_SUPPLY = 10_000;
     
     address public signer;
-    bool public publicMintIsOpen;
-    string public baseURI;
     uint256 public currentNonReservedId = 3500;
-    uint256 public mintableInPublicPerAddress = 2;
-    uint256 public publicMintPrice = 0.06 ether;
     uint256 public totalSupply;
     uint256 public whitelistMintPrice = 0.05 ether;    
 
@@ -48,7 +44,6 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard {
         S1NFT = IERC721(_s1nft);
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         signer = _signer;
-        setBaseURI(_baseUri);
     }
 
     function supportsInterface(bytes4 interfaceId) public view override(ERC721, AccessControl) returns (bool) {
@@ -118,64 +113,13 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard {
     }
 
     //==================================================================================================
-    // PUBLIC MINTING
-    //==================================================================================================
-    function publicMint(address _to, uint256 _quantity) external payable nonReentrant {
-        if(!publicMintIsOpen) {
-            revert PublicMintIsNotOpen();
-        }
-        
-        if(_quantity + totalSupply > MAX_SUPPLY) {
-            revert MaxSupplyWouldBeExceeded();
-        }
-
-        if(msg.value < publicMintPrice * _quantity) {
-            revert InsufficientFunds();
-        }
-
-        if(mintedPublic[msg.sender] + _quantity > mintableInPublicPerAddress) {
-            revert MaxAllocationWouldBeExceeded();
-        }
-
-        totalSupply += _quantity;
-        for(uint256 i = 0; i < _quantity; ++i) {
-            ++currentNonReservedId;
-            _mint(_to, currentNonReservedId);
-        }
-    }
-
-    //==================================================================================================
     // ADMIN FUNCTIONS
     //==================================================================================================
-    function adminMint(
-        address _to,
-        uint256 _quantity
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if(_quantity + totalSupply > MAX_SUPPLY) {
-            revert MaxSupplyWouldBeExceeded();
-        }
-        
-        totalSupply += _quantity;
-        for(uint256 i = 0; i < _quantity; ++i) {
-            ++currentNonReservedId;
-            _mint(_to, currentNonReservedId);
-        }
-    }
-
-    function setBaseURI(string memory _uri) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        baseURI = _uri;
-    }
-
     function setSigner(address _signer) public onlyRole(DEFAULT_ADMIN_ROLE) {
         signer = _signer;
     }
 
-    function setPublicMintIsOpen(bool _publicMintIsOpen) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        publicMintIsOpen = _publicMintIsOpen;
-    }
-
-    function setMintPrices(uint256 _publicMintPrice, uint256 _whitelistMintPrice) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        publicMintPrice = _publicMintPrice;
+    function setMintPrice(uint256 _whitelistMintPrice) public onlyRole(DEFAULT_ADMIN_ROLE) {
         whitelistMintPrice = _whitelistMintPrice;
     }
 
@@ -206,9 +150,7 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard {
     //==================================================================================================
     // OVERRIDES
     //==================================================================================================
-    function _baseURI() internal view override returns (string memory) {
-        return baseURI;
-    }
+
 
 }
 
