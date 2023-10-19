@@ -8,23 +8,28 @@ import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import { Pausable } from  "@openzeppelin/contracts/security/Pausable.sol";
 
 /// @title VVV_FUND_ERC721
 /// @notice relative to ERC721A version, includes reserved IDs for non-S1 collection IDs (example, assuming above 3500, would need to know this number ahead of deployment)
 
-contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard {
-
+contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
     IERC721 public immutable S1NFT;
     
     uint256 public constant MAX_SUPPLY = 10_000;
+    uint256 public constant MAX_MINTABLE_SUPPLY = MAX_SUPPLY - 1;
     
     address public signer;
+    string public baseURI;
     uint256 public currentNonReservedId = 3500;
     uint256 public totalSupply;
-    uint256 public whitelistMintPrice = 0.05 ether;    
+    uint256 public whitelistMintPrice = 0.05 ether;
+    uint256 public publicMintPrice = 0.05 ether;
+    uint256 public publicMintStartTime;
+    uint256 maxPublicMintsPerAddress = 5;
 
     mapping(address => uint256) public mintedBySignature;
-    mapping(address => uint256) public mintedPublic;
+    mapping(address => uint256) public publicMintsByAddress;
 
     error ArrayLengthMismatch();
     error InsufficientFunds();
@@ -32,7 +37,9 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard {
     error MaxAllocationWouldBeExceeded();
     error MaxSupplyWouldBeExceeded();
     error NotTokenOwner();
-    error PublicMintIsNotOpen();
+    error MaxPublicMintsWouldBeExceeded();
+    error PublicMintNotStarted();
+    error UnableToWithdraw();
 
     constructor(
         address _s1nft,
@@ -44,6 +51,10 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard {
         S1NFT = IERC721(_s1nft);
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         signer = _signer;
+
+        // should be updated to the actual start time after deployment
+        publicMintStartTime = block.timestamp;
+        _pause();
     }
 
     function supportsInterface(bytes4 interfaceId) public view override(ERC721, AccessControl) returns (bool) {
@@ -86,13 +97,12 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard {
         uint256 _quantity,
         uint256 _maxQuantity,
         bytes memory _signature
-    ) external payable nonReentrant {
-
+    ) external payable nonReentrant whenNotPaused {
         if(!_isSignatureValid(msg.sender, _maxQuantity, _signature)) {
             revert InvalidSignature();
         }
 
-        if(_quantity + totalSupply > MAX_SUPPLY) {
+        if(_quantity + totalSupply > MAX_MINTABLE_SUPPLY) {
             revert MaxSupplyWouldBeExceeded();
         }
 
@@ -112,15 +122,84 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard {
         }
     }
 
+
+    /**
+     * @notice public mint function that opens after specified date
+     * @param _amount amount of tokens to mint
+     */
+    function publicMint(address _to, uint256 _amount) external payable nonReentrant whenNotPaused {
+        publicMintsByAddress[msg.sender] += _amount;
+        if(block.timestamp < publicMintStartTime) {
+            revert PublicMintNotStarted();
+        }
+
+        if(publicMintsByAddress[msg.sender] > maxPublicMintsPerAddress) {
+            revert MaxPublicMintsWouldBeExceeded();
+        }
+        if(_amount + totalSupply > MAX_MINTABLE_SUPPLY) {
+            revert MaxSupplyWouldBeExceeded();
+        }
+
+        if(msg.value < publicMintPrice * _amount) {
+            revert InsufficientFunds();
+        }
+
+        totalSupply += _amount;
+        for (uint256 i = 0; i < _amount; ++i) {
+            ++currentNonReservedId;
+            _mint(_to, currentNonReservedId);
+        }
+    }
+
+
     //==================================================================================================
     // ADMIN FUNCTIONS
     //==================================================================================================
+    function adminMint(
+        address _to,
+        uint256 _quantity
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if(_quantity + totalSupply > MAX_SUPPLY) {
+            revert MaxSupplyWouldBeExceeded();
+        }
+
+        totalSupply += _quantity;
+        for(uint256 i = 0; i < _quantity; ++i) {
+            ++currentNonReservedId;
+            _mint(_to, currentNonReservedId);
+        }
+    }    
+    
     function setSigner(address _signer) public onlyRole(DEFAULT_ADMIN_ROLE) {
         signer = _signer;
     }
 
-    function setMintPrice(uint256 _whitelistMintPrice) public onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setWhitelistMintPrice(uint256 _whitelistMintPrice) public onlyRole(DEFAULT_ADMIN_ROLE) {
         whitelistMintPrice = _whitelistMintPrice;
+    }
+
+    function setPublicMintPrice(uint256 _publicMintPrice) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        publicMintPrice = _publicMintPrice;
+    }
+
+    function setMaxPublicMintsPerAddress(uint256 _publicMintMax) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        maxPublicMintsPerAddress = _publicMintMax;
+    }
+
+    function pause() public onlyRole(DEFAULT_ADMIN_ROLE) {
+        _pause();
+    }
+
+    function unpause() public onlyRole(DEFAULT_ADMIN_ROLE) {
+        _unpause();
+    }
+
+    function setPublicMintStartTime(uint256 _startTime) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        publicMintStartTime = _startTime;
+    }
+
+    function setBaseURI(string memory _uri) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        baseURI = _uri;
     }
 
     //==================================================================================================
@@ -147,10 +226,15 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard {
             );
     }
 
+    function withdraw() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        (bool success, ) = msg.sender.call{value: address(this).balance}("");
+        if (!success) { revert UnableToWithdraw(); }
+    }
+
     //==================================================================================================
     // OVERRIDES
     //==================================================================================================
-
-
+    function _baseURI() internal view override returns (string memory) {
+        return baseURI;
+    }
 }
-
