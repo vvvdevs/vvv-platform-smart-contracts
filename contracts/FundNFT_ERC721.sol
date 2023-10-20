@@ -2,14 +2,14 @@
 pragma solidity 0.8.21;
 
 import { ERC721 } from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import { Pausable } from  "@openzeppelin/contracts/security/Pausable.sol";
+import { Pausable } from  "@openzeppelin/contracts/utils/Pausable.sol";
 
 /// @title VVV_FUND_ERC721
 /// @notice relative to ERC721A version, includes reserved IDs for non-S1 collection IDs (example, assuming above 3500, would need to know this number ahead of deployment)
@@ -227,7 +227,7 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
         return
             SignatureChecker.isValidSignatureNow(
                 signer,
-                ECDSA.toEthSignedMessageHash(
+                MessageHashUtils.toEthSignedMessageHash(
                     keccak256(
                         abi.encodePacked(
                             _minter,
