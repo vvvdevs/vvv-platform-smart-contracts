@@ -4,6 +4,7 @@ pragma solidity 0.8.21;
 import { ERC721 } from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
+import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
@@ -14,6 +15,8 @@ import { Pausable } from  "@openzeppelin/contracts/security/Pausable.sol";
 /// @notice relative to ERC721A version, includes reserved IDs for non-S1 collection IDs (example, assuming above 3500, would need to know this number ahead of deployment)
 
 contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
+    using Strings for uint256;
+
     IERC721 public immutable S1NFT;
     
     uint256 public constant MAX_SUPPLY = 10_000;
@@ -21,6 +24,7 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
     
     address public signer;
     string public baseURI;
+    string public baseExtension = ".json";
     uint256 public currentNonReservedId = 3500;
     uint256 public totalSupply;
     uint256 public whitelistMintPrice = 0.05 ether;
@@ -40,6 +44,7 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
     error MaxPublicMintsWouldBeExceeded();
     error PublicMintNotStarted();
     error UnableToWithdraw();
+    error URIQueryForNonexistentToken();
 
     constructor(
         address _s1nft,
@@ -51,6 +56,7 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
         S1NFT = IERC721(_s1nft);
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         signer = _signer;
+        baseURI = _baseUri;
 
         // should be updated to the actual start time after deployment
         publicMintStartTime = block.timestamp;
@@ -202,6 +208,14 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
         baseURI = _uri;
     }
 
+    function setBaseExtension(string memory _baseExtension)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        baseExtension = _baseExtension;
+    }
+
+
     //==================================================================================================
     // INTERNAL FUNCTIONS
     //==================================================================================================
@@ -236,5 +250,23 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
     //==================================================================================================
     function _baseURI() internal view override returns (string memory) {
         return baseURI;
+    }
+
+    function tokenURI(uint256 tokenId)
+        public
+        view
+        override
+        returns (string memory)
+    {
+        //if (!_exists(tokenId)) {
+        //    revert URIQueryForNonexistentToken();
+        // }
+
+        return
+        bytes(baseURI).length != 0
+        ? string(
+            abi.encodePacked(baseURI, tokenId.toString(), baseExtension)
+        )
+        : "";
     }
 }
