@@ -7,10 +7,10 @@ pragma solidity 0.8.21;
  * @notice Handles the investment process for vVv allocations' investments and claims
  */
 
-import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -487,7 +487,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
         return
             SignatureChecker.isValidSignatureNow(
                 _signer,
-                ECDSA.toEthSignedMessageHash(
+                MessageHashUtils.toEthSignedMessageHash(
                     keccak256(
                         abi.encodePacked(
                             _params.investmentId,
