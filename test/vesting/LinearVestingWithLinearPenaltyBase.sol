@@ -21,8 +21,9 @@ contract LinearVestingWithLinearPenaltyBase is Test {
     address signer = vm.addr(signerKey);
     uint256 chainid = 5;
 
-    uint256 VESTING_LENGTH = 100_000;
-    uint256[] NON_PENALIZED_PROPORTIONS = [0, 1000, 2000, 3000, 4000]; //testing "@TGE" claimable amounts without penalty
+    uint256 VESTING_INTERVAL_DURATION = 1000;
+    uint256 TOTAL_VESTING_INTERVALS = 10;
+    uint256 INTERVALS_BEFORE_CLIFF = 2;
 
     address[] public users = new address[](333);
     bool logging = false;

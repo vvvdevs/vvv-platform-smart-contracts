@@ -4,7 +4,7 @@ pragma solidity 0.8.21;
 // Using Mock for now until branches merge and this contract can access the token and its interface
 // import { IVVVToken } from "../interfaces/IVVVToken.sol";
 import { MockERC20 } from "../mock/MockERC20.sol";
-import { Ownable } from "@openzeppelin/contracts/utils/Ownable.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 
@@ -18,8 +18,8 @@ contract LinearVestingWithLinearPenalty is Ownable {
     /// @dev captures both X% at cliff and linear vesting for the Y% remaining after that
     struct VestingParams {
         uint256 startTimestamp;
-        uint256 vestingDuration;
-        uint256 vestingInterval; //in seconds
+        uint256 vestingIntervalDuration;
+        uint256 totalVestingIntervals;
         uint256 intervalsBeforeCliff;
     }
 
@@ -38,7 +38,7 @@ contract LinearVestingWithLinearPenalty is Ownable {
     error InvalidConstructorArguments();
     error InvalidSignature();
 
-    constructor(address _token, address _signer) {
+    constructor(address _token, address _signer) Ownable(msg.sender) {
         if (_signer == address(0) || _signer == address(this) || _token == address(0)) {
             revert InvalidConstructorArguments();
         }
@@ -78,7 +78,9 @@ contract LinearVestingWithLinearPenalty is Ownable {
         }
 
         //check balance as of this vesting interval
-
+        if(_claimAmount > vestedTokensNow(_investmentRound, _nominalTotalClaimable)){
+            revert AmountIsGreaterThanClaimable();
+        }
 
         // mint tokens to _to
         // or transfer contract token balance and burn the penalty amount
@@ -90,41 +92,48 @@ contract LinearVestingWithLinearPenalty is Ownable {
 
     function nominalToActual(uint256 _amount, uint256 _investmentRound) public view returns (uint256) {
         VestingParams memory thisVestingParams = investmentRoundToVestingParams[_investmentRound];
-        return (_amount * elapsedVestingTime(_investmentRound)) / thisVestingParams.vestingDuration;
+        return (_amount * currentVestingInterval(_investmentRound)) / thisVestingParams.totalVestingIntervals;
     }
 
     function actualToNominal(uint256 _amount, uint256 _investmentRound) public view returns (uint256) {
         VestingParams memory thisVestingParams = investmentRoundToVestingParams[_investmentRound];
-        return (_amount * thisVestingParams.vestingDuration) / elapsedVestingTime(_investmentRound);
+        return (_amount * thisVestingParams.totalVestingIntervals) / currentVestingInterval(_investmentRound);
     }
 
     ///@dev returns either the total vesting time or the time elapsed since vesting began if less than totalVestingTime
-    function elapsedVestingTime(uint256 _investmentRound) public view returns (uint256) {
+    function currentVestingInterval(uint256 _investmentRound) public view returns (uint256) {
         VestingParams memory thisVestingParams = investmentRoundToVestingParams[_investmentRound];
-        if (block.timestamp >= thisVestingParams.startTimestamp + thisVestingParams.vestingDuration) {
-            return thisVestingParams.vestingDuration;
+
+        uint256 currentInterval = (block.timestamp - thisVestingParams.startTimestamp) / thisVestingParams.vestingIntervalDuration;
+
+        if (currentInterval >= thisVestingParams.totalVestingIntervals) {
+            return thisVestingParams.totalVestingIntervals;
+        } else {
+            return currentInterval + 1;
         }
-        return block.timestamp - thisVestingParams.startTimestamp;
+        
     }
 
-    /// @dev incorporates the vesting interval to calculate the amount of tokens vested at the current time, also accounting for cliff
-    function vestedTokensAtTimestamp(uint256 _investmentRound, uint256 _nominalTotalClaimable) public view returns (uint256) {
+    /// @dev incorporates the vesting interval to calculate the amount of tokens vested at the current time (interval), also accounting for cliff
+    function vestedTokensNow(uint256 _investmentRound, uint256 _nominalTotalClaimable) public view returns (uint256) {
         VestingParams memory thisVestingParams = investmentRoundToVestingParams[_investmentRound];
-        uint256 thisInterval = elapsedVestingTime(_investmentRound) / thisVestingParams.vestingInterval;
-        uint256 totalIntervals = thisVestingParams.vestingDuration / thisVestingParams.vestingInterval; //should div evenly
+
+        //should this be +1? distinguish elapsed intervals from current
+        //consider during first interval, elapsed = 0, current = 1
+        uint256 thisInterval = currentVestingInterval(_investmentRound);
 
         //still < cliff
         if (thisInterval < thisVestingParams.intervalsBeforeCliff) {
             return 0;
 
-        //after cliff, split total - cliff amount into remaining intervals, then multiply by elapsed post-cliff intervals    
+        //after cliff, split (total - cliff) amount into remaining intervals, then multiply by elapsed post-cliff intervals    
         } else {
-            uint256 cliffAmount = (_nominalTotalClaimable * thisVestingParams.intervalsBeforeCliff) / totalIntervals;
+            uint256 cliffAmount = (_nominalTotalClaimable * thisVestingParams.intervalsBeforeCliff) / thisVestingParams.totalVestingIntervals;
             uint256 remainingAmount = _nominalTotalClaimable - cliffAmount;
             uint256 vestedAmount = (remainingAmount * (thisInterval - thisVestingParams.intervalsBeforeCliff)) /
-                (totalIntervals - thisVestingParams.intervalsBeforeCliff);
+                (thisVestingParams.totalVestingIntervals - thisVestingParams.intervalsBeforeCliff);
 
-            return vestedAmount;
+            return cliffAmount + vestedAmount;
         }
 
     }
@@ -134,14 +143,14 @@ contract LinearVestingWithLinearPenalty is Ownable {
     function setVestingParams(
         uint256 _investmentRound,
         uint256 _startTimestamp,
-        uint256 _vestingDuration,
-        uint256 _vestingInterval,
+        uint256 _vestingIntervalDuration,
+        uint256 _totalVestingIntervals,
         uint256 _intervalsBeforeCliff
     ) external onlyOwner {
         investmentRoundToVestingParams[_investmentRound] = VestingParams(
             _startTimestamp,
-            _vestingDuration,
-            _vestingInterval,
+            _vestingIntervalDuration,
+            _totalVestingIntervals,
             _intervalsBeforeCliff
         );
     }
@@ -156,7 +165,7 @@ contract LinearVestingWithLinearPenalty is Ownable {
         return
             SignatureChecker.isValidSignatureNow(
                 signer,
-                ECDSA.toEthSignedMessageHash(
+                MessageHashUtils.toEthSignedMessageHash(
                     keccak256(
                         abi.encodePacked(_account, _nominalTotalClaimable, _investmentRound, block.chainid)
                     )
