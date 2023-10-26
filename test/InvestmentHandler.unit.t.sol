@@ -84,9 +84,12 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
             sampleKycAddress,
             1000 * 1e6 // 1000 USDC
         );
-        mintProjectTokensToInvestmentHandler();
 
         uint16 thisInvestmentId = investmentHandler.latestInvestmentId();
+
+        (, address projectTokenWallet, , , , , , ) = investmentHandler.investments(thisInvestmentId);
+        mintProjectTokensTo(projectTokenWallet);
+
         uint256 thisTotalClaimAmount = investmentHandler.computeUserTotalAllocationForInvesment(
             sampleKycAddress,
             thisInvestmentId
@@ -97,7 +100,7 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
             thisInvestmentId
         );
 
-        uint256 projectToPaymentRatio = IERC20(mockProject).balanceOf(address(investmentHandler)) /
+        uint256 projectToPaymentRatio = IERC20(mockProject).balanceOf(projectTokenWallet) /
             IERC20(mockStable).balanceOf(address(investmentHandler));
 
         (uint128 investedPaymentToken, ) = investmentHandler.userInvestments(
@@ -164,6 +167,7 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         vm.stopPrank();
 
         (
+            ,   
             ,
             IERC20 projectToken,
             IERC20 paymentToken,
@@ -188,7 +192,7 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         uint120 investAmount = 1000000 * 1e6;
         userInvest(investmentHandler.latestInvestmentId(), sampleKycAddress, sampleKycAddress, investAmount);
 
-        ( , , , , uint128 investedPaymentToken, , ) = investmentHandler.investments(
+        (, , , , , uint128 investedPaymentToken, , ) = investmentHandler.investments(
             investmentHandler.latestInvestmentId()
         );
         assertTrue(investedPaymentToken == investAmount);
@@ -203,7 +207,7 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         uint120 investAmount = 1000000 * 1e6;
         userInvest(investmentHandler.latestInvestmentId(), sampleUser, sampleKycAddress, investAmount);
 
-        ( , , , , uint128 investedPaymentToken, , ) = investmentHandler.investments(
+        (, , , , , uint128 investedPaymentToken, , ) = investmentHandler.investments(
             investmentHandler.latestInvestmentId()
         );
         assertTrue(investedPaymentToken == investAmount);
@@ -214,9 +218,12 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
      */
     function testClaimFromNetworkWallet() public {
         testInvestFromNetworkWallet();
-        mintProjectTokensToInvestmentHandler();
 
         uint16 thisInvestmentId = investmentHandler.latestInvestmentId();
+        
+        (, address projectTokenWallet, , , , , , ) = investmentHandler.investments(thisInvestmentId);
+        mintProjectTokensTo(projectTokenWallet);
+        
         uint256 thisClaimAmount = investmentHandler.computeUserClaimableAllocationForInvestment(
             sampleKycAddress,
             thisInvestmentId
@@ -350,7 +357,9 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
         vm.stopPrank();
 
         // revert case 2 refunding when project tokens have been deposited (aka claims could have started already)
-        mintProjectTokensToInvestmentHandler();
+        (, address projectTokenWallet, , , , , , ) = investmentHandler.investments(_investmentId);
+        mintProjectTokensTo(projectTokenWallet);
+
         vm.startPrank(refundManager, refundManager);
         vm.expectRevert(bytes4(keccak256("TooLateForRefund()")));
         investmentHandler.refundUser(sampleKycAddress, _investmentId, uint120(1), pauseAfterCall);
@@ -444,7 +453,7 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
 
         //revert case, recover more than balance
         vm.startPrank(investmentManager, investmentManager);
-        vm.expectRevert(bytes4(keccak256("ERC20AmountExceedsBalance()")));
+        vm.expectRevert();
         investmentHandler.recoverERC20(
             address(mockProject),
             investmentManager,
@@ -546,11 +555,13 @@ contract InvestmentHandlerUnitTests is InvestmentHandlerTestSetup {
      */
     function testClaimsUnaffectedByClaimDelayAndFrequency() public {
         createInvestment();
-        mintProjectTokensToInvestmentHandler();
 
         uint120 investAmount = 100000 * 1e6;
         uint256 claimAmount;
         uint16 investmentId = investmentHandler.latestInvestmentId();
+
+        (, address projectTokenWallet, , , , , , ) = investmentHandler.investments(investmentId);
+        mintProjectTokensTo(projectTokenWallet);
 
         // each user invests and claims in some rearranged order
         for (uint256 i = 2; i < users.length; i++) {

@@ -185,12 +185,17 @@ contract InvestmentHandlerTestSetup is Test {
             phase,
             pauseAfterCall
         );
+        investmentHandler.initializeProjectTokenWallet(
+            investmentHandler.latestInvestmentId(), 
+            address(mockProject), 
+            pauseAfterCall
+        );
         vm.stopPrank();
     }
 
-    function mintProjectTokensToInvestmentHandler() public {
+    function mintProjectTokensTo(address _to) public {
         vm.startPrank(projectSender, projectSender);
-        mockProject.mint(address(investmentHandler), projectAmount);
+        mockProject.mint(_to, projectAmount);
         vm.stopPrank();
     }
 
@@ -274,9 +279,11 @@ contract InvestmentHandlerTestSetup is Test {
         }
     }
 
-    function transferProjectTokensToInvestmentHandler(uint256 _amount) public {
+    function transferProjectTokensToProjectTokenWallet(uint256 _amount) public {
         vm.startPrank(projectSender, projectSender);
-        mockProject.mint(address(investmentHandler), _amount);
+        uint16 thisInvestmentId = investmentHandler.latestInvestmentId();
+        (, address projectTokenWallet, , , , , , ) = investmentHandler.investments(thisInvestmentId);
+        mockProject.mint(projectTokenWallet, _amount);
         vm.stopPrank();
         //update ghosts
         ghost_open_depositedProjectTokens[ghost_open_latestInvestmentId] += _amount;
@@ -332,6 +339,12 @@ contract InvestmentHandlerTestSetup is Test {
             investmentManager,
             ghost_bound_latestInvestmentId,
             phase,
+            pauseAfterCall
+        );
+        handler.initializeProjectTokenWallet(
+            investmentManager,
+            ghost_bound_latestInvestmentId,
+            address(mockProject),
             pauseAfterCall
         );
     }
@@ -428,8 +441,10 @@ contract InvestmentHandlerTestSetup is Test {
 
     function transferProjectTokensTo_HandlerForInvestmentHandler(uint256 _amount) public {
         vm.startPrank(projectSender, projectSender);
+        uint16 thisInvestmentId = investmentHandler.latestInvestmentId();
+        (, address projectTokenWallet, , , , , , ) = investmentHandler.investments(thisInvestmentId);        
         mockProject.mint(projectSender, _amount);
-        mockProject.transfer(address(handler), _amount);
+        mockProject.transfer(projectTokenWallet, _amount);
         vm.stopPrank();
 
         //update ghosts

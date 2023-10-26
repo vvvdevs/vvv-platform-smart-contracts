@@ -69,16 +69,20 @@ contract InvestmentHandlerInvariantTests_Bound is InvestmentHandlerTestSetup {
      * Invariant 2: The projectToken balance of the InvestmentHandler contract should be equal to the total amount of projectTokens deposited to the contract minus the total amount of projectTokens (for this investmentId) that have been claimed by users.
      */
     function invariant_contractProjectTokenBalanceIsEqualToDepositsMinusClaims() public {
-        console.log("contract balance: ", IERC20(mockProject).balanceOf(address(handler)));
+        
+        uint16 thisInvestmentId = investmentHandler.latestInvestmentId();
+        (, address projectTokenWallet, , , , , , ) = investmentHandler.investments(thisInvestmentId);
+
+        console.log("contract balance: ", IERC20(mockProject).balanceOf(projectTokenWallet));
         console.log(
             "deposited-claimed: ",
             ghost_bound_depositedProjectTokens[ghost_bound_latestInvestmentId] -
                 ghost_bound_claimedTotal[ghost_bound_latestInvestmentId]
         );
 
-        assertTrue(IERC20(mockProject).balanceOf(address(handler)) > 0);
+        assertTrue(IERC20(mockProject).balanceOf(projectTokenWallet) > 0);
         assertTrue(
-            (IERC20(mockProject).balanceOf(address(handler)) ==
+            (IERC20(mockProject).balanceOf(projectTokenWallet) ==
                 (ghost_bound_depositedProjectTokens[ghost_bound_latestInvestmentId] -
                     ghost_bound_claimedTotal[ghost_bound_latestInvestmentId]))
         );
@@ -125,10 +129,10 @@ contract InvestmentHandlerInvariantTests_Open is InvestmentHandlerTestSetup {
         generateUserAddressListAndDealEtherAndMockStable();
         createInvestment();
         usersInvestRandomAmounts();
-        transferProjectTokensToInvestmentHandler(1_000_000 * 1e6);
+        transferProjectTokensToProjectTokenWallet(1_000_000 * 1e6);
         usersClaimRandomAmounts();
 
-        ( , , , ,investedTotal, , ) = investmentHandler.investments(
+        (, , , , ,investedTotal, , ) = investmentHandler.investments(
             investmentHandler.latestInvestmentId()
         );
     }
@@ -144,16 +148,19 @@ contract InvestmentHandlerInvariantTests_Open is InvestmentHandlerTestSetup {
      * Invariant 2: The projectToken balance of the InvestmentHandler contract should be equal to the total amount of projectTokens deposited to the contract minus the total amount of projectTokens (for this investmentId) that have been claimed by users.
      */
     function invariant_open_contractProjectTokenBalanceIsEqualToDepositsMinusClaims() public {
-        console.log("contract balance: ", IERC20(mockProject).balanceOf(address(investmentHandler)));
+        uint16 thisInvestmentId = investmentHandler.latestInvestmentId();
+        (, address projectTokenWallet, , , , , , ) = investmentHandler.investments(thisInvestmentId);
+        
+        console.log("contract balance: ", IERC20(mockProject).balanceOf(projectTokenWallet));
         console.log(
             "deposited-claimed: ",
             ghost_open_depositedProjectTokens[ghost_open_latestInvestmentId] -
                 ghost_open_claimedTotal[ghost_open_latestInvestmentId]
         );
 
-        assertTrue(IERC20(mockProject).balanceOf(address(investmentHandler)) > 0);
+        assertTrue(IERC20(mockProject).balanceOf(projectTokenWallet) > 0);
         assertTrue(
-            (IERC20(mockProject).balanceOf(address(investmentHandler)) ==
+            (IERC20(mockProject).balanceOf(projectTokenWallet) ==
                 (ghost_open_depositedProjectTokens[ghost_open_latestInvestmentId] -
                     ghost_open_claimedTotal[ghost_open_latestInvestmentId]))
         );
@@ -200,10 +207,10 @@ contract InvestmentHandlerFuzzTests is InvestmentHandlerTestSetup {
         generateUserAddressListAndDealEtherAndMockStable();
         createInvestment();
         usersInvestRandomAmounts();
-        transferProjectTokensToInvestmentHandler(1_000_000 * 1e6);
+        transferProjectTokensToProjectTokenWallet(1_000_000 * 1e6);
         usersClaimRandomAmounts();
 
-        ( , , , ,investedTotal, , ) = investmentHandler.investments(
+        (, , , , ,investedTotal, , ) = investmentHandler.investments(
             investmentHandler.latestInvestmentId()
         );
     }

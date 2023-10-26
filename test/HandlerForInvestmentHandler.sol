@@ -124,6 +124,24 @@ contract HandlerForInvestmentHandler is Test {
         );
     }
 
+    function initializeProjectTokenWallet(
+        address _caller,
+        uint16 _investmentId,
+        address _projectTokenAddress,
+        bool _pauseAfterCall
+    ) public useActor(_caller) {
+        uint16 minId = 1;
+        uint16 maxId = 333;
+
+        uint256 boundInvestmentId = bound(_investmentId, minId, maxId);
+
+        investmentHandler.initializeProjectTokenWallet(
+            uint16(boundInvestmentId),
+            _projectTokenAddress,
+            _pauseAfterCall
+        );
+    }
+
     function latestInvestmentId() public view returns (uint16) {
         return investmentHandler.latestInvestmentId();
     }

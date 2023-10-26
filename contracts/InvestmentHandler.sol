@@ -14,7 +14,9 @@ import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/Mes
 import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { Clones } from "@openzeppelin/contracts/proxy/Clones.sol";
 import { PausableSelective } from "@uintgroup/pausable-selective/src/PausableSelective.sol";
+import { ProjectTokenWallet } from "./ProjectTokenWallet.sol";
 
 contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective {
     //V^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^VvV^
@@ -28,6 +30,9 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
     bytes32 private constant INVESTMENT_MANAGER_ROLE = keccak256("ADD_INVESTMENT_ROLE");
     bytes32 private constant PAYMENT_TOKEN_TRANSFER_ROLE = keccak256("PAYMENT_TOKEN_TRANSFER_ROLE");
     bytes32 private constant REFUNDER_ROLE = keccak256("REFUNDER_ROLE");
+
+    ///@dev implementation address for projectTokenWallet
+    address public projectTokenWalletImplementation;
 
     /// @dev global tracker for latest investment id
     uint16 public latestInvestmentId;
@@ -45,6 +50,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
      */
     struct Investment {
         address signer;
+        address projectTokenWallet;
         IERC20 projectToken;
         IERC20 paymentToken;
         uint8 contributionPhase;
@@ -120,6 +126,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
     event InvestmentPhaseSet(uint256 indexed investmentId, uint256 indexed phase);
     event InvestmentProjectTokenAddressSet(uint256 indexed investmentId, address indexed projectToken);
     event InvestmentProjectTokenAllocationSet(uint256 indexed investmentId, uint256 indexed amount);
+    event ProjectTokenWalletInitialized(uint256 indexed investmentId, address indexed projectTokenWallet);
     event UserInvestmentContribution(
         address indexed sender,
         address indexed kycAddress,
@@ -196,6 +203,9 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
 
         //Pauses admin functions that should be unpaused to use for security
         defaultPauseConfig();
+
+        //Implementation for InvestmentWallet is set up
+        projectTokenWalletImplementation = address(new ProjectTokenWallet());
 
         //Deployer renounces default admin role
         _revokeRole(DEFAULT_ADMIN_ROLE, _msgSender());
@@ -287,7 +297,8 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
         userInvestment.totalTokensClaimed += _params.claimAmount;
         investment.totalTokensClaimed += _params.claimAmount;
 
-        investment.projectToken.safeTransfer(_params.tokenRecipient, _params.claimAmount);
+        //transfer tokens held in the project token wallet for this investment to the user
+        ProjectTokenWallet(investment.projectTokenWallet).userClaim(_params.tokenRecipient, _params.claimAmount);
 
         emit UserTokenClaim(
             msg.sender,
@@ -416,6 +427,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
      * @param _kycAddress the address on whose behalf the claim is being made by msg.sender
      * @param _investmentId the id of the investment the user is claiming from
      */
+     //TODO: cache investment / userInvestment, this is not efficient, but will wait until later ticket to optimize pre-audits
     function computeUserClaimableAllocationForInvestment(
         address _kycAddress,
         uint16 _investmentId
@@ -428,7 +440,8 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
             .totalInvestedPaymentToken;
         uint256 userTokensClaimed = userInvestments[_kycAddress][_investmentId].totalTokensClaimed;
 
-        uint256 contractTokenBalance = investments[_investmentId].projectToken.balanceOf(address(this));
+        address thisProjectTokenWallet = investments[_investmentId].projectTokenWallet;
+        uint256 contractTokenBalance = investments[_investmentId].projectToken.balanceOf(thisProjectTokenWallet);
 
         uint256 userBaseClaimableTokens = Math.mulDiv(
             contractTokenBalance + totalTokensClaimed,
@@ -565,10 +578,14 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
         bool _pauseAfterCall
     ) external nonReentrant whenNotPausedSelective(_pauseAfterCall) onlyRole(INVESTMENT_MANAGER_ROLE) {
         uint128[] memory _investedPaymentTokenForPhase = new uint128[](_allocatedPaymentTokenForPhase.length);
+
+        //create wallet for investment's project token
+        address thisWalletClone = Clones.clone(projectTokenWalletImplementation);
         
         //increment latestInvestmentId while creating new Investment struct with default parameters other than those specified in function inputs
         investments[++latestInvestmentId] = Investment({
             signer: _signer,
+            projectTokenWallet: thisWalletClone,
             projectToken: IERC20(address(0)),
             paymentToken: IERC20(_paymentToken),
             contributionPhase: 0,
@@ -654,6 +671,18 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
         emit InvestmentProjectTokenAllocationSet(_investmentId, _totalTokensAllocated);
     }
 
+    /**
+     * @dev initializes the project token wallet for a given investment ID
+     */
+    function initializeProjectTokenWallet(
+        uint16 _investmentId, 
+        address _projectTokenAddress, 
+        bool _pauseAfterCall
+    ) external nonReentrant whenNotPausedSelective(_pauseAfterCall) onlyRole(INVESTMENT_MANAGER_ROLE) {
+        address thisProjectTokenWallet = investments[_investmentId].projectTokenWallet;
+        ProjectTokenWallet(thisProjectTokenWallet).initialize(address(this), _projectTokenAddress);
+        emit ProjectTokenWalletInitialized(_investmentId, thisProjectTokenWallet);
+    }
     /**
      * @dev admin-only for pausing/unpausing any function in the contract. this function cannot be paused itself.
      */
@@ -744,8 +773,9 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
             revert RefundAmountExceedsUserBalance();
         }
 
-        // contract must not contain project token, to avoid manipulation of refunds based on token price
-        if (investments[_investmentId].projectToken.balanceOf(address(this)) > 0) {
+        // project token wallet must not contain project token, to avoid manipulation of refunds based on token price
+        address thisProjectTokenWallet = investments[_investmentId].projectTokenWallet;
+        if (investments[_investmentId].projectToken.balanceOf(thisProjectTokenWallet) > 0) {
             revert TooLateForRefund();
         }
 
@@ -793,9 +823,6 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
         uint256 _tokenAmount,
         bool _pauseAfterCall
     ) public nonReentrant whenNotPausedSelective(_pauseAfterCall) onlyRole(PAYMENT_TOKEN_TRANSFER_ROLE) {
-        if (_tokenAmount > IERC20(_tokenAddress).balanceOf(address(this))) {
-            revert ERC20AmountExceedsBalance();
-        }
         IERC20(_tokenAddress).safeTransfer(_destinationAddress, _tokenAmount);
         emit ERC20Recovered(msg.sender, _tokenAddress, _destinationAddress, _tokenAmount);
     }
