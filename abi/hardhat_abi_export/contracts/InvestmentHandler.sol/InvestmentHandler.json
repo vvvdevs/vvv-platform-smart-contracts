@@ -32,7 +32,50 @@
   },
   {
     "inputs": [],
+    "name": "AccessControlBadConfirmation",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "neededRole",
+        "type": "bytes32"
+      }
+    ],
+    "name": "AccessControlUnauthorizedAccount",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "AddressAlreadyInKycNetwork",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "target",
+        "type": "address"
+      }
+    ],
+    "name": "AddressEmptyCode",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "AddressInsufficientBalance",
     "type": "error"
   },
   {
@@ -77,7 +120,17 @@
   },
   {
     "inputs": [],
+    "name": "ERC1167FailedCreateClone",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "ERC20AmountExceedsBalance",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "FailedInnerCall",
     "type": "error"
   },
   {
@@ -112,6 +165,11 @@
   },
   {
     "inputs": [],
+    "name": "MathOverflowedMulDiv",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "NotInKycAddressNetwork",
     "type": "error"
   },
@@ -133,7 +191,23 @@
   },
   {
     "inputs": [],
+    "name": "ReentrancyGuardReentrantCall",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "RefundAmountExceedsUserBalance",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      }
+    ],
+    "name": "SafeERC20FailedOperation",
     "type": "error"
   },
   {
@@ -358,6 +432,25 @@
       }
     ],
     "name": "PaymentTokenTransferred",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "investmentId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "projectTokenWallet",
+        "type": "address"
+      }
+    ],
+    "name": "ProjectTokenWalletInitialized",
     "type": "event"
   },
   {
@@ -911,6 +1004,29 @@
   {
     "inputs": [
       {
+        "internalType": "uint16",
+        "name": "_investmentId",
+        "type": "uint16"
+      },
+      {
+        "internalType": "address",
+        "name": "_projectTokenAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "bool",
+        "name": "_pauseAfterCall",
+        "type": "bool"
+      }
+    ],
+    "name": "initializeProjectTokenWallet",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "components": [
           {
             "internalType": "uint16",
@@ -966,6 +1082,11 @@
       {
         "internalType": "address",
         "name": "signer",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "projectTokenWallet",
         "type": "address"
       },
       {
@@ -1068,6 +1189,19 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "projectTokenWalletImplementation",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "address",
@@ -1145,7 +1279,7 @@
       },
       {
         "internalType": "address",
-        "name": "account",
+        "name": "callerConfirmation",
         "type": "address"
       }
     ],
