@@ -42,4 +42,5 @@ contract DeployInvestmentHandler is Script {
     0x01D1a93e9CC5f2Ab537Fcb35De4efBB5605fb808
     0x6b59209840641161b6B33BEfeC87d74c42b71838
     0x9B681dAF666e5341575d080612F76005AD0fdbBb (vvv-63 compatible)
+    0xFcEd6767DD9Fb2e4775Afe84589C297b8D289Dc3 (vvv-63 compatible)
  */
