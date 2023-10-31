@@ -124,7 +124,7 @@ contract HandlerForInvestmentHandler is Test {
         );
     }
 
-    function initializeProjectTokenWallet(
+    function createAndInitializeProjectTokenWallet(
         address _caller,
         uint16 _investmentId,
         address _projectTokenAddress,
@@ -135,7 +135,7 @@ contract HandlerForInvestmentHandler is Test {
 
         uint256 boundInvestmentId = bound(_investmentId, minId, maxId);
 
-        investmentHandler.initializeProjectTokenWallet(
+        investmentHandler.createAndInitializeProjectTokenWallet(
             uint16(boundInvestmentId),
             _projectTokenAddress,
             _pauseAfterCall

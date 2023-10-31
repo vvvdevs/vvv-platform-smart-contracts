@@ -185,7 +185,7 @@ contract InvestmentHandlerTestSetup is Test {
             phase,
             pauseAfterCall
         );
-        investmentHandler.initializeProjectTokenWallet(
+        investmentHandler.createAndInitializeProjectTokenWallet(
             investmentHandler.latestInvestmentId(), 
             address(mockProject), 
             pauseAfterCall
@@ -341,7 +341,7 @@ contract InvestmentHandlerTestSetup is Test {
             phase,
             pauseAfterCall
         );
-        handler.initializeProjectTokenWallet(
+        handler.createAndInitializeProjectTokenWallet(
             investmentManager,
             ghost_bound_latestInvestmentId,
             address(mockProject),

@@ -126,7 +126,7 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
     event InvestmentPhaseSet(uint256 indexed investmentId, uint256 indexed phase);
     event InvestmentProjectTokenAddressSet(uint256 indexed investmentId, address indexed projectToken);
     event InvestmentProjectTokenAllocationSet(uint256 indexed investmentId, uint256 indexed amount);
-    event ProjectTokenWalletInitialized(uint256 indexed investmentId, address indexed projectTokenWallet);
+    event ProjectTokenWalletCreatedAndInitialized(uint256 indexed investmentId, address indexed projectTokenWallet);
     event UserInvestmentContribution(
         address indexed sender,
         address indexed kycAddress,
@@ -578,14 +578,11 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
         bool _pauseAfterCall
     ) external nonReentrant whenNotPausedSelective(_pauseAfterCall) onlyRole(INVESTMENT_MANAGER_ROLE) {
         uint128[] memory _investedPaymentTokenForPhase = new uint128[](_allocatedPaymentTokenForPhase.length);
-
-        //create wallet for investment's project token
-        address thisWalletClone = Clones.clone(projectTokenWalletImplementation);
         
         //increment latestInvestmentId while creating new Investment struct with default parameters other than those specified in function inputs
         investments[++latestInvestmentId] = Investment({
             signer: _signer,
-            projectTokenWallet: thisWalletClone,
+            projectTokenWallet: address(0),
             projectToken: IERC20(address(0)),
             paymentToken: IERC20(_paymentToken),
             contributionPhase: 0,
@@ -672,16 +669,19 @@ contract InvestmentHandler is AccessControl, ReentrancyGuard, PausableSelective 
     }
 
     /**
-     * @dev initializes the project token wallet for a given investment ID
+     * @dev creates and initializes the project token wallet for a given investment ID
      */
-    function initializeProjectTokenWallet(
+    function createAndInitializeProjectTokenWallet(
         uint16 _investmentId, 
         address _projectTokenAddress, 
         bool _pauseAfterCall
     ) external nonReentrant whenNotPausedSelective(_pauseAfterCall) onlyRole(INVESTMENT_MANAGER_ROLE) {
-        address thisProjectTokenWallet = investments[_investmentId].projectTokenWallet;
-        ProjectTokenWallet(thisProjectTokenWallet).initialize(address(this), _projectTokenAddress);
-        emit ProjectTokenWalletInitialized(_investmentId, thisProjectTokenWallet);
+
+        //create wallet for investment's project token
+        address thisWalletClone = Clones.clone(projectTokenWalletImplementation);
+        investments[_investmentId].projectTokenWallet = thisWalletClone;
+        ProjectTokenWallet(thisWalletClone).initialize(address(this), _projectTokenAddress);
+        emit ProjectTokenWalletCreatedAndInitialized(_investmentId, thisWalletClone);
     }
     /**
      * @dev admin-only for pausing/unpausing any function in the contract. this function cannot be paused itself.
