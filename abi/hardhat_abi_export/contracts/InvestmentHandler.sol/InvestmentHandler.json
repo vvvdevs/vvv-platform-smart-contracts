@@ -450,7 +450,7 @@
         "type": "address"
       }
     ],
-    "name": "ProjectTokenWalletInitialized",
+    "name": "ProjectTokenWalletCreatedAndInitialized",
     "type": "event"
   },
   {
@@ -838,6 +838,29 @@
   {
     "inputs": [
       {
+        "internalType": "uint16",
+        "name": "_investmentId",
+        "type": "uint16"
+      },
+      {
+        "internalType": "address",
+        "name": "_projectTokenAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "bool",
+        "name": "_pauseAfterCall",
+        "type": "bool"
+      }
+    ],
+    "name": "createAndInitializeProjectTokenWallet",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "bytes4",
         "name": "",
         "type": "bytes4"
@@ -999,29 +1022,6 @@
       }
     ],
     "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint16",
-        "name": "_investmentId",
-        "type": "uint16"
-      },
-      {
-        "internalType": "address",
-        "name": "_projectTokenAddress",
-        "type": "address"
-      },
-      {
-        "internalType": "bool",
-        "name": "_pauseAfterCall",
-        "type": "bool"
-      }
-    ],
-    "name": "initializeProjectTokenWallet",
-    "outputs": [],
-    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
