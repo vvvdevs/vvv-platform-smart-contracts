@@ -110,7 +110,7 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
             revert InvalidSignature();
         }
 
-        if(_deadline < block.timestamp) {
+        if(block.timestamp > _deadline) {
             revert ExpiredSignature();
         }
 
@@ -221,6 +221,10 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
         baseExtension = _baseExtension;
     }
 
+    function withdraw() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        (bool success, ) = msg.sender.call{value: address(this).balance}("");
+        if (!success) { revert UnableToWithdraw(); }
+    }
 
     //==================================================================================================
     // INTERNAL FUNCTIONS
@@ -246,11 +250,6 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
                 ),
                 _signature
             );
-    }
-
-    function withdraw() external onlyRole(DEFAULT_ADMIN_ROLE) {
-        (bool success, ) = msg.sender.call{value: address(this).balance}("");
-        if (!success) { revert UnableToWithdraw(); }
     }
 
     //==================================================================================================
