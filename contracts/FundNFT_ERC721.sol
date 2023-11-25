@@ -36,6 +36,7 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
     mapping(address => uint256) public publicMintsByAddress;
 
     error ArrayLengthMismatch();
+    error ExpiredSignature();
     error InsufficientFunds();
     error InvalidSignature();
     error MaxAllocationWouldBeExceeded();
@@ -102,10 +103,15 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
         address _to,
         uint256 _quantity,
         uint256 _maxQuantity,
+        uint256 _deadline,
         bytes memory _signature
     ) external payable nonReentrant whenNotPaused {
-        if(!_isSignatureValid(msg.sender, _maxQuantity, _signature)) {
+        if(!_isSignatureValid(msg.sender, _maxQuantity, _deadline, _signature)) {
             revert InvalidSignature();
+        }
+
+        if(_deadline < block.timestamp) {
+            revert ExpiredSignature();
         }
 
         if(_quantity + totalSupply > MAX_MINTABLE_SUPPLY) {
@@ -222,6 +228,7 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
     function _isSignatureValid(
         address _minter,
         uint256 _maxQuantity,
+        uint256 _deadline,
         bytes memory _signature
     ) internal view returns (bool) {
         return
@@ -232,6 +239,7 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
                         abi.encodePacked(
                             _minter,
                             _maxQuantity,
+                            _deadline,
                             block.chainid
                         )
                     )

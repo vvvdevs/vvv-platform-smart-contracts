@@ -27,6 +27,7 @@ contract InvestmentHandlerTestSetup is Test {
     uint256 public defaultAdminControllerKey = 12345; //will likely be multisig
     uint256 public custodianKey = 123456;
     uint256 public signerKey = 123456789;
+    uint256 public whitelistMintDeadline;
 
     address deployer = vm.addr(deployerKey);
     address defaultAdminController = vm.addr(defaultAdminControllerKey);
@@ -101,10 +102,11 @@ contract InvestmentHandlerTestSetup is Test {
 
     function getSignature(
         address _minter,
-        uint256 _maxQuantity
+        uint256 _maxQuantity,
+        uint256 _deadline
     ) public returns (bytes memory) {
         chainid = block.chainid;
-        bytes32 messageHash = keccak256(abi.encodePacked(_minter, _maxQuantity, chainid));
+        bytes32 messageHash = keccak256(abi.encodePacked(_minter, _maxQuantity, _deadline, chainid));
         bytes32 prefixedHash = prefixed(messageHash);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerKey, prefixedHash);
         bytes memory signature = toBytesConcat(r, s, v);
@@ -134,9 +136,10 @@ contract InvestmentHandlerTestSetup is Test {
     }
 
     function testMintViaSignature_ERC721() public {
-        bytes memory signature = getSignature(sampleUser, 1);
+        whitelistMintDeadline = blockTimestamp + 1;
+        bytes memory signature = getSignature(sampleUser, 1, whitelistMintDeadline);
         vm.startPrank(sampleUser, sampleUser);
-        fundNft_ERC721.mintBySignature{value: fundNft_ERC721.whitelistMintPrice()}(sampleUser, 1, 1, signature);
+        fundNft_ERC721.mintBySignature{value: fundNft_ERC721.whitelistMintPrice()}(sampleUser, 1, 1, whitelistMintDeadline, signature);
         vm.stopPrank();
         uint256 idOffset = fundNft_ERC721.currentNonReservedId();
         assertTrue(fundNft_ERC721.ownerOf(idOffset) == sampleUser);
@@ -200,7 +203,8 @@ contract InvestmentHandlerTestSetup is Test {
     }
 
     function testMintMaxSupplyExceeded() public {
-        bytes memory signature = getSignature(sampleUser, 1);
+        whitelistMintDeadline = blockTimestamp + 1;
+        bytes memory signature = getSignature(sampleUser, 1, whitelistMintDeadline);
         vm.startPrank(deployer, deployer);
         // loop so that we mint 9999 nfts
         for (uint256 i = 0; i < 9999; i++) {
@@ -209,7 +213,7 @@ contract InvestmentHandlerTestSetup is Test {
         vm.stopPrank();
         vm.startPrank(sampleUser, sampleUser);
         vm.expectRevert(VVV_FUND_ERC721.MaxSupplyWouldBeExceeded.selector);
-        fundNft_ERC721.mintBySignature{value: 0.05 ether}(sampleUser, 1, 1, signature);
+        fundNft_ERC721.mintBySignature{value: 0.05 ether}(sampleUser, 1, 1, whitelistMintDeadline, signature);
         vm.stopPrank();
     }
 
@@ -279,12 +283,25 @@ contract InvestmentHandlerTestSetup is Test {
     }
 
     function testSignatureMintWhenPaused() public {
-        bytes memory signature = getSignature(sampleUser, 1);
+        whitelistMintDeadline = blockTimestamp + 1;
+        bytes memory signature = getSignature(sampleUser, 1, whitelistMintDeadline);
         vm.startPrank(deployer, deployer);
         fundNft_ERC721.pause();
-        vm.expectRevert();
-        fundNft_ERC721.mintBySignature{value: 0.05 ether}(sampleUser, 1, 1, signature);
         vm.stopPrank();
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert();
+        fundNft_ERC721.mintBySignature{value: 0.05 ether}(sampleUser, 1, 1, whitelistMintDeadline, signature);
+        vm.stopPrank();
+    }
+
+    function testSignatureMintWithExpiredSignature() public {
+        whitelistMintDeadline = blockTimestamp + 1;
+        bytes memory signature = getSignature(sampleUser, 1, whitelistMintDeadline);
+        advanceBlockNumberAndTimestamp(1); //advance one block to make signature invalid
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert();
+        fundNft_ERC721.mintBySignature{value: 0.05 ether}(sampleUser, 1, 1, whitelistMintDeadline, signature);
+        vm.stopPrank();  
     }
 
     function testWithdraw() public {
