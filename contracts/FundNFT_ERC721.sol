@@ -40,7 +40,6 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
     error InvalidSignature();
     error MaxAllocationWouldBeExceeded();
     error MaxSupplyWouldBeExceeded();
-    error NotTokenOwner();
     error MaxPublicMintsWouldBeExceeded();
     error PublicMintNotStarted();
     error UnableToWithdraw();
