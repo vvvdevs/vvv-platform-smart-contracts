@@ -83,9 +83,6 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
         uint256 quantity = _ids.length;
         totalSupply += quantity;
         for(uint256 i = 0; i < quantity; ++i) {
-            if(S1NFT.ownerOf(_ids[i]) != msg.sender) {
-                revert NotTokenOwner();
-            }
             S1NFT.transferFrom(msg.sender, address(this), _ids[i]);
             _mint(_to, _ids[i]);
         }
