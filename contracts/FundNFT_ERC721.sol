@@ -6,7 +6,7 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.s
 import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import { Pausable } from  "@openzeppelin/contracts/utils/Pausable.sol";
@@ -18,6 +18,13 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
     using Strings for uint256;
 
     IERC721 public immutable S1NFT;
+
+    // EIP-712 definitions
+    bytes32 private constant DOMAIN_TYPEHASH = 
+        keccak256(bytes("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"));
+    bytes32 private constant WHITELIST_MINT_TYPEHASH = 
+        keccak256(bytes("WhitelistMint(address minter,uint256 maxQuantity,uint256 deadline)"));
+    bytes32 private immutable DOMAIN_SEPARATOR;
     
     uint256 public constant MAX_SUPPLY = 10_000;
     uint256 public constant MAX_MINTABLE_SUPPLY = MAX_SUPPLY - 1;
@@ -41,6 +48,7 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
     error InvalidSignature();
     error MaxAllocationWouldBeExceeded();
     error MaxSupplyWouldBeExceeded();
+    error NotTokenOwner();
     error MaxPublicMintsWouldBeExceeded();
     error PublicMintNotStarted();
     error UnableToWithdraw();
@@ -57,6 +65,17 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         signer = _signer;
         baseURI = _baseUri;
+
+        // EIP-712 domain separator
+        DOMAIN_SEPARATOR = keccak256(
+            abi.encode(
+                DOMAIN_TYPEHASH,
+                keccak256(bytes("VVV_FUND_ERC721")),
+                keccak256(bytes("1")),
+                block.chainid,
+                address(this)
+            )
+        );
 
         // should be updated to the actual start time after deployment
         publicMintStartTime = block.timestamp;
@@ -83,6 +102,9 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
         uint256 quantity = _ids.length;
         totalSupply += quantity;
         for(uint256 i = 0; i < quantity; ++i) {
+            if(S1NFT.ownerOf(_ids[i]) != msg.sender) {
+                revert NotTokenOwner();
+            }
             S1NFT.transferFrom(msg.sender, address(this), _ids[i]);
             _mint(_to, _ids[i]);
         }
@@ -106,7 +128,7 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
             revert InvalidSignature();
         }
 
-        if(block.timestamp > _deadline) {
+        if(_deadline < block.timestamp) {
             revert ExpiredSignature();
         }
 
@@ -217,10 +239,6 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
         baseExtension = _baseExtension;
     }
 
-    function withdraw() external onlyRole(DEFAULT_ADMIN_ROLE) {
-        (bool success, ) = msg.sender.call{value: address(this).balance}("");
-        if (!success) { revert UnableToWithdraw(); }
-    }
 
     //==================================================================================================
     // INTERNAL FUNCTIONS
@@ -231,21 +249,28 @@ contract VVV_FUND_ERC721 is ERC721, AccessControl, ReentrancyGuard, Pausable {
         uint256 _deadline,
         bytes memory _signature
     ) internal view returns (bool) {
-        return
-            SignatureChecker.isValidSignatureNow(
-                signer,
-                MessageHashUtils.toEthSignedMessageHash(
-                    keccak256(
-                        abi.encodePacked(
-                            _minter,
-                            _maxQuantity,
-                            _deadline,
-                            block.chainid
-                        )
+        bytes32 digest = keccak256(
+            abi.encodePacked(
+                "\x19\x01",
+                DOMAIN_SEPARATOR,
+                keccak256(
+                    abi.encode(
+                        WHITELIST_MINT_TYPEHASH,
+                        _minter,
+                        _maxQuantity,
+                        _deadline
                     )
-                ),
-                _signature
-            );
+                )
+            )
+        );
+
+        address recoveredAddress = ECDSA.recover(digest, _signature);
+        return recoveredAddress == signer && recoveredAddress != address(0);
+    }
+
+    function withdraw() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        (bool success, ) = msg.sender.call{value: address(this).balance}("");
+        if (!success) { revert UnableToWithdraw(); }
     }
 
     //==================================================================================================

@@ -19,7 +19,7 @@ contract InvestmentHandlerTestSetup is Test {
 
     MyToken public s1nft;
 
-    VVV_FUND_ERC721 public fundNft_ERC721;
+    VVV_FUND_ERC721 public fundNft;
 
     address[] public users = new address[](333);
 
@@ -41,7 +41,6 @@ contract InvestmentHandlerTestSetup is Test {
 
     uint256 blockNumber;
     uint256 blockTimestamp;
-    uint256 chainid;
 
     // setup =============================================================================
 
@@ -51,14 +50,14 @@ contract InvestmentHandlerTestSetup is Test {
         s1nft = new MyToken();
 
 
-        fundNft_ERC721 = new VVV_FUND_ERC721(
+        fundNft = new VVV_FUND_ERC721(
             address(s1nft),
             signer,
             "VVV Fund",
             "VVVF",
             "https://vvv.fund/api/token/"
         );
-        fundNft_ERC721.unpause(); 
+        fundNft.unpause(); 
         vm.stopPrank();
 
         generateUserAddressListAndDealEther();
@@ -96,23 +95,45 @@ contract InvestmentHandlerTestSetup is Test {
         return signature;
     }
 
-    function prefixed(bytes32 hash) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash));
-    }
-
     function getSignature(
         address _minter,
         uint256 _maxQuantity,
         uint256 _deadline
     ) public returns (bytes memory) {
-        chainid = block.chainid;
-        bytes32 messageHash = keccak256(abi.encodePacked(_minter, _maxQuantity, _deadline, chainid));
-        bytes32 prefixedHash = prefixed(messageHash);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerKey, prefixedHash);
+        // EIP-712 domain separator
+        bytes32 domainSeparator = keccak256(
+            abi.encode(
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256(bytes("VVV_FUND_ERC721")),
+                keccak256(bytes("1")),
+                block.chainid,
+                address(fundNft)
+            )
+        );
+
+        // EIP-712 encoded data
+        bytes32 digest = keccak256(
+            abi.encodePacked(
+                "\x19\x01",
+                domainSeparator,
+                keccak256(
+                    abi.encode(
+                        keccak256("WhitelistMint(address minter,uint256 maxQuantity,uint256 deadline)"),
+                        _minter,
+                        _maxQuantity,
+                        _deadline
+                    )
+                )
+            )
+        );
+
+        // Get the signature components
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerKey, digest);
+
         bytes memory signature = toBytesConcat(r, s, v);
 
         if (logging) {
-            emit log_named_bytes32("hash", messageHash);
+            emit log_named_bytes32("digest", digest);
             emit log_named_bytes("signature", signature);
         }
 
@@ -131,74 +152,74 @@ contract InvestmentHandlerTestSetup is Test {
     //==================================================================================================
     // ERC721 VERSION TESTS
     //==================================================================================================
-    function testDeployment_ERC721() public {
-        assertTrue(address(fundNft_ERC721) != address(0));
+    function testDeployment() public {
+        assertTrue(address(fundNft) != address(0));
     }
 
-    function testMintViaSignature_ERC721() public {
+    function testMintViaSignature() public {
         whitelistMintDeadline = blockTimestamp + 1;
         bytes memory signature = getSignature(sampleUser, 1, whitelistMintDeadline);
         vm.startPrank(sampleUser, sampleUser);
-        fundNft_ERC721.mintBySignature{value: fundNft_ERC721.whitelistMintPrice()}(sampleUser, 1, 1, whitelistMintDeadline, signature);
+        fundNft.mintBySignature{value: fundNft.whitelistMintPrice()}(sampleUser, 1, 1, whitelistMintDeadline, signature);
         vm.stopPrank();
-        uint256 idOffset = fundNft_ERC721.currentNonReservedId();
-        assertTrue(fundNft_ERC721.ownerOf(idOffset) == sampleUser);
+        uint256 idOffset = fundNft.currentNonReservedId();
+        assertTrue(fundNft.ownerOf(idOffset) == sampleUser);
     }
 
     function testPublicMint() public {
         vm.startPrank(sampleUser, sampleUser);
-        fundNft_ERC721.publicMint{value: 0.05 ether}(sampleUser, 1);
+        fundNft.publicMint{value: 0.05 ether}(sampleUser, 1);
         vm.stopPrank();
 
-        uint256 idOffset = fundNft_ERC721.currentNonReservedId();
-        assertTrue(fundNft_ERC721.ownerOf(idOffset) == sampleUser);
+        uint256 idOffset = fundNft.currentNonReservedId();
+        assertTrue(fundNft.ownerOf(idOffset) == sampleUser);
     }
 
     function testPublicMintMax() public {
         vm.startPrank(sampleUser, sampleUser);
-        fundNft_ERC721.publicMint{value: 0.25 ether}(sampleUser, 5);
+        fundNft.publicMint{value: 0.25 ether}(sampleUser, 5);
         vm.stopPrank();
-        uint256 idOffset = fundNft_ERC721.currentNonReservedId();
-        assertTrue(fundNft_ERC721.ownerOf(idOffset - 4)== sampleUser);
-        assertTrue(fundNft_ERC721.ownerOf(idOffset - 3) == sampleUser);
-        assertTrue(fundNft_ERC721.ownerOf(idOffset - 2) == sampleUser);
-        assertTrue(fundNft_ERC721.ownerOf(idOffset - 1) == sampleUser);
-        assertTrue(fundNft_ERC721.ownerOf(idOffset) == sampleUser);
+        uint256 idOffset = fundNft.currentNonReservedId();
+        assertTrue(fundNft.ownerOf(idOffset - 4)== sampleUser);
+        assertTrue(fundNft.ownerOf(idOffset - 3) == sampleUser);
+        assertTrue(fundNft.ownerOf(idOffset - 2) == sampleUser);
+        assertTrue(fundNft.ownerOf(idOffset - 1) == sampleUser);
+        assertTrue(fundNft.ownerOf(idOffset) == sampleUser);
     }
 
     function testPublicMintMaxExceeded() public {
         vm.startPrank(sampleUser, sampleUser);
         vm.expectRevert(VVV_FUND_ERC721.MaxPublicMintsWouldBeExceeded.selector);
-        fundNft_ERC721.publicMint{value: 0.30 ether}(sampleUser, 6);
+        fundNft.publicMint{value: 0.30 ether}(sampleUser, 6);
         vm.stopPrank();
     }
 
     function testPublicMintSetMax() public {
         vm.startPrank(deployer, deployer);
-        fundNft_ERC721.setMaxPublicMintsPerAddress(1);
+        fundNft.setMaxPublicMintsPerAddress(1);
         vm.stopPrank();
         vm.startPrank(sampleUser, sampleUser);
         vm.expectRevert(VVV_FUND_ERC721.MaxPublicMintsWouldBeExceeded.selector);
-        fundNft_ERC721.publicMint{value: 0.05 ether}(sampleUser, 2);
+        fundNft.publicMint{value: 0.05 ether}(sampleUser, 2);
         vm.stopPrank();
     }
 
     function testPublicMintMaxSupplyExceded() public {
         vm.startPrank(deployer, deployer);
         for (uint256 i = 0; i < 9999; i++) {
-            fundNft_ERC721.adminMint(deployer, 1);
+            fundNft.adminMint(deployer, 1);
         }
         vm.stopPrank();
         vm.startPrank(sampleUser, sampleUser);
         vm.expectRevert(VVV_FUND_ERC721.MaxSupplyWouldBeExceeded.selector);
-        fundNft_ERC721.publicMint{value: 0.05 ether}(sampleUser, 1);
+        fundNft.publicMint{value: 0.05 ether}(sampleUser, 1);
         vm.stopPrank();
     }
 
     function testPublicMintInsuffecientFunds() public {
         vm.startPrank(sampleUser, sampleUser);
         vm.expectRevert(VVV_FUND_ERC721.InsufficientFunds.selector);
-        fundNft_ERC721.publicMint{value: 0.01 ether}(sampleUser, 1);
+        fundNft.publicMint{value: 0.01 ether}(sampleUser, 1);
         vm.stopPrank();
     }
 
@@ -208,77 +229,77 @@ contract InvestmentHandlerTestSetup is Test {
         vm.startPrank(deployer, deployer);
         // loop so that we mint 9999 nfts
         for (uint256 i = 0; i < 9999; i++) {
-            fundNft_ERC721.adminMint(deployer, 1);
+            fundNft.adminMint(deployer, 1);
         }
         vm.stopPrank();
         vm.startPrank(sampleUser, sampleUser);
         vm.expectRevert(VVV_FUND_ERC721.MaxSupplyWouldBeExceeded.selector);
-        fundNft_ERC721.mintBySignature{value: 0.05 ether}(sampleUser, 1, 1, whitelistMintDeadline, signature);
+        fundNft.mintBySignature{value: 0.05 ether}(sampleUser, 1, 1, whitelistMintDeadline, signature);
         vm.stopPrank();
     }
 
     function testSetPublicMintStartTime() public {
         vm.startPrank(deployer, deployer);
         uint256 newStartTime = blockTimestamp + 1000;
-        fundNft_ERC721.setPublicMintStartTime(newStartTime);
+        fundNft.setPublicMintStartTime(newStartTime);
         vm.stopPrank();
-        assertTrue(fundNft_ERC721.publicMintStartTime() == newStartTime);
+        assertTrue(fundNft.publicMintStartTime() == newStartTime);
     }
 
-    function testMintViaTradeIn_ERC721() public {
+    function testMintViaTradeIn() public {
         vm.startPrank(sampleUser, sampleUser);
-        s1nft.setApprovalForAll(address(fundNft_ERC721), true);
+        s1nft.setApprovalForAll(address(fundNft), true);
 
         uint256[] memory ids = new uint256[](1);
         ids[0] = 1;
-        fundNft_ERC721.mintByTradeIn(sampleUser, ids); //sampleUser is minted ID 1
+        fundNft.mintByTradeIn(sampleUser, ids); //sampleUser is minted ID 1
         vm.stopPrank();
-        assertTrue(fundNft_ERC721.ownerOf(1) == sampleUser);
+        assertTrue(fundNft.ownerOf(1) == sampleUser);
     }
 
     function testMigrateFifteenNfts() public {
         vm.startPrank(sampleUser, sampleUser);
-            s1nft.setApprovalForAll(address(fundNft_ERC721), true);
+            s1nft.setApprovalForAll(address(fundNft), true);
 
             uint256[] memory ids = new uint256[](15);
             for(uint256 i=0; i<ids.length; i++){
                 ids[i] = i+1;
             }
 
-            fundNft_ERC721.mintByTradeIn(sampleUser, ids); //sampleUser is minted ID 1
+            fundNft.mintByTradeIn(sampleUser, ids); //sampleUser is minted ID 1
         vm.stopPrank();
-        assertTrue(fundNft_ERC721.ownerOf(1) == sampleUser);        
+        assertTrue(fundNft.ownerOf(1) == sampleUser);        
     }
 
     function testAdminMint() public{
         vm.startPrank(deployer, deployer);
-        fundNft_ERC721.adminMint(deployer, 1);
+        fundNft.adminMint(deployer, 1);
         vm.stopPrank();
-        uint256 idOffset = fundNft_ERC721.currentNonReservedId();
-        assertTrue(fundNft_ERC721.ownerOf(idOffset) == deployer);
+        uint256 idOffset = fundNft.currentNonReservedId();
+        assertTrue(fundNft.ownerOf(idOffset) == deployer);
     }
 
     function testPause() public {
         vm.startPrank(deployer, deployer);
-        fundNft_ERC721.pause();
+        fundNft.pause();
         vm.stopPrank();
-        assertTrue(fundNft_ERC721.paused());
+        assertTrue(fundNft.paused());
     }
 
     function testUnPause() public {
         vm.startPrank(deployer, deployer);
-        fundNft_ERC721.pause();
-        assertTrue(fundNft_ERC721.paused());
-        fundNft_ERC721.unpause();
+        fundNft.pause();
+        assertTrue(fundNft.paused());
+        fundNft.unpause();
         vm.stopPrank();
-        assertTrue(!fundNft_ERC721.paused());
+        assertTrue(!fundNft.paused());
     }
 
     function testPublicMintWhenPaused() public {
         vm.startPrank(deployer, deployer);
-        fundNft_ERC721.pause();
+        fundNft.pause();
         vm.expectRevert();
-        fundNft_ERC721.publicMint{value: 0.05 ether}(sampleUser, 1);
+        fundNft.publicMint{value: 0.05 ether}(sampleUser, 1);
         vm.stopPrank();
     }
 
@@ -286,11 +307,11 @@ contract InvestmentHandlerTestSetup is Test {
         whitelistMintDeadline = blockTimestamp + 1;
         bytes memory signature = getSignature(sampleUser, 1, whitelistMintDeadline);
         vm.startPrank(deployer, deployer);
-        fundNft_ERC721.pause();
+        fundNft.pause();
         vm.stopPrank();
         vm.startPrank(sampleUser, sampleUser);
         vm.expectRevert();
-        fundNft_ERC721.mintBySignature{value: 0.05 ether}(sampleUser, 1, 1, whitelistMintDeadline, signature);
+        fundNft.mintBySignature{value: 0.05 ether}(sampleUser, 1, 1, whitelistMintDeadline, signature);
         vm.stopPrank();
     }
 
@@ -300,17 +321,17 @@ contract InvestmentHandlerTestSetup is Test {
         advanceBlockNumberAndTimestamp(1); //advance one block to make signature invalid
         vm.startPrank(sampleUser, sampleUser);
         vm.expectRevert();
-        fundNft_ERC721.mintBySignature{value: 0.05 ether}(sampleUser, 1, 1, whitelistMintDeadline, signature);
+        fundNft.mintBySignature{value: 0.05 ether}(sampleUser, 1, 1, whitelistMintDeadline, signature);
         vm.stopPrank();  
     }
 
     function testWithdraw() public {
         uint256 balance = address(deployer).balance;
         vm.startPrank(sampleUser, sampleUser);
-        fundNft_ERC721.publicMint{value: 0.25 ether}(sampleUser, 5);
+        fundNft.publicMint{value: 0.25 ether}(sampleUser, 5);
         vm.stopPrank();
         vm.startPrank(deployer, deployer);
-        fundNft_ERC721.withdraw();
+        fundNft.withdraw();
         vm.stopPrank();
         uint newBalance = address(deployer).balance;
         assertTrue(newBalance == balance + 0.25 ether);
@@ -318,20 +339,20 @@ contract InvestmentHandlerTestSetup is Test {
 
     function testTokenURI() public {
         vm.startPrank(deployer, deployer);
-        fundNft_ERC721.adminMint(deployer, 1);
+        fundNft.adminMint(deployer, 1);
         vm.stopPrank();
 
-        string memory tokenURI = fundNft_ERC721.tokenURI(3501);
+        string memory tokenURI = fundNft.tokenURI(3501);
         assertTrue(keccak256(abi.encodePacked(tokenURI)) == keccak256(abi.encodePacked("https://vvv.fund/api/token/3501.json")));
     }
 
     function testSetBaseExtension() public {
         vm.startPrank(deployer, deployer);
-        fundNft_ERC721.setBaseExtension(".html");
-        fundNft_ERC721.adminMint(deployer, 1);
+        fundNft.setBaseExtension(".html");
+        fundNft.adminMint(deployer, 1);
         vm.stopPrank();
 
-        string memory tokenURI = fundNft_ERC721.tokenURI(3501);
+        string memory tokenURI = fundNft.tokenURI(3501);
         assertTrue(keccak256(abi.encodePacked(tokenURI)) == keccak256(abi.encodePacked("https://vvv.fund/api/token/3501.html")));
 
     }
