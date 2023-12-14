@@ -11,11 +11,9 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { ERC20Capped } from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
 
 contract VVVToken is ERC20Capped, Ownable {
-    event tokensMinted (address indexed to, uint256 amount);
 
     constructor(uint256 _cap, uint256 _initialSupply) ERC20("vVvToken", "VVV") ERC20Capped(_cap) Ownable(msg.sender) {
         _mint(msg.sender, _initialSupply);
-        emit tokensMinted(msg.sender, _initialSupply);
     }
 
     function mint(address _to, uint256 _amount) public onlyOwner {
