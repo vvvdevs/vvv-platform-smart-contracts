@@ -57,7 +57,7 @@ contract MinimalLinearVesting is Ownable {
     /**
         @notice allows user to withdraw any portion of their currently available tokens
         @param _amount amount of tokens to withdraw
-        @dev reverts if user has no vesting schedule set, if vesting schedule has not started, if vesting schedule has already been fulfilled, if amount is greater than withdrawable amount, or if contract has insufficient balance
+        @dev reverts if user has no vesting schedule set, if vesting schedule has not started, if amount is greater than withdrawable amount, or if contract has insufficient balance
      */
     function withdrawVestedTokens(uint256 _amount) external {
         VestingSchedule storage vestingSchedule = userVestingSchedule[msg.sender];
@@ -66,10 +66,8 @@ contract MinimalLinearVesting is Ownable {
             revert VestingScheduleNotSet();
         } else if (block.timestamp < vestingSchedule.startTime){
             revert VestingScheduleNotStarted();
-        } else if (_amount > getWithdrawableAmount(msg.sender)){
+        } else if (_amount > getVestedAmount(msg.sender) - vestingSchedule.amountWithdrawn){
             revert AmountIsGreaterThanWithdrawable();        
-        } else if (vestingSchedule.amountWithdrawn >= vestingSchedule.totalAmount){
-            revert VestingScheduleAlreadyFulfilled();
         } else if (token.balanceOf(address(this)) < _amount){
             revert InsufficientContractBalance();
         }
@@ -104,28 +102,27 @@ contract MinimalLinearVesting is Ownable {
     }
 
     /**
-        @notice returns the amount of tokens that are currently available to withdraw
+        @notice returns the amount of tokens that are currently vested (exlcudes amount withdrawn)
         @param _user the user whose withdrawable amount is being queried
         @dev considers 4 cases for calculating withdrawable amount:
-            1+2. schedule has not started OR has not been set OR all tokens have been withdrawn
-            3. schedule has ended with tokens remaining to withdraw
-            4. schedule is in progress with tokens remaining to withdraw
+            1. schedule has not started OR has not been set OR all tokens have been withdrawn
+            2. schedule has ended with tokens remaining to withdraw
+            3. schedule is in progress with tokens remaining to withdraw
      */
-    function getWithdrawableAmount(address _user) public view returns (uint256) {
+
+    function getVestedAmount(address _user) public view returns(uint256){
         VestingSchedule storage vestingSchedule = userVestingSchedule[_user];
 
         if(
             block.timestamp < vestingSchedule.startTime || 
-            vestingSchedule.startTime == 0 ||
-            vestingSchedule.amountWithdrawn >= vestingSchedule.totalAmount
+            vestingSchedule.startTime == 0
         ){
             return 0;
         } else if (block.timestamp >= vestingSchedule.startTime + vestingSchedule.duration){
-            return vestingSchedule.totalAmount - vestingSchedule.amountWithdrawn;
+            return vestingSchedule.totalAmount;
         } else {
             return (vestingSchedule.totalAmount * (block.timestamp - vestingSchedule.startTime)) / vestingSchedule.duration;
         }
-
     }
 
     //=====================================================================
