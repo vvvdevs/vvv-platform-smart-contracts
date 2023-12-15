@@ -97,7 +97,7 @@ contract MinimalLinearVesting is Ownable {
         @notice returns the amount of tokens that are currently vested (exlcudes amount withdrawn)
         @param _user the user whose withdrawable amount is being queried
         @dev considers 3 cases for calculating withdrawable amount:
-            1. schedule has not started OR has not been set OR all tokens have been withdrawn
+            1. schedule has not started OR has not been set
             2. schedule has ended with tokens remaining to withdraw
             3. schedule is in progress with tokens remaining to withdraw
      */
