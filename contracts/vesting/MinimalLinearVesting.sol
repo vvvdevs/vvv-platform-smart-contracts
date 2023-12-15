@@ -11,7 +11,7 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
  */
 
 
-contract MinimalLinearVesting is Ownable {
+contract VVVVesting is Ownable {
     //=====================================================================
     //STORAGE AND SETUP
     //=====================================================================
