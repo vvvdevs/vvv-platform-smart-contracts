@@ -55,7 +55,7 @@ contract MinimalLinearVesting is Ownable {
         @param _amount amount of tokens to withdraw
         @dev reverts if user has no vesting schedule set, if vesting schedule has not started, if amount is greater than withdrawable amount, or if contract has insufficient balance
      */
-    function withdrawVestedTokens(uint256 _amount) external {
+    function withdrawVestedTokens(uint256 _amount, address _destination) external {
         VestingSchedule storage vestingSchedule = userVestingSchedule[msg.sender];
 
         if (_amount > getVestedAmount(msg.sender) - vestingSchedule.amountWithdrawn){
@@ -68,7 +68,7 @@ contract MinimalLinearVesting is Ownable {
 
         //TODO: handle lag and slashing in future issues here or in breakout functions called here
 
-        token.transfer(msg.sender, _amount);
+        token.transfer(_destination, _amount);
     }
 
     //=====================================================================
@@ -96,7 +96,7 @@ contract MinimalLinearVesting is Ownable {
     /**
         @notice returns the amount of tokens that are currently vested (exlcudes amount withdrawn)
         @param _user the user whose withdrawable amount is being queried
-        @dev considers 4 cases for calculating withdrawable amount:
+        @dev considers 3 cases for calculating withdrawable amount:
             1. schedule has not started OR has not been set OR all tokens have been withdrawn
             2. schedule has ended with tokens remaining to withdraw
             3. schedule is in progress with tokens remaining to withdraw
