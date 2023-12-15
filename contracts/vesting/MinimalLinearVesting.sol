@@ -62,11 +62,7 @@ contract MinimalLinearVesting is Ownable {
     function withdrawVestedTokens(uint256 _amount) external {
         VestingSchedule storage vestingSchedule = userVestingSchedule[msg.sender];
 
-        if(vestingSchedule.startTime == 0){
-            revert VestingScheduleNotSet();
-        } else if (block.timestamp < vestingSchedule.startTime){
-            revert VestingScheduleNotStarted();
-        } else if (_amount > getVestedAmount(msg.sender) - vestingSchedule.amountWithdrawn){
+        if (_amount > getVestedAmount(msg.sender) - vestingSchedule.amountWithdrawn){
             revert AmountIsGreaterThanWithdrawable();        
         } else if (token.balanceOf(address(this)) < _amount){
             revert InsufficientContractBalance();
