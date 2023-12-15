@@ -6,10 +6,6 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
 
-@dev This is a minimal linear vesting contract that will be expanded upon as requirements are more clearly defined for vesting.
-
- */
-
 
 contract VVVVesting is Ownable {
     //=====================================================================
