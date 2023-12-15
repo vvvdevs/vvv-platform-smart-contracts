@@ -62,7 +62,6 @@ contract VVVVesting is Ownable {
     
         vestingSchedule.amountWithdrawn += _amount;
 
-        //TODO: handle lag and slashing in future issues here or in breakout functions called here
 
         token.transfer(_destination, _amount);
     }
