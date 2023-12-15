@@ -37,10 +37,6 @@ contract MinimalLinearVesting is Ownable {
     error AmountIsGreaterThanWithdrawable(); 
     error InsufficientContractBalance();   
     error InvalidConstructorArguments();
-    error VestingScheduleNotSet();
-    error VestingScheduleNotStarted();
-    error VestingScheduleAlreadyFulfilled();
-
 
     constructor(address _token) Ownable(msg.sender) {
         if (_token == address(0)) {
