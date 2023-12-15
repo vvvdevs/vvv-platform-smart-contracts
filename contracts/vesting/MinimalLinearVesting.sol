@@ -53,7 +53,7 @@ contract MinimalLinearVesting is Ownable {
     /**
         @notice allows user to withdraw any portion of their currently available tokens
         @param _amount amount of tokens to withdraw
-        @dev reverts if user has no vesting schedule set, if vesting schedule has not started, if amount is greater than withdrawable amount, or if contract has insufficient balance
+        @dev reverts if user withdrawable amount is less than _amount or if the contract balance is less than _amount
      */
     function withdrawVestedTokens(uint256 _amount, address _destination) external {
         VestingSchedule storage vestingSchedule = userVestingSchedule[msg.sender];
