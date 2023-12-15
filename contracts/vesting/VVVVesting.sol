@@ -3,14 +3,13 @@ pragma solidity 0.8.21;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-
-/**
-
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract VVVVesting is Ownable {
     //=====================================================================
     //STORAGE AND SETUP
     //=====================================================================
+    using SafeERC20 for IERC20;
     IERC20 public token;
 
     struct VestingSchedule {
@@ -63,7 +62,7 @@ contract VVVVesting is Ownable {
         vestingSchedule.amountWithdrawn += _amount;
 
 
-        token.transfer(_destination, _amount);
+        token.safeTransfer(_destination, _amount);
     }
 
     //=====================================================================
