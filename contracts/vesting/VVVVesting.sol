@@ -19,12 +19,13 @@ contract VVVVesting is Ownable {
         uint256 startTime;
     }
 
-    mapping(address => VestingSchedule) public userVestingSchedule;
-
+    mapping(address => VestingSchedule[]) public userVestingSchedules;
 
     event SetVestingSchedule(
         address indexed _user,
-        uint256 _remainingAmount,
+        uint256 _vestingScheduleIndex,
+        uint256 _totalAmount,
+        uint256 _amountWithdrawn,
         uint256 _duration,
         uint256 _startTime
     );
@@ -46,21 +47,21 @@ contract VVVVesting is Ownable {
     //=====================================================================
 
     /**
-        @notice allows user to withdraw any portion of their currently available tokens
+        @notice allows user to withdraw any portion of their currently available tokens for a given vesting schedule
         @param _amount amount of tokens to withdraw
-        @dev reverts if user withdrawable amount is less than _amount or if the contract balance is less than _amount
+        @param _vestingScheduleIndex index of vesting schedule to withdraw from
+        @dev reverts if user withdrawable amount for that schedule is less than _amount or if the contract balance is less than _amount
      */
-    function withdrawVestedTokens(uint256 _amount, address _destination) external {
-        VestingSchedule storage vestingSchedule = userVestingSchedule[msg.sender];
+    function withdrawVestedTokens(uint256 _amount, address _destination, uint256 _vestingScheduleIndex) external {
+        VestingSchedule storage vestingSchedule = userVestingSchedules[msg.sender][_vestingScheduleIndex];
 
-        if (_amount > getVestedAmount(msg.sender) - vestingSchedule.amountWithdrawn){
+        if (_amount > getVestedAmount(msg.sender, _vestingScheduleIndex) - vestingSchedule.amountWithdrawn){
             revert AmountIsGreaterThanWithdrawable();        
         } else if (token.balanceOf(address(this)) < _amount){
             revert InsufficientContractBalance();
         }
     
         vestingSchedule.amountWithdrawn += _amount;
-
 
         token.safeTransfer(_destination, _amount);
     }
@@ -69,22 +70,31 @@ contract VVVVesting is Ownable {
     //INTERNAL
     //=====================================================================
 
+    ///@notice sets or replaces vesting schedule
     function _setVestingSchedule(
         address _user,
+        uint256 _vestingScheduleIndex,
         uint256 _totalAmount,
         uint256 _duration,
         uint256 _startTime
     ) private {
-        userVestingSchedule[_user] = VestingSchedule(_totalAmount, 0, _duration, _startTime);
-        emit SetVestingSchedule(_user, _totalAmount, _duration, _startTime);
+        VestingSchedule memory newSchedule = VestingSchedule(_totalAmount, 0, _duration, _startTime);
+
+        if (_vestingScheduleIndex == userVestingSchedules[_user].length) {
+            userVestingSchedules[_user].push(newSchedule);
+        } else {
+            userVestingSchedules[_user][_vestingScheduleIndex] = newSchedule;
+        }
+
+        emit SetVestingSchedule(_user, _vestingScheduleIndex, _totalAmount, 0, _duration, _startTime);
     }
     
     //=====================================================================
     //VIEW
     //=====================================================================
 
-    function getVestingSchedule(address _user) public view returns (VestingSchedule memory) {
-        return userVestingSchedule[_user];
+    function getVestingSchedule(address _user, uint256 _vestingScheduleIndex) public view returns (VestingSchedule memory) {
+        return userVestingSchedules[_user][_vestingScheduleIndex];
     }
 
     /**
@@ -95,9 +105,8 @@ contract VVVVesting is Ownable {
             2. schedule has ended with tokens remaining to withdraw
             3. schedule is in progress with tokens remaining to withdraw
      */
-
-    function getVestedAmount(address _user) public view returns(uint256){
-        VestingSchedule storage vestingSchedule = userVestingSchedule[_user];
+    function getVestedAmount(address _user, uint256 _vestingScheduleIndex) public view returns (uint256){
+        VestingSchedule storage vestingSchedule = userVestingSchedules[_user][_vestingScheduleIndex];
 
         if(
             block.timestamp < vestingSchedule.startTime || 
@@ -117,12 +126,18 @@ contract VVVVesting is Ownable {
 
     function setVestingSchedule(
         address _user,
+        uint256 _vestingScheduleIndex,
         uint256 _totalAmount,
         uint256 _duration,
         uint256 _startTime
     ) external onlyOwner {
-        _setVestingSchedule(_user, _totalAmount, _duration, _startTime);
+        _setVestingSchedule(_user, _vestingScheduleIndex, _totalAmount, _duration, _startTime);
     }
-    
+
+    ///@dev removes vesting schedule while preserving indices of other schedules
+    function removeVestingSchedule(address _user, uint256 _vestingScheduleIndex) external onlyOwner {
+        delete userVestingSchedules[_user][_vestingScheduleIndex];   
+        emit SetVestingSchedule(_user, _vestingScheduleIndex, 0, 0, 0, 0);     
+    }
 
 }
