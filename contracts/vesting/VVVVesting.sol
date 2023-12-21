@@ -69,7 +69,7 @@ contract VVVVesting is Ownable {
 
     ///@notice sets or replaces vesting schedule
     function _setVestingSchedule(
-        address _user,
+        address _address,
         uint256 _vestingScheduleIndex,
         uint256 _totalAmount,
         uint256 _duration,
