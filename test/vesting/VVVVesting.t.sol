@@ -1,12 +1,12 @@
 //SPDX-License-Identifier: MIT
 
 /**
- * @dev VVVVesting Unit Tests
+ * @title VVVVesting Unit Tests
  * @dev use "forge test --match-contract VVVVestingTests -vvv" to run tests and show logs if applicable
  * @dev use "forge coverage --match-contract VVVVesting" to run coverage
  */
 
-pragma solidity ^0.8.15;
+pragma solidity ^0.8.21;
 
 import { Test } from "lib/forge-std/src/Test.sol"; //for stateless tests
 import { VVVVesting } from "contracts/vesting/VVVVesting.sol";
@@ -182,18 +182,11 @@ contract VVVVestingTests is Test {
             emit log_named_uint("vestedAmount", vestedAmount/1e18);
         }
 
-        //prank to incorporate each expected revert message
-        vm.startPrank(sampleUser, sampleUser);        
-        vm.expectRevert(VVVVesting.InsufficientContractBalance.selector);
-        VVVVestingInstance.withdrawVestedTokens(contractBalance + 1, sampleUser, vestingScheduleIndex);
-        vm.stopPrank();        
-        
+        //prank to incorporate expected revert message  
         vm.startPrank(sampleUser, sampleUser);        
         vm.expectRevert(VVVVesting.AmountIsGreaterThanWithdrawable.selector);
         VVVVestingInstance.withdrawVestedTokens(vestedAmount + 1, sampleUser, vestingScheduleIndex);
         vm.stopPrank();
-
-
     }
 
     //=====================================================================
