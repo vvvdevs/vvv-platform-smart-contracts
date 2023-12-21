@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: MIT
-pragma solidity 0.8.21;
+pragma solidity ^0.8.21;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
@@ -44,6 +44,16 @@ contract VVVVesting is Ownable {
         uint256 _amountWithdrawn,
         uint256 _duration,
         uint256 _startTime
+    );
+
+    /**
+        @notice emitted when a user's vesting schedule is removed
+        @param _address the address of the user whose vesting schedule is being removed
+        @param _vestingScheduleIndex the index of the vesting schedule being removed
+    */
+    event RemoveVestingSchedule(
+        address indexed _address,
+        uint256 _vestingScheduleIndex
     );
 
     /**
@@ -186,6 +196,6 @@ contract VVVVesting is Ownable {
      */
     function removeVestingSchedule(address _address, uint256 _vestingScheduleIndex) external onlyOwner {
         delete userVestingSchedules[_address][_vestingScheduleIndex];   
-        emit SetVestingSchedule(_address, _vestingScheduleIndex, 0, 0, 0, 0);     
+        emit RemoveVestingSchedule(_address, _vestingScheduleIndex);     
     }
 }
