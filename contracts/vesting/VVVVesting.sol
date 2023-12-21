@@ -93,7 +93,7 @@ contract VVVVesting is Ownable {
     //VIEW
     //=====================================================================
 
-    function getVestingSchedule(address _user, uint256 _vestingScheduleIndex) public view returns (VestingSchedule memory) {
+    function getVestingSchedule(address _user, uint256 _vestingScheduleIndex) external view returns (VestingSchedule memory) {
         return userVestingSchedules[_user][_vestingScheduleIndex];
     }
 
