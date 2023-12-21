@@ -31,7 +31,6 @@ contract VVVVesting is Ownable {
     );
 
     error AmountIsGreaterThanWithdrawable(); 
-    error InsufficientContractBalance();   
     error InvalidConstructorArguments();
 
     constructor(address _token) Ownable(msg.sender) {
@@ -57,8 +56,6 @@ contract VVVVesting is Ownable {
 
         if (_amount > getVestedAmount(msg.sender, _vestingScheduleIndex) - vestingSchedule.amountWithdrawn){
             revert AmountIsGreaterThanWithdrawable();        
-        } else if (token.balanceOf(address(this)) < _amount){
-            revert InsufficientContractBalance();
         }
     
         vestingSchedule.amountWithdrawn += _amount;
