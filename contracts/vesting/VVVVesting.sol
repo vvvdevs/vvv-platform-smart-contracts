@@ -75,6 +75,9 @@ contract VVVVesting is Ownable {
     ///@notice emitted when the contract is deployed with invalid constructor arguments
     error InvalidConstructorArguments();
 
+    ///@notice emitted when a user tries to set a vesting schedule that does not exist
+    error InvalidScheduleIndexToWrite();
+
     /**
         @notice constructor
         @param _vvvtoken the VVV token being vested
@@ -128,8 +131,10 @@ contract VVVVesting is Ownable {
 
         if (_vestingScheduleIndex == userVestingSchedules[_vestedUser].length) {
             userVestingSchedules[_vestedUser].push(newSchedule);
-        } else {
+        } else if (_vestingScheduleIndex < userVestingSchedules[_vestedUser].length) {
             userVestingSchedules[_vestedUser][_vestingScheduleIndex] = newSchedule;
+        } else {
+            revert InvalidScheduleIndexToWrite();
         }
 
         emit SetVestingSchedule(_vestedUser, _vestingScheduleIndex, _vestingScheduleTotalAmount, 0, _vestingScheduleDuration, _vestingScheduleStartTime);
