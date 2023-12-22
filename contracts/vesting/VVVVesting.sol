@@ -7,7 +7,6 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 
 contract VVVVesting is Ownable {
     using SafeERC20 for IERC20;
-    
     ///@notice the token being vested
     IERC20 public token;
 
