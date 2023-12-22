@@ -76,7 +76,7 @@ contract VVVVesting is Ownable {
     error InvalidConstructorArguments();
 
     ///@notice emitted when a user tries to set a vesting schedule that does not exist
-    error InvalidScheduleIndexToWrite();
+    error InvalidScheduleIndex();
 
     /**
         @notice constructor
@@ -99,6 +99,10 @@ contract VVVVesting is Ownable {
         @dev reverts if user withdrawable amount for that schedule is less than _tokenAmountToWithdraw
      */
     function withdrawVestedTokens(uint256 _tokenAmountToWithdraw, address _tokenDestination, uint256 _vestingScheduleIndex) external {
+        if(_vestingScheduleIndex >= userVestingSchedules[msg.sender].length){
+            revert InvalidScheduleIndex();
+        }
+
         VestingSchedule storage vestingSchedule = userVestingSchedules[msg.sender][_vestingScheduleIndex];
 
         if (_tokenAmountToWithdraw > getVestedAmount(msg.sender, _vestingScheduleIndex) - vestingSchedule.tokenAmountWithdrawn){
@@ -134,7 +138,7 @@ contract VVVVesting is Ownable {
         } else if (_vestingScheduleIndex < userVestingSchedules[_vestedUser].length) {
             userVestingSchedules[_vestedUser][_vestingScheduleIndex] = newSchedule;
         } else {
-            revert InvalidScheduleIndexToWrite();
+            revert InvalidScheduleIndex();
         }
 
         emit SetVestingSchedule(_vestedUser, _vestingScheduleIndex, _vestingScheduleTotalAmount, 0, _vestingScheduleDuration, _vestingScheduleStartTime);
@@ -163,7 +167,8 @@ contract VVVVesting is Ownable {
 
         if(
             block.timestamp < vestingSchedule.startTime || 
-            vestingSchedule.startTime == 0
+            vestingSchedule.startTime == 0 ||
+            userVestingSchedules[_vestedUser].length == 0
         ){
             return 0;
         } else if (block.timestamp >= vestingSchedule.startTime + vestingSchedule.duration){
