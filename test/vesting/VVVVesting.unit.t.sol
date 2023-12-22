@@ -2,34 +2,20 @@
 
 /**
  * @title VVVVesting Unit Tests
- * @dev use "forge test --match-contract VVVVestingTests -vvv" to run tests and show logs if applicable
+ * @dev use "forge test --match-contract VVVVestingUnitTests -vvv" to run tests and show logs if applicable
  * @dev use "forge coverage --match-contract VVVVesting" to run coverage
  */
 
-pragma solidity ^0.8.21;
+pragma solidity ^0.8.23;
 
-import { Test } from "lib/forge-std/src/Test.sol"; //for stateless tests
-import { VVVVesting } from "contracts/vesting/VVVVesting.sol";
+// import { Test } from "lib/forge-std/src/Test.sol"; //for stateless tests
+import { VVVVestingTestBase } from "test/vesting/VVVVestingTestBase.sol";
 import { MockERC20 } from "contracts/mock/MockERC20.sol";
+import { VVVVesting } from "contracts/vesting/VVVVesting.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
-contract VVVVestingTests is Test {
-
-    MockERC20 public VVVTokenInstance;
-    VVVVesting public VVVVestingInstance;
-
-    address[] public users = new address[](333);
-
-    uint256 public deployerKey = 1;
-    uint256 public userKey = 2;
-    address deployer = vm.addr(deployerKey);
-    address sampleUser = vm.addr(userKey);
-
+contract VVVVestingUnitTests is VVVVestingTestBase {
     bool logging = true;
-
-    uint256 blockNumber;
-    uint256 blockTimestamp;
-    uint256 chainid;
 
     //=====================================================================
     // SETUP
@@ -52,7 +38,47 @@ contract VVVVestingTests is Test {
         assertTrue(address(VVVVestingInstance) != address(0));
     }
 
+    //test deployment with zero address as vvv token address
+    function testDeploymentWithZeroAddress() public {
+        vm.startPrank(deployer, deployer);
+        vm.expectRevert(VVVVesting.InvalidConstructorArguments.selector);
+        VVVVestingInstance = new VVVVesting(address(0));
+        vm.stopPrank();
+    }
+
     // admin actions ------------------------------------------------------
+
+    //test admin/owner only functions are not accessible by other callers
+    function testAdminFunctionNotCallableByOtherUsers() public {
+        //values that would work if caller was owner/admin
+        uint256 vestingScheduleIndex = 0;
+        uint256 totalAmount = 10_000 * 1e18; //10k tokens
+        uint256 durationInSeconds = 120; //120 seconds
+        uint256 startTime = block.timestamp;
+
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert();
+        VVVVestingInstance.setVestingSchedule(sampleUser, vestingScheduleIndex, totalAmount, durationInSeconds, startTime);
+        vm.stopPrank();
+
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert();
+        VVVVestingInstance.removeVestingSchedule(sampleUser, vestingScheduleIndex);
+        vm.stopPrank();
+    }
+
+    //test invalid vesting schedule index
+    function testInvalidVestingScheduleIndex() public {
+        uint256 vestingScheduleIndex = 1; //at this point length is 0, so 1 should fail
+        uint256 totalAmount = 10_000 * 1e18; //10k tokens
+        uint256 durationInSeconds = 120; //120 seconds
+        uint256 startTime = block.timestamp;
+
+        vm.startPrank(deployer, deployer);
+        vm.expectRevert(VVVVesting.InvalidScheduleIndex.selector);
+        VVVVestingInstance.setVestingSchedule(sampleUser, vestingScheduleIndex, totalAmount, durationInSeconds, startTime);
+        vm.stopPrank();
+    }
 
     //test that a new vesting schedule can be set and the correct values are stored/read
     function testSetNewVestingSchedule() public {
@@ -161,7 +187,7 @@ contract VVVVestingTests is Test {
 
     }
 
-    ///@dev vests more tokens than the contract token balance, so that both error cases can be reached
+    ///vests more tokens than the contract token balance, so that both error cases can be reached
     function testWithdrawMoreThanPermitted() public {
         uint256 vestingScheduleIndex = 0;
 
@@ -189,33 +215,49 @@ contract VVVVestingTests is Test {
         vm.stopPrank();
     }
 
-    //=====================================================================
-    // HELPERS
-    //=====================================================================
-    function advanceBlockNumberAndTimestampInBlocks(uint256 blocks) public {
-        for (uint256 i = 0; i < blocks; i++) {
-            blockNumber += 1;
-            blockTimestamp += 12; //seconds per block
-        }
-        vm.warp(blockTimestamp);
-        vm.roll(blockNumber);
-    }
+    //test withdrawVestedTokens() with invalid vesting schedule index - at this point there are no schedules, so any index should fail
+    function testWithdrawVestedTokensWithInvalidVestingScheduleIndex() public {
+        uint256 vestingScheduleIndex = 0;
+        uint256 totalAmount = 10_000 * 1e18; //10k tokens
 
-    function setVestingScheduleFromDeployer(address _user, uint256 _vestingScheduleIndex, uint256 _totalAmount, uint256 _duration, uint256 _startTime) public {
-        vm.startPrank(deployer, deployer);
-        VVVVestingInstance.setVestingSchedule(_user, _vestingScheduleIndex, _totalAmount, _duration, _startTime);
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVVVesting.InvalidScheduleIndex.selector);
+        VVVVestingInstance.withdrawVestedTokens(totalAmount, sampleUser, vestingScheduleIndex);
         vm.stopPrank();
     }
 
-    function removeVestingScheduleFromDeployer(address _user, uint256 _vestingScheduleIndex) public {
-        vm.startPrank(deployer, deployer);
-        VVVVestingInstance.removeVestingSchedule(_user, _vestingScheduleIndex);
+    //test withdrawVestedTokens() with a finished vesting schedule
+    function testWithdrawVestedTokensWithFinishedVestingSchedule() public {
+        uint256 vestingScheduleIndex = 0;
+        uint256 totalAmount = 10_000 * 1e18; //10k tokens
+        uint256 durationInSeconds = 120; //120 seconds
+        uint256 startTime = block.timestamp;
+
+        setVestingScheduleFromDeployer(sampleUser, vestingScheduleIndex, totalAmount, durationInSeconds, startTime);
+        advanceBlockNumberAndTimestampInBlocks(durationInSeconds*10); //seconds/(seconds per block) - be sure to be past 100% vesting
+
+        //withdraw all vested tokens after schedule is finished
+        withdrawVestedTokensAsUser(sampleUser, totalAmount, sampleUser, vestingScheduleIndex);
+
+        //attempt to withdraw one more token, should fail
+        vm.startPrank(sampleUser, sampleUser);        
+        vm.expectRevert(VVVVesting.AmountIsGreaterThanWithdrawable.selector);
+        VVVVestingInstance.withdrawVestedTokens(1, sampleUser, vestingScheduleIndex);
         vm.stopPrank();
     }
 
-    function withdrawVestedTokensAsUser(address _caller, uint256 _amount, address _destination, uint256 _vestingScheduleIndex) public {
-        vm.startPrank(_caller, _caller);
-        VVVVestingInstance.withdrawVestedTokens(_amount, _destination, _vestingScheduleIndex);
+    //test withdrawVestedTokens() with a vesting schedule that has not yet started
+    function testWithdrawVestedTokensWithVestingScheduleNotStarted() public {
+        uint256 vestingScheduleIndex = 0;
+        uint256 totalAmount = 10_000 * 1e18; //10k tokens
+        uint256 durationInSeconds = 120; //120 seconds
+        uint256 startTime = block.timestamp + 60*60*24*2; //2 days from now
+
+        setVestingScheduleFromDeployer(sampleUser, vestingScheduleIndex, totalAmount, durationInSeconds, startTime);
+
+        vm.startPrank(sampleUser, sampleUser);        
+        vm.expectRevert(VVVVesting.AmountIsGreaterThanWithdrawable.selector);
+        VVVVestingInstance.withdrawVestedTokens(totalAmount, sampleUser, vestingScheduleIndex);
         vm.stopPrank();
     }
 }
