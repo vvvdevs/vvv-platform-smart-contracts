@@ -123,7 +123,7 @@ contract VVVVesting is Ownable {
         uint256 _vestingScheduleTotalAmount,
         uint256 _vestingScheduleDuration,
         uint256 _vestingScheduleStartTime
-    ) internal {
+    ) private {
         VestingSchedule memory newSchedule = VestingSchedule(_vestingScheduleTotalAmount, 0, _vestingScheduleDuration, _vestingScheduleStartTime);
 
         if (_vestingScheduleIndex == userVestingSchedules[_vestedUser].length) {
