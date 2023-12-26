@@ -25,10 +25,15 @@ abstract contract VVVVestingTestBase is Test {
     
     
     function advanceBlockNumberAndTimestampInBlocks(uint256 blocks) public {
-        for (uint256 i = 0; i < blocks; i++) {
-            blockNumber += 1;
-            blockTimestamp += 12; //seconds per block
-        }
+        blockNumber += blocks;
+        blockTimestamp += blocks * 12; //seconds per block
+        vm.warp(blockTimestamp);
+        vm.roll(blockNumber);
+    }
+
+    function advanceBlockNumberAndTimestampInSeconds(uint256 secondsToAdvance) public {
+        blockNumber += secondsToAdvance / 12; //seconds per block
+        blockTimestamp += secondsToAdvance;
         vm.warp(blockTimestamp);
         vm.roll(blockNumber);
     }
