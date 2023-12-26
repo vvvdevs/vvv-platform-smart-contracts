@@ -52,9 +52,28 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
         assertEq(VVVTokenInstance.balanceOf(sampleUser), amountToWithdraw);
     }
 
+    //tests both that the correct amount of vested and withdrawn tokens are read
+    function testFuzz_GetVestedAmount(address _vestedUser, uint8 _vestingTime) public {
+        uint256 totalAmount = 10_000 * 1e18; //10k tokens
+        uint256 duration = 120; 
+        uint256 startTime = block.timestamp;
+        uint256 vestingScheduleIndex = 0;
 
-    // function testFuzz_GetVestedAmount() public {}
-    // function testFuzz_SetVestingSchedule() public {}
-    // function testFuzz_RemoveVestingSchedule() public {}
+        setVestingScheduleFromDeployer(_vestedUser, vestingScheduleIndex, totalAmount, duration, startTime);
+        
+        uint256 vestingTime = _vestingTime > 0 ? _vestingTime : 1;
+        advanceBlockNumberAndTimestampInSeconds(vestingTime);
+
+        uint256 vestedAmount = VVVVestingInstance.getVestedAmount(_vestedUser, vestingScheduleIndex);
+        
+        uint256 referenceVestedAmount = Math.min(totalAmount, (totalAmount * (block.timestamp - startTime)) / duration);
+
+
+        emit log_named_uint("vestedAmount", vestedAmount);
+        emit log_named_uint("referenceVestedAmount", referenceVestedAmount);
+
+        assertEq(vestedAmount, referenceVestedAmount);
+    }
+
 }
 
