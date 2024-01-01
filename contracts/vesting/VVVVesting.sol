@@ -203,6 +203,7 @@ contract VVVVesting is Ownable {
     /**
         @notice used to batch-call _setVestingSchedule
         @notice only callable by admin
+        @dev reverts if array lengths do not match
      */
     function batchSetVestingSchedule(
         address[] calldata _vestedUsers,
