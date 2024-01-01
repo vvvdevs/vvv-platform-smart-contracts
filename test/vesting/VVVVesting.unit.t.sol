@@ -13,6 +13,7 @@ import { VVVVestingTestBase } from "test/vesting/VVVVestingTestBase.sol";
 import { MockERC20 } from "contracts/mock/MockERC20.sol";
 import { VVVVesting } from "contracts/vesting/VVVVesting.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 contract VVVVestingUnitTests is VVVVestingTestBase {
     bool logging = true;
@@ -258,6 +259,60 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         vm.startPrank(sampleUser, sampleUser);        
         vm.expectRevert(VVVVesting.AmountIsGreaterThanWithdrawable.selector);
         VVVVestingInstance.withdrawVestedTokens(totalAmount, sampleUser, vestingScheduleIndex);
+        vm.stopPrank();
+    }
+
+    
+    //test batch-setting vesting schedules as admin, as user, and with invalid arguments
+    function testBatchSetVestingSchedules() public {
+        //sample data
+        uint256 numberOfVestedUsers = 123;
+        for (uint256 i = 0; i < numberOfVestedUsers; i++) {
+            vestedUsers.push(vm.addr(i+1));
+            vestingScheduleIndices.push(0);
+            vestingScheduleTotalAmounts.push(i * 10_000 * 1e18); //10k tokens
+            vestingScheduleDurations.push(i*60*24*365*2); //2 years
+            vestingScheduleStartTimes.push(block.timestamp + i*60*24*2); //2 days from now
+        }
+
+        //set a vesting schedule as admin
+        vm.startPrank(deployer, deployer);
+        VVVVestingInstance.batchSetVestingSchedule(
+            vestedUsers,
+            vestingScheduleIndices,
+            vestingScheduleTotalAmounts,
+            vestingScheduleDurations,
+            vestingScheduleStartTimes
+        );
+        vm.stopPrank();
+
+        //set as user (not allowed)
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, sampleUser));
+        VVVVestingInstance.batchSetVestingSchedule(
+            vestedUsers,
+            vestingScheduleIndices,
+            vestingScheduleTotalAmounts,
+            vestingScheduleDurations,
+            vestingScheduleStartTimes
+        );
+        vm.stopPrank();
+
+        //ensure schedules properly set - running these checks before reducing array length of one array below
+        for (uint256 i = 0; i < numberOfVestedUsers; i++) {
+            (uint256 _totalAmount, uint256 _amountWithdrawn, uint256 _duration, uint256 _startTime) = VVVVestingInstance.userVestingSchedules(vestedUsers[i], 0);
+            assertTrue(_totalAmount == vestingScheduleTotalAmounts[i]);
+            assertTrue(_amountWithdrawn == 0);
+            assertTrue(_duration == vestingScheduleDurations[i]);
+            assertTrue(_startTime == vestingScheduleStartTimes[i]);
+        }
+
+        //set a vesting schedule with invalid arguments
+        vm.startPrank(deployer, deployer);
+        vm.expectRevert(VVVVesting.ArrayLengthMismatch.selector);
+        //reduce array length by 1 for array length mismatch
+        vestedUsers.pop(); 
+        VVVVestingInstance.batchSetVestingSchedule(vestedUsers, vestingScheduleIndices, vestingScheduleTotalAmounts, vestingScheduleDurations, vestingScheduleStartTimes);
         vm.stopPrank();
     }
 }
