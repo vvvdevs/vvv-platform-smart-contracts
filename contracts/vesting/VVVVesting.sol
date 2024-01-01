@@ -72,6 +72,9 @@ contract VVVVesting is Ownable {
     ///@notice emitted when user tries to withdraw more tokens than are available to withdraw
     error AmountIsGreaterThanWithdrawable(); 
     
+    ///@notice emitted when array lengths do not match
+    error ArrayLengthMismatch();
+
     ///@notice emitted when the contract is deployed with invalid constructor arguments
     error InvalidConstructorArguments();
 
@@ -195,6 +198,31 @@ contract VVVVesting is Ownable {
         uint256 _vestingScheduleStartTime
     ) external onlyOwner {
         _setVestingSchedule(_vestedUser, _vestingScheduleIndex, _vestingScheduleTotalAmount, _vestingScheduleDuration, _vestingScheduleStartTime);
+    }
+
+    /**
+        @notice used to batch-call _setVestingSchedule
+        @notice only callable by admin
+     */
+    function batchSetVestingSchedule(
+        address[] calldata _vestedUsers,
+        uint256[] calldata _vestingScheduleIndices,
+        uint256[] calldata _vestingScheduleTotalAmounts,
+        uint256[] calldata _vestingScheduleDurations,
+        uint256[] calldata _vestingScheduleStartTimes
+    ) external onlyOwner {
+        if(
+            _vestedUsers.length != _vestingScheduleIndices.length ||
+            _vestedUsers.length != _vestingScheduleTotalAmounts.length ||
+            _vestedUsers.length != _vestingScheduleDurations.length ||
+            _vestedUsers.length != _vestingScheduleStartTimes.length
+        ){
+            revert ArrayLengthMismatch();
+        }
+
+        for (uint256 i = 0; i < _vestedUsers.length; ++i) {
+            _setVestingSchedule(_vestedUsers[i], _vestingScheduleIndices[i], _vestingScheduleTotalAmounts[i], _vestingScheduleDurations[i], _vestingScheduleStartTimes[i]);
+        }
     }
 
     /**

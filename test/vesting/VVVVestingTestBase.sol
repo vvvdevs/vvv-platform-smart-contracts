@@ -22,7 +22,12 @@ abstract contract VVVVestingTestBase is Test {
     uint256 blockNumber;
     uint256 blockTimestamp;
     uint256 chainid;
-    
+
+    address[] public vestedUsers;
+    uint256[] public vestingScheduleIndices;
+    uint256[] public vestingScheduleTotalAmounts;
+    uint256[] public vestingScheduleDurations;
+    uint256[] public vestingScheduleStartTimes;
     
     function advanceBlockNumberAndTimestampInBlocks(uint256 blocks) public {
         blockNumber += blocks;
