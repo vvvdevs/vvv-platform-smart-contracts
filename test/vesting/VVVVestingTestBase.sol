@@ -38,9 +38,9 @@ abstract contract VVVVestingTestBase is Test {
         vm.roll(blockNumber);
     }
 
-    function setVestingScheduleFromDeployer(address _user, uint256 _vestingScheduleIndex, uint256 _totalAmount, uint256 _duration, uint256 _startTime) public {
+    function setVestingScheduleFromDeployer(address _user, uint256 _vestingScheduleIndex, uint256 _totalAmount, uint256 _duration, uint256 _startTime, uint256 _intervalLength, uint256 _tokenAmountPerInterval) public {
         vm.startPrank(deployer, deployer);
-        VVVVestingInstance.setVestingSchedule(_user, _vestingScheduleIndex, _totalAmount, _duration, _startTime);
+        VVVVestingInstance.setVestingSchedule(_user, _vestingScheduleIndex, _totalAmount, _duration, _startTime, _intervalLength, _tokenAmountPerInterval);
         vm.stopPrank();
     }
 

@@ -16,12 +16,16 @@ contract VVVVesting is Ownable {
         @param tokenAmountWithdrawn the amount of tokens that have been withdrawn
         @param duration the duration of the vesting schedule
         @param startTime the start time of the vesting schedule
+        @param intervalLength the length of each interval in seconds
+        @param tokenAmountPerInterval the amount of tokens to be vested per interval
      */
     struct VestingSchedule {
         uint256 totalTokenAmountToVest;
         uint256 tokenAmountWithdrawn;
         uint256 duration;
         uint256 startTime;
+        uint256 intervalLength;
+        uint256 tokenAmountPerInterval;
     }
 
     ///@notice maps user address to array of vesting schedules
@@ -35,6 +39,8 @@ contract VVVVesting is Ownable {
         @param _vestingScheduleAmountWithdrawn the amount of tokens that have been withdrawn
         @param _vestingScheduleDuration the duration of the vesting schedule
         @param _vestingScheduleStartTime the start time of the vesting schedule
+        @param _vestingScheduleIntervalLength the length of each interval in seconds
+        @param _vestingScheduleTokenAmountPerInterval the amount of tokens to be vested per interval
     */
     event SetVestingSchedule(
         address indexed _vestedUser,
@@ -42,7 +48,9 @@ contract VVVVesting is Ownable {
         uint256 _vestingScheduleTotalAmount,
         uint256 _vestingScheduleAmountWithdrawn,
         uint256 _vestingScheduleDuration,
-        uint256 _vestingScheduleStartTime
+        uint256 _vestingScheduleStartTime,
+        uint256 _vestingScheduleIntervalLength,
+        uint256 _vestingScheduleTokenAmountPerInterval
     );
 
     /**
@@ -123,15 +131,26 @@ contract VVVVesting is Ownable {
         @param _vestingScheduleTotalAmount the total amount of tokens to be vested for this schedule
         @param _vestingScheduleDuration the duration of the vesting schedule
         @param _vestingScheduleStartTime the start time of the vesting schedule
+        @param _vestingScheduleIntervalLength the length of each interval in seconds
+        @param _vestingScheduleTokenAmountPerInterval the amount of tokens to be vested per interval
      */
     function _setVestingSchedule(
         address _vestedUser,
         uint256 _vestingScheduleIndex,
         uint256 _vestingScheduleTotalAmount,
         uint256 _vestingScheduleDuration,
-        uint256 _vestingScheduleStartTime
+        uint256 _vestingScheduleStartTime,
+        uint256 _vestingScheduleIntervalLength,
+        uint256 _vestingScheduleTokenAmountPerInterval
     ) private {
-        VestingSchedule memory newSchedule = VestingSchedule(_vestingScheduleTotalAmount, 0, _vestingScheduleDuration, _vestingScheduleStartTime);
+        VestingSchedule memory newSchedule = VestingSchedule(
+            _vestingScheduleTotalAmount, 
+            0, 
+            _vestingScheduleDuration, 
+            _vestingScheduleStartTime,
+            _vestingScheduleIntervalLength,
+            _vestingScheduleTokenAmountPerInterval
+        );
 
         if (_vestingScheduleIndex == userVestingSchedules[_vestedUser].length) {
             userVestingSchedules[_vestedUser].push(newSchedule);
@@ -141,7 +160,7 @@ contract VVVVesting is Ownable {
             revert InvalidScheduleIndex();
         }
 
-        emit SetVestingSchedule(_vestedUser, _vestingScheduleIndex, _vestingScheduleTotalAmount, 0, _vestingScheduleDuration, _vestingScheduleStartTime);
+        emit SetVestingSchedule(_vestedUser, _vestingScheduleIndex, _vestingScheduleTotalAmount, 0, _vestingScheduleDuration, _vestingScheduleStartTime, _vestingScheduleIntervalLength, _vestingScheduleTokenAmountPerInterval);
     }
 
     /**
@@ -174,7 +193,8 @@ contract VVVVesting is Ownable {
         } else if (block.timestamp >= vestingSchedule.startTime + vestingSchedule.duration){
             return vestingSchedule.totalTokenAmountToVest;
         } else {
-            return (vestingSchedule.totalTokenAmountToVest * (block.timestamp - vestingSchedule.startTime)) / vestingSchedule.duration;
+            uint256 elapsedIntervals = (block.timestamp - vestingSchedule.startTime) / vestingSchedule.intervalLength;
+            return elapsedIntervals * vestingSchedule.tokenAmountPerInterval;
         }
     }
 
@@ -186,15 +206,19 @@ contract VVVVesting is Ownable {
         @param _vestingScheduleTotalAmount the total amount of tokens to be vested
         @param _vestingScheduleDuration the duration of the vesting schedule
         @param _vestingScheduleStartTime the start time of the vesting schedule
+        @param _vestingScheduleIntervalLength the length of each interval in seconds
+        @param _vestingScheduleTokenAmountPerInterval the amount of tokens to be vested per interval
      */
     function setVestingSchedule(
         address _vestedUser,
         uint256 _vestingScheduleIndex,
         uint256 _vestingScheduleTotalAmount,
         uint256 _vestingScheduleDuration,
-        uint256 _vestingScheduleStartTime
+        uint256 _vestingScheduleStartTime,
+        uint256 _vestingScheduleIntervalLength,
+        uint256 _vestingScheduleTokenAmountPerInterval
     ) external onlyOwner {
-        _setVestingSchedule(_vestedUser, _vestingScheduleIndex, _vestingScheduleTotalAmount, _vestingScheduleDuration, _vestingScheduleStartTime);
+        _setVestingSchedule(_vestedUser, _vestingScheduleIndex, _vestingScheduleTotalAmount, _vestingScheduleDuration, _vestingScheduleStartTime, _vestingScheduleIntervalLength, _vestingScheduleTokenAmountPerInterval);
     }
 
     /**
