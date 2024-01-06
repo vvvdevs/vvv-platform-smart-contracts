@@ -2,21 +2,18 @@
 
 /**
  * @title VVVVesting Unit Tests
- * @dev use "forge test --match-contract VVVVestingUnitTests -vvv" to run tests and show logs if applicable
+ * @dev use "forge test --match-contract VVVVestingUnitTests" to run tests
  * @dev use "forge coverage --match-contract VVVVesting" to run coverage
  */
 
 pragma solidity ^0.8.23;
 
-// import { Test } from "lib/forge-std/src/Test.sol"; //for stateless tests
 import { VVVVestingTestBase } from "test/vesting/VVVVestingTestBase.sol";
 import { MockERC20 } from "contracts/mock/MockERC20.sol";
 import { VVVVesting } from "contracts/vesting/VVVVesting.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 contract VVVVestingUnitTests is VVVVestingTestBase {
-    bool logging = true;
-
     //=====================================================================
     // SETUP
     //=====================================================================
@@ -176,15 +173,6 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
 
         uint256 vestingContractBalanceAfterWithdraw = VVVTokenInstance.balanceOf(address(VVVVestingInstance));
         assertTrue(vestingContractBalanceBeforeWithdraw == vestedAmount + vestingContractBalanceAfterWithdraw);
-        
-        if(logging){
-            emit log_named_uint("startBlock", startBlock);
-            emit log_named_uint("startTimestamp", startTime);
-            emit log_named_uint("block.number", block.number);
-            emit log_named_uint("block.timestamp", block.timestamp);
-            emit log_named_uint("vestedAmount", vestedAmount/1e18);            
-        }
-
     }
 
     ///vests more tokens than the contract token balance, so that both error cases can be reached
@@ -201,12 +189,6 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         advanceBlockNumberAndTimestampInBlocks(durationInSeconds); //seconds/(seconds per block) - be sure to be past 100% vesting
 
         uint256 vestedAmount = VVVVestingInstance.getVestedAmount(sampleUser, vestingScheduleIndex);
-
-        if(logging){
-            emit log_named_uint("contract balance", contractBalance/1e18);
-            emit log_named_uint("totalAmount", totalAmount/1e18);
-            emit log_named_uint("vestedAmount", vestedAmount/1e18);
-        }
 
         //prank to incorporate expected revert message  
         vm.startPrank(sampleUser, sampleUser);        
