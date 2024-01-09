@@ -2,21 +2,18 @@
 
 /**
  * @title VVVVesting Fuzz Tests
- * @dev use "forge test --match-contract VVVVestingInvariantTests -vvv" to run tests and show logs if applicable
- * @dev use "forge coverage --match-contract VVVVesting" to run coverage
+ * @dev use "forge test --match-contract VVVVestingFuzzTests" to run tests
+ * @dev use "forge coverage --match-contract VVVVestingFuzzTests" to run coverage
  */
 
 pragma solidity ^0.8.23;
 
-// import { Test } from "lib/forge-std/src/Test.sol"; //for stateless tests
 import { VVVVestingTestBase } from "test/vesting/VVVVestingTestBase.sol";
 import { MockERC20 } from "contracts/mock/MockERC20.sol";
 import { VVVVesting } from "contracts/vesting/VVVVesting.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 contract VVVVestingFuzzTests is VVVVestingTestBase {
-    bool logging = true;
-
     //=====================================================================
     // SETUP
     //=====================================================================
@@ -67,10 +64,6 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
         uint256 vestedAmount = VVVVestingInstance.getVestedAmount(_vestedUser, vestingScheduleIndex);
         
         uint256 referenceVestedAmount = Math.min(totalAmount, (totalAmount * (block.timestamp - startTime)) / duration);
-
-
-        emit log_named_uint("vestedAmount", vestedAmount);
-        emit log_named_uint("referenceVestedAmount", referenceVestedAmount);
 
         assertEq(vestedAmount, referenceVestedAmount);
     }
