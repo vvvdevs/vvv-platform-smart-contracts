@@ -108,11 +108,13 @@ contract VVVVesting is Ownable {
         @dev reverts if user withdrawable amount for that schedule is less than _tokenAmountToWithdraw
      */
     function withdrawVestedTokens(uint256 _tokenAmountToWithdraw, address _tokenDestination, uint256 _vestingScheduleIndex) external {
-        if(_vestingScheduleIndex >= userVestingSchedules[msg.sender].length){
+        VestingSchedule[] storage vestingSchedules = userVestingSchedules[msg.sender];
+        
+        if(_vestingScheduleIndex >= vestingSchedules.length){
             revert InvalidScheduleIndex();
         }
 
-        VestingSchedule storage vestingSchedule = userVestingSchedules[msg.sender][_vestingScheduleIndex];
+        VestingSchedule storage vestingSchedule = vestingSchedules[_vestingScheduleIndex];
 
         if (_tokenAmountToWithdraw > getVestedAmount(msg.sender, _vestingScheduleIndex) - vestingSchedule.tokenAmountWithdrawn){
             revert AmountIsGreaterThanWithdrawable();        
