@@ -77,6 +77,12 @@ contract VVVVesting is Ownable {
         uint256 _vestingScheduleIndex
     );
 
+    /**
+        @notice emitted when the vested token is set
+        @param _vvvtoken the address of the VVV token being vested
+    */
+    event SetVestedToken(address indexed _vvvtoken);
+
     ///@notice emitted when user tries to withdraw more tokens than are available to withdraw
     error AmountIsGreaterThanWithdrawable(); 
     
@@ -85,6 +91,9 @@ contract VVVVesting is Ownable {
 
     ///@notice emitted when a user tries to set a vesting schedule that does not exist
     error InvalidScheduleIndex();
+
+    ///@notice emitted when an admin tries to set the vested token to the zero address
+    error InvalidTokenAddress();
 
     /**
         @notice constructor
@@ -107,11 +116,13 @@ contract VVVVesting is Ownable {
         @dev reverts if user withdrawable amount for that schedule is less than _tokenAmountToWithdraw
      */
     function withdrawVestedTokens(uint256 _tokenAmountToWithdraw, address _tokenDestination, uint256 _vestingScheduleIndex) external {
-        if(_vestingScheduleIndex >= userVestingSchedules[msg.sender].length){
+        VestingSchedule[] storage vestingSchedules = userVestingSchedules[msg.sender];
+        
+        if(_vestingScheduleIndex >= vestingSchedules.length){
             revert InvalidScheduleIndex();
         }
 
-        VestingSchedule storage vestingSchedule = userVestingSchedules[msg.sender][_vestingScheduleIndex];
+        VestingSchedule storage vestingSchedule = vestingSchedules[_vestingScheduleIndex];
 
         if (_tokenAmountToWithdraw > getVestedAmount(msg.sender, _vestingScheduleIndex) - vestingSchedule.tokenAmountWithdrawn){
             revert AmountIsGreaterThanWithdrawable();        
@@ -231,4 +242,21 @@ contract VVVVesting is Ownable {
         delete userVestingSchedules[_vestedUser][_vestingScheduleIndex];   
         emit RemoveVestingSchedule(_vestedUser, _vestingScheduleIndex);     
     }
+
+    /**
+        @notice sets the address of the VVV token being vested
+        @notice emits SetVestedToken event
+        @param _vvvtoken the address of the VVV token being vested
+        @dev in-place update that carries over existing vesting schedules and user claims
+        @dev reverts if _vvvtoken is the zero address
+     */
+    function setVestedToken(address _vvvtoken) external onlyOwner {
+        if (_vvvtoken == address(0)) {
+            revert InvalidTokenAddress();
+        }
+
+        VVVToken = IERC20(_vvvtoken);
+        emit SetVestedToken(_vvvtoken);
+    }
 }
+
