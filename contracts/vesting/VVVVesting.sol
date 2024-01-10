@@ -247,21 +247,4 @@ contract VVVVesting is Ownable {
         delete userVestingSchedules[_vestedUser][_vestingScheduleIndex];   
         emit RemoveVestingSchedule(_vestedUser, _vestingScheduleIndex);     
     }
-
-    /**
-        @notice sets the address of the VVV token being vested
-        @notice emits SetVestedToken event
-        @param _vvvtoken the address of the VVV token being vested
-        @dev in-place update that carries over existing vesting schedules and user claims
-        @dev reverts if _vvvtoken is the zero address
-     */
-    function setVestedToken(address _vvvtoken) external onlyOwner {
-        if (_vvvtoken == address(0)) {
-            revert InvalidTokenAddress();
-        }
-
-        VVVToken = IERC20(_vvvtoken);
-        emit SetVestedToken(_vvvtoken);
-    }
 }
-
