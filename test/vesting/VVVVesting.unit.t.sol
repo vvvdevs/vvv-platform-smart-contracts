@@ -243,7 +243,6 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         VVVVestingInstance.withdrawVestedTokens(totalAmount, sampleUser, vestingScheduleIndex);
         vm.stopPrank();
     }
-
     
     //test batch-setting vesting schedules as admin, as user, and with invalid arguments
     function testBatchSetVestingSchedules() public {
