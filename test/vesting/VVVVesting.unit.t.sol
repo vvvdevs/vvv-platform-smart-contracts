@@ -175,7 +175,6 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 totalAmount = 10_000 * 1e18; //10k tokens
         uint256 durationInSeconds = 120; //120 seconds
         uint256 startTime = block.timestamp;
-        uint256 startBlock = block.number;
         uint256 intervalLength = 12;
         uint256 tokenAmountPerInterval = totalAmount / intervalLength;
 
@@ -286,11 +285,6 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         advanceBlockNumberAndTimestampInSeconds(intervalLength*10);
 
         uint256 vestedAmount = VVVVestingInstance.getVestedAmount(sampleUser, vestingScheduleIndex);
-
-        if(logging){
-            emit log_named_uint("totalAmount  - tokenAmountPerInterval", totalAmount);
-            emit log_named_uint("vestedAmount", vestedAmount);
-        }
 
         //using < because I don't know the remainder
         assertTrue(vestedAmount <= totalAmount - tokenAmountPerInterval);
