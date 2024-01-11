@@ -6,10 +6,14 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
+/**
+ * @title VVV VC Investment Ledger
+ * @notice This contract facilitates investments in VVV VC projects
+ */
 contract VVVVCInvestmentLedger is Ownable {
     using SafeERC20 for IERC20;
 
-    // EIP-712 definitions
+    /// @notice EIP-712 standard definitions
     bytes32 private constant DOMAIN_TYPEHASH =
         keccak256(
             bytes("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")
@@ -19,24 +23,30 @@ contract VVVVCInvestmentLedger is Ownable {
             bytes("VCInvestment(bytes32 investmentRound,address kycAddress,uint256 investmentAmount)")
         );
     bytes32 private immutable DOMAIN_SEPARATOR;
-
+    
+    
+    /// @notice The address authorized to sign investment transactions
     address public signer;
 
-    // store kyc address and total amounts invested for each investment round
+    /// @notice stores kyc address amounts invested for each investment round
     mapping(address => mapping(uint256 => uint256)) public kycAddressInvestedPerRound;
+    
+    /// @notice stores total amounts invested for each investment round
     mapping(uint256 => uint256) public totalInvestedPerRound;
 
     /**
-        @notice input structure for invest()
-        @param _investmentRound the round of the investment
-        @param _investmentRoundLimit the limit of the investment round
-        @param _investmentCustodian the custodian of the investment
-        @param _paymentTokenAddress the address of the payment token
-        @param _kycAddress the address of the kyc address
-        @param _kycAddressAllocation the max amount the kyc address can invest
-        @param _amountToInvest the amount to invest
-        @param _deadline the deadline for the investment
-        @param _signature the signature of the investment
+     * @notice Struct for investment parameters
+     * @param investmentRound The round of the investment
+     * @param investmentRoundLimit The limit of the investment round
+     * @param investmentRoundStartTimestamp The start timestamp of the investment round
+     * @param investmentRoundEndTimestamp The end timestamp of the investment round
+     * @param investmentCustodian The custodian of the investment
+     * @param paymentTokenAddress The address of the payment token
+     * @param kycAddress The address of the kyc address
+     * @param kycAddressAllocation The max amount the kyc address can invest
+     * @param amountToInvest The amount to invest
+     * @param deadline The deadline for the investment
+     * @param signature The signature of the investment
      */
     struct InvestParams {
         uint256 investmentRound;
@@ -52,18 +62,34 @@ contract VVVVCInvestmentLedger is Ownable {
         bytes signature;
     }
 
+    /**
+     * @notice Event emitted when a VC investment is made
+     * @param investmentRound The round of the investment
+     * @param kycAddress The address of the kyc address
+     * @param investmentAmount The amount invested
+     */
     event VCInvestment(
         uint256 indexed investmentRound,
         address indexed kycAddress,
         uint256 investmentAmount
     );
 
+    /// @notice Error thrown when the caller is not a KYC address
     error CallerIsNotKYCAddress();
+
+    /// @notice Error thrown when the caller or investment round allocation has been exceeded
     error ExceedsAllocation();
+
+    /// @notice Error thrown when the investment round is inactive
     error InactiveInvestmentRound();
+
+    /// @notice Error thrown when the signer address is not recovered from the provided signature
     error InvalidSignature();
+
+    /// @notice Error thrown when transferring ETH or ERC20 tokens fails
     error TransferFailed();
 
+    /// @notice stores the signer address and initializes the EIP-712 domain separator
     constructor(address _signer) Ownable(msg.sender) {
         signer = _signer;
 
@@ -77,12 +103,11 @@ contract VVVVCInvestmentLedger is Ownable {
                 address(this)
             )
         );
-
     }
-    
+
     /**
-        @notice facilitates a kyc address's investment in a project
-        @param p an InvestParams struct containing the investment parameters
+     * @notice Facilitates a kyc address's investment in a project
+     * @param p An InvestParams struct containing the investment parameters
      */
     function invest(InvestParams memory p) external {
         // check if signature is valid
@@ -126,6 +151,11 @@ contract VVVVCInvestmentLedger is Ownable {
         emit VCInvestment(p.investmentRound, p.kycAddress, p.amountToInvest);
     }
 
+    /**
+     * @notice Checks if the provided signature is valid
+     * @param p An InvestParams struct containing the investment parameters
+     * @return true if the signer address is recovered from the signature, false otherwise
+     */
     function _isSignatureValid(InvestParams memory p) internal view returns (bool) {
         bytes32 digest = keccak256(
             abi.encodePacked(
@@ -153,23 +183,21 @@ contract VVVVCInvestmentLedger is Ownable {
         return recoveredAddress == signer && recoveredAddress != address(0);
     }
 
+    /// @notice external wrapper for _isSignatureValid
     function isSignatureValid(InvestParams memory p) external view returns (bool) {
         return _isSignatureValid(p);
     }
 
-    function transferERC20(
-        address _tokenAddress,
-        address _to,
-        uint256 _amount
-    ) external onlyOwner {
+    /// @notice Allows admin to transfer ERC20 tokens from this contract
+    function transferERC20(address _tokenAddress, address _to, uint256 _amount) external onlyOwner {
         IERC20(_tokenAddress).safeTransfer(_to, _amount);
     }
 
+    /// @notice Allows admin to transfer ETH from this contract
     function transferETH(address payable _to, uint256 _amount) external onlyOwner {
         (bool os, ) = _to.call{ value: _amount }("");
-        if(!os) {
+        if (!os) {
             revert TransferFailed();
         }
     }
-
 }

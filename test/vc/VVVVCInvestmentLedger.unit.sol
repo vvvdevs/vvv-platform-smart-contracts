@@ -1,21 +1,17 @@
 //SPDX-License-Identifier: MIT
-
-/**
- * @title VVVVCInvestmentLedger Unit Tests
- * @dev use "forge test --match-contract VVVVCInvestmentLedgerUnitTests" to run tests
- * @dev use "forge coverage --match-contract VVVVCInvestmentLedger" to run coverage
- */
-
 pragma solidity ^0.8.23;
 
 import { VVVVCInvestmentLedgerTestBase } from "test/vc/VVVVCInvestmentLedgerTestBase.sol";
 import { MockERC20 } from "contracts/mock/MockERC20.sol";
 import { VVVVCInvestmentLedger } from "contracts/vc/VVVVCInvestmentLedger.sol";
 
+/**
+ * @title VVVVCInvestmentLedger Unit Tests
+ * @dev use "forge test --match-contract VVVVCInvestmentLedgerUnitTests" to run tests
+ * @dev use "forge coverage --match-contract VVVVCInvestmentLedger" to run coverage
+ */
 contract VVVVCInvestmentLedgerUnitTests is VVVVCInvestmentLedgerTestBase {
-    //=====================================================================
-    // SETUP
-    //=====================================================================
+    /// @notice sets up project and payment tokens, and an instance of the investment ledger
     function setUp() public {
         vm.startPrank(deployer, deployer);
 
@@ -29,16 +25,15 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCInvestmentLedgerTestBase {
         vm.stopPrank();
     }
 
-    //=====================================================================
-    // UNIT TESTS
-    //=====================================================================
+    /// @notice Tests deployment of VVVVCInvestmentLedger
     function testDeployment() public {
         assertTrue(address(LedgerInstance) != address(0));
     }
 
-    // tests that creation and validation of EIP712 signatures works 
-    // the test creates a signature and the contract 
-    // validates it given the same InvestParams
+    /**
+     * @notice Tests creation and validation of EIP712 signatures
+     * @dev defines an InvestParams struct, creates a signature for it, and validates it with the same struct parameters
+     */
     function testValidateSignature() public {
         VVVVCInvestmentLedger.InvestParams memory p = VVVVCInvestmentLedger.InvestParams({
             investmentRound: 1,
@@ -66,7 +61,6 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCInvestmentLedgerTestBase {
             );
 
         bytes memory sig = getEIP712SignatureForInvest(
-            domainTypehash, 
             domainSeparator, 
             investmentTypehash, 
             p
