@@ -267,6 +267,33 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         vm.stopPrank();
     }
 
+    //tests that an admin can set the vested token address, and than a non-admin cannot do so
+    function testSetVestedTokenAdminAndUser() public {
+        address newVestedTokenAddress = 0x1234567890123456789012345678901234567890;
+        address zeroAddress = address(0);
+
+        // InvalidTokenAddress()
+        vm.startPrank(deployer, deployer);
+        vm.expectRevert(VVVVesting.InvalidTokenAddress.selector);
+        VVVVestingInstance.setVestedToken(zeroAddress);
+        vm.stopPrank();
+
+        // OwnableUnauthorizedAccount(caller)
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, sampleUser));
+        VVVVestingInstance.setVestedToken(newVestedTokenAddress);
+        vm.stopPrank();        
+        
+        // Should work
+        vm.startPrank(deployer, deployer);
+        VVVVestingInstance.setVestedToken(newVestedTokenAddress);
+        vm.stopPrank();
+
+        emit log_named_address("address(VVVVestingInstance.VVVToken())", address(VVVVestingInstance.VVVToken()));
+        emit log_named_address("newVestedTokenAddress", newVestedTokenAddress);
+        assertTrue(address(VVVVestingInstance.VVVToken()) == newVestedTokenAddress);
+    }
+
     //test for remainder from division truncation, and make sure it is withdrawable after vesting schedule is finished. choosing prime amounts to make sure it'd work with any vesting schedule
     function testRemainderFromDivisionTruncationIsWithdrawable() public {
         uint256 vestingScheduleIndex = 0;
