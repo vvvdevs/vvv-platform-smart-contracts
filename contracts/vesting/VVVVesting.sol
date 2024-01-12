@@ -162,12 +162,13 @@ contract VVVVesting is Ownable {
         uint256 _vestingScheduleStartTime,
         uint256 _vestingScheduleIntervalLength
     ) private {
-        uint256 vestingScheduleTokenAmountPerInterval = _vestingScheduleTotalAmount / (_vestingScheduleDuration / _vestingScheduleIntervalLength);
+        uint256 vestingScheduleTokenAmountPerInterval = _vestingScheduleTotalAmount /
+            (_vestingScheduleDuration / _vestingScheduleIntervalLength);
 
         VestingSchedule memory newSchedule = VestingSchedule(
-            _vestingScheduleTotalAmount, 
-            0, 
-            _vestingScheduleDuration, 
+            _vestingScheduleTotalAmount,
+            0,
+            _vestingScheduleDuration,
             _vestingScheduleStartTime,
             _vestingScheduleIntervalLength,
             vestingScheduleTokenAmountPerInterval
@@ -181,7 +182,16 @@ contract VVVVesting is Ownable {
             revert InvalidScheduleIndex();
         }
 
-        emit SetVestingSchedule(_vestedUser, _vestingScheduleIndex, _vestingScheduleTotalAmount, 0, _vestingScheduleDuration, _vestingScheduleStartTime, _vestingScheduleIntervalLength, vestingScheduleTokenAmountPerInterval);
+        emit SetVestingSchedule(
+            _vestedUser,
+            _vestingScheduleIndex,
+            _vestingScheduleTotalAmount,
+            0,
+            _vestingScheduleDuration,
+            _vestingScheduleStartTime,
+            _vestingScheduleIntervalLength,
+            vestingScheduleTokenAmountPerInterval
+        );
     }
 
     /**
@@ -220,7 +230,8 @@ contract VVVVesting is Ownable {
         } else if (block.timestamp >= vestingSchedule.startTime + vestingSchedule.duration) {
             return vestingSchedule.totalTokenAmountToVest;
         } else {
-            uint256 elapsedIntervals = (block.timestamp - vestingSchedule.startTime) / vestingSchedule.intervalLength;
+            uint256 elapsedIntervals = (block.timestamp - vestingSchedule.startTime) /
+                vestingSchedule.intervalLength;
             return elapsedIntervals * vestingSchedule.tokenAmountPerInterval;
         }
     }
@@ -243,7 +254,14 @@ contract VVVVesting is Ownable {
         uint256 _vestingScheduleStartTime,
         uint256 _vestingScheduleIntervalLength
     ) external onlyOwner {
-        _setVestingSchedule(_vestedUser, _vestingScheduleIndex, _vestingScheduleTotalAmount, _vestingScheduleDuration, _vestingScheduleStartTime, _vestingScheduleIntervalLength);
+        _setVestingSchedule(
+            _vestedUser,
+            _vestingScheduleIndex,
+            _vestingScheduleTotalAmount,
+            _vestingScheduleDuration,
+            _vestingScheduleStartTime,
+            _vestingScheduleIntervalLength
+        );
     }
 
     /**
