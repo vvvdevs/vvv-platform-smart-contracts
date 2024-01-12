@@ -416,7 +416,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 vestedAmount = VVVVestingInstance.getVestedAmount(sampleUser, vestingScheduleIndex);
 
         //vestedAmount should be 9*tokenAmountPerInterval because at 95% of the schedule length, 9 intervals have passed
-        assertTrue(vestedAmount <= (numberOfIntervalsToAdvanceTimestamp-1) * tokenAmountPerInterval);
+        assertTrue(vestedAmount <= (numberOfIntervalsToAdvanceTimestamp - 1) * tokenAmountPerInterval);
 
         advanceBlockNumberAndTimestampInSeconds(intervalLength);
 
