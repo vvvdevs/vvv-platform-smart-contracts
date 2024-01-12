@@ -11,10 +11,5 @@ artifacts
 cache_forge
 out
 
-gittricks.txt
-gitscript.sh
-
-4naly3er/
-.aider*
-
 broadcast
+lib
