@@ -174,15 +174,6 @@ contract VVVVesting is Ownable {
     }
 
     /**
-        @notice returns a user's vesting schedule
-        @param _vestedUser the address of the user whose vesting schedule is being queried
-        @param _vestingScheduleIndex the index of the vesting schedule being queried
-     */
-    function getVestingSchedule(address _vestedUser, uint256 _vestingScheduleIndex) external view returns (VestingSchedule memory) {
-        return userVestingSchedules[_vestedUser][_vestingScheduleIndex];
-    }
-
-    /**
         @notice returns the amount of tokens that are currently vested (exlcudes amount withdrawn)
         @param _vestedUser the user whose withdrawable amount is being queried
         @param _vestingScheduleIndex the index of the vesting schedule being queried
