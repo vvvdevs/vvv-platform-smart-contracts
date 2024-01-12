@@ -150,21 +150,6 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             sampleUser,
             vestingScheduleIndex,
             totalAmount2,
-            duration2,
-            startTime2
-        );
-
-        (
-            uint256 _totalAmount2,
-            uint256 _amountWithdrawn2,
-            uint256 _duration2,
-            uint256 _startTime2
-        ) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
-
-        setVestingScheduleFromDeployer(
-            sampleUser,
-            vestingScheduleIndex,
-            totalAmount2,
             amountWithdrawn,
             duration2,
             startTime2
