@@ -27,7 +27,7 @@ jobs:
         run: npm install
 
       - name: Run lint
-        run: npm lint
+        run: npm run lint
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
