@@ -383,11 +383,6 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         VVVVestingInstance.setVestedToken(newVestedTokenAddress);
         vm.stopPrank();
 
-        emit log_named_address(
-            "address(VVVVestingInstance.VVVToken())",
-            address(VVVVestingInstance.VVVToken())
-        );
-        emit log_named_address("newVestedTokenAddress", newVestedTokenAddress);
         assertTrue(address(VVVVestingInstance.VVVToken()) == newVestedTokenAddress);
     }
 
@@ -400,7 +395,6 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 intervalLength = 397;
         uint256 tokenAmountPerInterval = totalAmount / (durationInSeconds / intervalLength);
         uint256 numberOfIntervalsToAdvanceTimestamp = 10; // 10 intervals = 3970 seconds
-        uint256 vestedAmountCheckDivisor = 1000; // 0.1% of totalAmount, used to check a threshold for truncation error
 
         //397/4159 = 0.09545563837460928, so I'll advance 10 intervals to get 95% of the way to the end of the schedule
         //at this point, the total vested amount should be totalAmount - tokenAmountPerInterval - truncation error
@@ -421,13 +415,8 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
 
         uint256 vestedAmount = VVVVestingInstance.getVestedAmount(sampleUser, vestingScheduleIndex);
 
-        //using < because I don't know the remainder
-        assertTrue(vestedAmount <= totalAmount - tokenAmountPerInterval);
-        //make sure the vested amount is close to the expected amount given truncation
-        assertTrue(
-            vestedAmount >
-                totalAmount - tokenAmountPerInterval - tokenAmountPerInterval / vestedAmountCheckDivisor
-        );
+        //vestedAmount should be 9*tokenAmountPerInterval because at 95% of the schedule length, 9 intervals have passed
+        assertTrue(vestedAmount <= (numberOfIntervalsToAdvanceTimestamp-1) * tokenAmountPerInterval);
 
         advanceBlockNumberAndTimestampInSeconds(intervalLength);
 
