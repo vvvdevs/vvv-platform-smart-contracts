@@ -5,9 +5,9 @@ pragma solidity ^0.8.23;
  * @title VVVVesting Test Base
  *   @dev storage, setup, and helper functions for VVVVesting tests
  */
-import {Test} from "lib/forge-std/src/Test.sol"; //for stateless tests
-import {VVVVesting} from "contracts/vesting/VVVVesting.sol";
-import {MockERC20} from "contracts/mock/MockERC20.sol";
+import { Test } from "lib/forge-std/src/Test.sol"; //for stateless tests
+import { VVVVesting } from "contracts/vesting/VVVVesting.sol";
+import { MockERC20 } from "contracts/mock/MockERC20.sol";
 
 abstract contract VVVVestingTestBase is Test {
     MockERC20 public VVVTokenInstance;
@@ -45,7 +45,12 @@ abstract contract VVVVestingTestBase is Test {
     ) public {
         vm.startPrank(deployer, deployer);
         VVVVestingInstance.setVestingSchedule(
-            _user, _vestingScheduleIndex, _totalAmount, _amountWithdrawn, _duration, _startTime
+            _user,
+            _vestingScheduleIndex,
+            _totalAmount,
+            _amountWithdrawn,
+            _duration,
+            _startTime
         );
         vm.stopPrank();
     }
@@ -69,26 +74,30 @@ abstract contract VVVVestingTestBase is Test {
 
     // generates a SetVestingScheduleParams array with the specified number of users and the specified parameter varied,
     // and varies vestedUser and vestingScheduleIndex because these are the factors by which the vesting schedule is identified
-    function generateSetVestingScheduleData(uint256 _numUsers, string memory paramToVary)
-        public
-        view
-        returns (VVVVesting.SetVestingScheduleParams[] memory)
-    {
-        VVVVesting.SetVestingScheduleParams[] memory setVestingScheduleParams =
-            new VVVVesting.SetVestingScheduleParams[](_numUsers);
+    function generateSetVestingScheduleData(
+        uint256 _numUsers,
+        string memory paramToVary
+    ) public view returns (VVVVesting.SetVestingScheduleParams[] memory) {
+        VVVVesting.SetVestingScheduleParams[]
+            memory setVestingScheduleParams = new VVVVesting.SetVestingScheduleParams[](_numUsers);
 
         if (keccak256(abi.encodePacked(paramToVary)) == keccak256(abi.encodePacked("vestedUser"))) {
             for (uint256 i = 0; i < _numUsers; i++) {
-                setVestingScheduleParams[i].vestedUser = address(uint160(uint256(keccak256(abi.encodePacked(i)))));
+                setVestingScheduleParams[i].vestedUser = address(
+                    uint160(uint256(keccak256(abi.encodePacked(i))))
+                );
                 setVestingScheduleParams[i].vestingScheduleIndex = 0;
                 setVestingScheduleParams[i].vestingSchedule.totalTokenAmountToVest = i * 10_000 * 1e18; //10k tokens
                 setVestingScheduleParams[i].vestingSchedule.duration = i * 60 * 24 * 365 * 2; //2 years
                 setVestingScheduleParams[i].vestingSchedule.startTime = block.timestamp + i * 60 * 24 * 2; //2 days from now
             }
-        } else if (keccak256(abi.encodePacked(paramToVary)) == keccak256(abi.encodePacked("vestingScheduleIndex"))) {
+        } else if (
+            keccak256(abi.encodePacked(paramToVary)) == keccak256(abi.encodePacked("vestingScheduleIndex"))
+        ) {
             for (uint256 i = 0; i < _numUsers; i++) {
-                setVestingScheduleParams[i].vestedUser =
-                    address(uint160(uint256(keccak256(abi.encodePacked("vestedUser")))));
+                setVestingScheduleParams[i].vestedUser = address(
+                    uint160(uint256(keccak256(abi.encodePacked("vestedUser"))))
+                );
                 setVestingScheduleParams[i].vestingScheduleIndex = i;
                 setVestingScheduleParams[i].vestingSchedule.totalTokenAmountToVest = 10_000 * 1e18; //10k tokens
                 setVestingScheduleParams[i].vestingSchedule.duration = i * 60 * 24 * 365 * 2; //2 years
