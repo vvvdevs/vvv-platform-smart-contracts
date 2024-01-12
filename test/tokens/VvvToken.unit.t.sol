@@ -1,8 +1,8 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {VVVTokenTestBase} from "./VvvTokenTestBase.sol";
-import {VVVToken} from "contracts/tokens/VvvToken.sol";
+import { VVVTokenTestBase } from "./VvvTokenTestBase.sol";
+import { VVVToken } from "contracts/tokens/VvvToken.sol";
 
 contract VVVTokenUInitTests is VVVTokenTestBase {
     function setUp() public {

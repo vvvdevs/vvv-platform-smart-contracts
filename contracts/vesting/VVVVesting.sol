@@ -1,9 +1,9 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract VVVVesting is Ownable {
     using SafeERC20 for IERC20;
@@ -119,8 +119,8 @@ contract VVVVesting is Ownable {
         VestingSchedule storage vestingSchedule = vestingSchedules[_vestingScheduleIndex];
 
         if (
-            _tokenAmountToWithdraw
-                > getVestedAmount(msg.sender, _vestingScheduleIndex) - vestingSchedule.tokenAmountWithdrawn
+            _tokenAmountToWithdraw >
+            getVestedAmount(msg.sender, _vestingScheduleIndex) - vestingSchedule.tokenAmountWithdrawn
         ) {
             revert AmountIsGreaterThanWithdrawable();
         }
@@ -129,7 +129,12 @@ contract VVVVesting is Ownable {
 
         VVVToken.safeTransfer(_tokenDestination, _tokenAmountToWithdraw);
 
-        emit VestedTokenWithdrawal(msg.sender, _tokenDestination, _tokenAmountToWithdraw, _vestingScheduleIndex);
+        emit VestedTokenWithdrawal(
+            msg.sender,
+            _tokenDestination,
+            _tokenAmountToWithdraw,
+            _vestingScheduleIndex
+        );
     }
 
     /**
@@ -147,8 +152,12 @@ contract VVVVesting is Ownable {
         uint256 _vestingScheduleDuration,
         uint256 _vestingScheduleStartTime
     ) private {
-        VestingSchedule memory newSchedule =
-            VestingSchedule(_vestingScheduleTotalAmount, 0, _vestingScheduleDuration, _vestingScheduleStartTime);
+        VestingSchedule memory newSchedule = VestingSchedule(
+            _vestingScheduleTotalAmount,
+            0,
+            _vestingScheduleDuration,
+            _vestingScheduleStartTime
+        );
 
         if (_vestingScheduleIndex == userVestingSchedules[_vestedUser].length) {
             userVestingSchedules[_vestedUser].push(newSchedule);
@@ -173,11 +182,10 @@ contract VVVVesting is Ownable {
      *     @param _vestedUser the address of the user whose vesting schedule is being queried
      *     @param _vestingScheduleIndex the index of the vesting schedule being queried
      */
-    function getVestingSchedule(address _vestedUser, uint256 _vestingScheduleIndex)
-        external
-        view
-        returns (VestingSchedule memory)
-    {
+    function getVestingSchedule(
+        address _vestedUser,
+        uint256 _vestingScheduleIndex
+    ) external view returns (VestingSchedule memory) {
         return userVestingSchedules[_vestedUser][_vestingScheduleIndex];
     }
 
@@ -190,19 +198,24 @@ contract VVVVesting is Ownable {
      *         2. schedule has ended with tokens remaining to withdraw
      *         3. schedule is in progress with tokens remaining to withdraw
      */
-    function getVestedAmount(address _vestedUser, uint256 _vestingScheduleIndex) public view returns (uint256) {
+    function getVestedAmount(
+        address _vestedUser,
+        uint256 _vestingScheduleIndex
+    ) public view returns (uint256) {
         VestingSchedule storage vestingSchedule = userVestingSchedules[_vestedUser][_vestingScheduleIndex];
 
         if (
-            block.timestamp < vestingSchedule.startTime || vestingSchedule.startTime == 0
-                || userVestingSchedules[_vestedUser].length == 0
+            block.timestamp < vestingSchedule.startTime ||
+            vestingSchedule.startTime == 0 ||
+            userVestingSchedules[_vestedUser].length == 0
         ) {
             return 0;
         } else if (block.timestamp >= vestingSchedule.startTime + vestingSchedule.duration) {
             return vestingSchedule.totalTokenAmountToVest;
         } else {
-            return (vestingSchedule.totalTokenAmountToVest * (block.timestamp - vestingSchedule.startTime))
-                / vestingSchedule.duration;
+            return
+                (vestingSchedule.totalTokenAmountToVest * (block.timestamp - vestingSchedule.startTime)) /
+                vestingSchedule.duration;
         }
     }
 
