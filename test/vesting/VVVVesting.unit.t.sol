@@ -305,9 +305,6 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
 
         uint256 vestedAmount = VVVVestingInstance.getVestedAmount(sampleUser, vestingScheduleIndex);
 
-        emit log_named_uint("vestedAmount", vestedAmount);
-        emit log_named_uint("totalAmount", totalAmount);
-
         //using < because I don't know the remainder
         assertTrue(vestedAmount <= totalAmount - tokenAmountPerInterval);
         //make sure the vested amount is close to the expected amount given truncation
