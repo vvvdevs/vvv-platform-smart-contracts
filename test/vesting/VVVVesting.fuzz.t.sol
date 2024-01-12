@@ -5,7 +5,6 @@
  * @dev use "forge test --match-contract VVVVestingFuzzTests" to run tests
  * @dev use "forge coverage --match-contract VVVVestingFuzzTests" to run coverage
  */
-
 pragma solidity ^0.8.23;
 
 import { VVVVestingTestBase } from "test/vesting/VVVVestingTestBase.sol";
@@ -36,7 +35,7 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
     function testFuzz_WithdrawVestedTokens(uint256 _tokenAmountToWithdraw) public {
         uint256 vestingScheduleIndex = 0;
         uint256 totalAmount = 10_000 * 1e18; //10k tokens
-        uint256 duration = 120; 
+        uint256 duration = 120;
         uint256 startTime = block.timestamp;
         uint256 intervalLength = 30;
 
@@ -53,7 +52,7 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
     //tests both that the correct amount of vested and withdrawn tokens are read
     function testFuzz_GetVestedAmount(address _vestedUser, uint8 _vestingTime) public {
         uint256 totalAmount = 10_000 * 1e18; //10k tokens
-        uint256 duration = 120; 
+        uint256 duration = 120;
         uint256 startTime = block.timestamp;
         uint256 vestingScheduleIndex = 0;
         uint256 intervalLength = 30;
