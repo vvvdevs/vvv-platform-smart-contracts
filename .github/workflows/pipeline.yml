@@ -1,15 +1,21 @@
-name: Run Foundry Tests
+name: Test and lint
 
-on: [pull_request]
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
 
 jobs:
   check:
-    name: Foundry project
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
+          ref: ${{ github.event.pull_request.head.sha }}
           submodules: recursive
 
       - name: Set up Node.js
@@ -19,6 +25,9 @@ jobs:
 
       - name: Install dependencies
         run: npm install
+
+      - name: Run lint
+        run: npm lint
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
