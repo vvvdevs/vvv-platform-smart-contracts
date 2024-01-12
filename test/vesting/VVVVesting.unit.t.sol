@@ -79,8 +79,13 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
 
         setVestingScheduleFromDeployer(sampleUser, vestingScheduleIndex, totalAmount, amountWithdrawn, duration, startTime);
 
-        (uint256 _totalAmount, uint256 _amountWithdrawn, uint256 _duration, uint256 _startTime) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
-    
+        (
+            uint256 _totalAmount,
+            uint256 _amountWithdrawn,
+            uint256 _duration,
+            uint256 _startTime
+        ) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
+
         assertTrue(_totalAmount == totalAmount);
         assertTrue(_amountWithdrawn == 0);
         assertTrue(_duration == duration);
@@ -97,21 +102,41 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
 
         setVestingScheduleFromDeployer(sampleUser, vestingScheduleIndex, totalAmount, amountWithdrawn, duration, startTime);
 
-        (uint256 _totalAmount, uint256 _amountWithdrawn, uint256 _duration, uint256 _startTime) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
-    
+        (
+            uint256 _totalAmount,
+            uint256 _amountWithdrawn,
+            uint256 _duration,
+            uint256 _startTime
+        ) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
+
         assertTrue(_totalAmount == totalAmount);
         assertTrue(_amountWithdrawn == 0);
         assertTrue(_duration == duration);
         assertTrue(_startTime == startTime);
 
         uint256 totalAmount2 = 20_000 * 1e18; //20k tokens
-        uint256 duration2 = 60*60*24*365*3; //3 years
-        uint256 startTime2 = block.timestamp + 60*60*24*3; //3 days from now
+        uint256 duration2 = 60 * 60 * 24 * 365 * 3; //3 years
+        uint256 startTime2 = block.timestamp + 60 * 60 * 24 * 3; //3 days from now
+
+        setVestingScheduleFromDeployer(
+            sampleUser,
+            vestingScheduleIndex,
+            totalAmount2,
+            duration2,
+            startTime2
+        );
+
+        (
+            uint256 _totalAmount2,
+            uint256 _amountWithdrawn2,
+            uint256 _duration2,
+            uint256 _startTime2
+        ) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
 
         setVestingScheduleFromDeployer(sampleUser, vestingScheduleIndex, totalAmount2, amountWithdrawn, duration2, startTime2);
 
         (uint256 _totalAmount2, uint256 _amountWithdrawn2, uint256 _duration2, uint256 _startTime2) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
-    
+
         assertTrue(_totalAmount2 == totalAmount2);
         assertTrue(_amountWithdrawn2 == 0);
         assertTrue(_duration2 == duration2);
@@ -128,8 +153,13 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
 
         setVestingScheduleFromDeployer(sampleUser, vestingScheduleIndex, totalAmount, amountWithdrawn, duration, startTime);
 
-        (uint256 _totalAmount, uint256 _amountWithdrawn, uint256 _duration, uint256 _startTime) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
-    
+        (
+            uint256 _totalAmount,
+            uint256 _amountWithdrawn,
+            uint256 _duration,
+            uint256 _startTime
+        ) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
+
         assertTrue(_totalAmount == totalAmount);
         assertTrue(_amountWithdrawn == 0);
         assertTrue(_duration == duration);
@@ -137,8 +167,13 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
 
         removeVestingScheduleFromDeployer(sampleUser, vestingScheduleIndex);
 
-        (uint256 _totalAmount2, uint256 _amountWithdrawn2, uint256 _duration2, uint256 _startTime2) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
-    
+        (
+            uint256 _totalAmount2,
+            uint256 _amountWithdrawn2,
+            uint256 _duration2,
+            uint256 _startTime2
+        ) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
+
         assertTrue(_totalAmount2 == 0);
         assertTrue(_amountWithdrawn2 == 0);
         assertTrue(_duration2 == 0);
@@ -156,16 +191,22 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         setVestingScheduleFromDeployer(sampleUser, vestingScheduleIndex, totalAmount, amountWithdrawn, durationInSeconds, startTime);
         advanceBlockNumberAndTimestampInBlocks(durationInSeconds/12/2); //seconds/(seconds per block)/fraction of durationInSeconds
 
-        uint256 vestedAmount = VVVVestingInstance.getVestedAmount(sampleUser, vestingScheduleIndex);        
-        uint256 vestingContractBalanceBeforeWithdraw = VVVTokenInstance.balanceOf(address(VVVVestingInstance));
+        uint256 vestedAmount = VVVVestingInstance.getVestedAmount(sampleUser, vestingScheduleIndex);
+        uint256 vestingContractBalanceBeforeWithdraw = VVVTokenInstance.balanceOf(
+            address(VVVVestingInstance)
+        );
 
         withdrawVestedTokensAsUser(sampleUser, vestedAmount, sampleUser, vestingScheduleIndex);
 
-        ( , uint256 _amountWithdrawn2,  ,  ) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
+        (, uint256 _amountWithdrawn2, , ) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
         assertTrue(_amountWithdrawn2 == vestedAmount);
 
-        uint256 vestingContractBalanceAfterWithdraw = VVVTokenInstance.balanceOf(address(VVVVestingInstance));
-        assertTrue(vestingContractBalanceBeforeWithdraw == vestedAmount + vestingContractBalanceAfterWithdraw);
+        uint256 vestingContractBalanceAfterWithdraw = VVVTokenInstance.balanceOf(
+            address(VVVVestingInstance)
+        );
+        assertTrue(
+            vestingContractBalanceBeforeWithdraw == vestedAmount + vestingContractBalanceAfterWithdraw
+        );
     }
 
     // tests the case where the contract vests more tokens than the contract token balance
@@ -184,8 +225,8 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
 
         uint256 vestedAmount = VVVVestingInstance.getVestedAmount(sampleUser, vestingScheduleIndex);
 
-        //prank to incorporate expected revert message  
-        vm.startPrank(sampleUser, sampleUser);        
+        //prank to incorporate expected revert message
+        vm.startPrank(sampleUser, sampleUser);
         vm.expectRevert(VVVVesting.AmountIsGreaterThanWithdrawable.selector);
         VVVVestingInstance.withdrawVestedTokens(vestedAmount + 1, sampleUser, vestingScheduleIndex);
         vm.stopPrank();
@@ -217,7 +258,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         withdrawVestedTokensAsUser(sampleUser, totalAmount, sampleUser, vestingScheduleIndex);
 
         //attempt to withdraw one more token, should fail
-        vm.startPrank(sampleUser, sampleUser);        
+        vm.startPrank(sampleUser, sampleUser);
         vm.expectRevert(VVVVesting.AmountIsGreaterThanWithdrawable.selector);
         VVVVestingInstance.withdrawVestedTokens(1, sampleUser, vestingScheduleIndex);
         vm.stopPrank();
@@ -229,11 +270,11 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 totalAmount = 10_000 * 1e18; //10k tokens
         uint256 amountWithdrawn = 0;
         uint256 durationInSeconds = 120; //120 seconds
-        uint256 startTime = block.timestamp + 60*60*24*2; //2 days from now
+        uint256 startTime = block.timestamp + 60 * 60 * 24 * 2; //2 days from now
 
         setVestingScheduleFromDeployer(sampleUser, vestingScheduleIndex, totalAmount, amountWithdrawn, durationInSeconds, startTime);
 
-        vm.startPrank(sampleUser, sampleUser);        
+        vm.startPrank(sampleUser, sampleUser);
         vm.expectRevert(VVVVesting.AmountIsGreaterThanWithdrawable.selector);
         VVVVestingInstance.withdrawVestedTokens(totalAmount, sampleUser, vestingScheduleIndex);
         vm.stopPrank();
