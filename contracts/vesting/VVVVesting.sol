@@ -24,6 +24,18 @@ contract VVVVesting is Ownable {
         uint256 startTime;
     }
 
+    /**
+        @notice struct representing parameters for setting a vesting schedule
+        @param vestedUser the address of the user whose vesting schedule is being set
+        @param vestingScheduleIndex the index of the vesting schedule being set
+        @param vestingSchedule the vesting schedule being set
+     */
+    struct SetVestingScheduleParams {
+        address vestedUser;
+        uint256 vestingScheduleIndex;
+        VestingSchedule vestingSchedule;
+    }
+
     ///@notice maps user address to array of vesting schedules
     mapping(address => VestingSchedule[]) public userVestingSchedules;
 
@@ -132,30 +144,33 @@ contract VVVVesting is Ownable {
 
     /**
         @notice sets or replaces vesting schedule
-        @param _vestedUser the address of the user whose vesting schedule is being set
-        @param _vestingScheduleIndex the index of the vesting schedule being set
-        @param _vestingScheduleTotalAmount the total amount of tokens to be vested for this schedule
-        @param _vestingScheduleDuration the duration of the vesting schedule
-        @param _vestingScheduleStartTime the start time of the vesting schedule
+        @param p SetVestingScheduleParams struct
      */
-    function _setVestingSchedule(
-        address _vestedUser,
-        uint256 _vestingScheduleIndex,
-        uint256 _vestingScheduleTotalAmount,
-        uint256 _vestingScheduleDuration,
-        uint256 _vestingScheduleStartTime
-    ) private {
-        VestingSchedule memory newSchedule = VestingSchedule(_vestingScheduleTotalAmount, 0, _vestingScheduleDuration, _vestingScheduleStartTime);
-
-        if (_vestingScheduleIndex == userVestingSchedules[_vestedUser].length) {
-            userVestingSchedules[_vestedUser].push(newSchedule);
-        } else if (_vestingScheduleIndex < userVestingSchedules[_vestedUser].length) {
-            userVestingSchedules[_vestedUser][_vestingScheduleIndex] = newSchedule;
+    function _setVestingSchedule(SetVestingScheduleParams memory p) private {
+        VestingSchedule memory newSchedule = VestingSchedule(
+            p.vestingSchedule.totalTokenAmountToVest, 
+            0, 
+            p.vestingSchedule.duration, 
+            p.vestingSchedule.startTime
+        );
+        
+        if(p.vestingScheduleIndex == userVestingSchedules[p.vestedUser].length){
+            userVestingSchedules[p.vestedUser].push(newSchedule);
+        } else if (p.vestingScheduleIndex < userVestingSchedules[p.vestedUser].length){
+            userVestingSchedules[p.vestedUser][p.vestingScheduleIndex] = newSchedule;
         } else {
             revert InvalidScheduleIndex();
         }
 
-        emit SetVestingSchedule(_vestedUser, _vestingScheduleIndex, _vestingScheduleTotalAmount, 0, _vestingScheduleDuration, _vestingScheduleStartTime);
+        emit SetVestingSchedule(
+            p.vestedUser, 
+            p.vestingScheduleIndex, 
+            p.vestingSchedule.totalTokenAmountToVest, 
+            0, 
+            p.vestingSchedule.duration, 
+            p.vestingSchedule.startTime
+        );
+
     }
 
     /**
@@ -208,32 +223,28 @@ contract VVVVesting is Ownable {
         uint256 _vestingScheduleDuration,
         uint256 _vestingScheduleStartTime
     ) external onlyOwner {
-        _setVestingSchedule(_vestedUser, _vestingScheduleIndex, _vestingScheduleTotalAmount, _vestingScheduleDuration, _vestingScheduleStartTime);
+        SetVestingScheduleParams memory params = SetVestingScheduleParams(
+            _vestedUser,
+            _vestingScheduleIndex,
+            VestingSchedule(
+                _vestingScheduleTotalAmount,
+                0,
+                _vestingScheduleDuration,
+                _vestingScheduleStartTime
+            )
+        );
+
+        _setVestingSchedule(params);
     }
 
     /**
         @notice used to batch-call _setVestingSchedule
         @notice only callable by admin
-        @dev reverts if array lengths do not match
+        @param p array of SetVestingScheduleParams structs
      */
-    function batchSetVestingSchedule(
-        address[] calldata _vestedUsers,
-        uint256[] calldata _vestingScheduleIndices,
-        uint256[] calldata _vestingScheduleTotalAmounts,
-        uint256[] calldata _vestingScheduleDurations,
-        uint256[] calldata _vestingScheduleStartTimes
-    ) external onlyOwner {
-        if(
-            _vestedUsers.length != _vestingScheduleIndices.length ||
-            _vestedUsers.length != _vestingScheduleTotalAmounts.length ||
-            _vestedUsers.length != _vestingScheduleDurations.length ||
-            _vestedUsers.length != _vestingScheduleStartTimes.length
-        ){
-            revert ArrayLengthMismatch();
-        }
-
-        for (uint256 i = 0; i < _vestedUsers.length; ++i) {
-            _setVestingSchedule(_vestedUsers[i], _vestingScheduleIndices[i], _vestingScheduleTotalAmounts[i], _vestingScheduleDurations[i], _vestingScheduleStartTimes[i]);
+    function batchSetVestingSchedule(SetVestingScheduleParams[] calldata p) external onlyOwner {
+        for (uint256 i = 0; i < p.length; ++i) {
+            _setVestingSchedule(p[i]);
         }
     }
 

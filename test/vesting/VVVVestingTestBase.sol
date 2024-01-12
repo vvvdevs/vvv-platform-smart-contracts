@@ -21,14 +21,7 @@ abstract contract VVVVestingTestBase is Test {
     
     uint256 blockNumber;
     uint256 blockTimestamp;
-    uint256 chainid;
 
-    address[] public vestedUsers;
-    uint256[] public vestingScheduleIndices;
-    uint256[] public vestingScheduleTotalAmounts;
-    uint256[] public vestingScheduleDurations;
-    uint256[] public vestingScheduleStartTimes;
-    
     function advanceBlockNumberAndTimestampInBlocks(uint256 blocks) public {
         blockNumber += blocks;
         blockTimestamp += blocks * 12; //seconds per block
@@ -59,5 +52,36 @@ abstract contract VVVVestingTestBase is Test {
         vm.startPrank(_caller, _caller);
         VVVVestingInstance.withdrawVestedTokens(_amount, _destination, _vestingScheduleIndex);
         vm.stopPrank();
+    }
+
+    // generates a SetVestingScheduleParams array with the specified number of users and the specified parameter varied,
+    // and varies vestedUser and vestingScheduleIndex because these are the factors by which the vesting schedule is identified
+    function generateSetVestingScheduleData(uint256 _numUsers, string memory paramToVary) public view returns (VVVVesting.SetVestingScheduleParams[] memory) {
+        VVVVesting.SetVestingScheduleParams[] memory setVestingScheduleParams = new VVVVesting.SetVestingScheduleParams[](_numUsers);
+
+        if(keccak256(abi.encodePacked(paramToVary)) == keccak256(abi.encodePacked("vestedUser"))) {
+
+            for (uint256 i = 0; i < _numUsers; i++){
+                setVestingScheduleParams[i].vestedUser = address(uint160(uint(keccak256(abi.encodePacked(i)))));
+                setVestingScheduleParams[i].vestingScheduleIndex = 0;
+                setVestingScheduleParams[i].vestingSchedule.totalTokenAmountToVest = i * 10_000 * 1e18; //10k tokens
+                setVestingScheduleParams[i].vestingSchedule.duration = i*60*24*365*2; //2 years
+                setVestingScheduleParams[i].vestingSchedule.startTime = block.timestamp + i*60*24*2; //2 days from now
+            }
+
+        } else if(keccak256(abi.encodePacked(paramToVary)) == keccak256(abi.encodePacked("vestingScheduleIndex"))) {
+
+            for (uint256 i = 0; i < _numUsers; i++){
+                setVestingScheduleParams[i].vestedUser = address(uint160(uint(keccak256(abi.encodePacked("vestedUser")))));
+                setVestingScheduleParams[i].vestingScheduleIndex = i;
+                setVestingScheduleParams[i].vestingSchedule.totalTokenAmountToVest = 10_000 * 1e18; //10k tokens
+                setVestingScheduleParams[i].vestingSchedule.duration = i*60*24*365*2; //2 years
+                setVestingScheduleParams[i].vestingSchedule.startTime = block.timestamp + i*60*24*2; //2 days from now
+            }
+        } else {
+            revert("invalid paramToVary");
+        }
+        
+        return setVestingScheduleParams;
     }
 }
