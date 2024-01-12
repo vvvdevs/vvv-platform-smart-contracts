@@ -1,10 +1,10 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {VVVVestingTestBase} from "test/vesting/VVVVestingTestBase.sol";
-import {MockERC20} from "contracts/mock/MockERC20.sol";
-import {VVVVesting} from "contracts/vesting/VVVVesting.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import { VVVVestingTestBase } from "test/vesting/VVVVestingTestBase.sol";
+import { MockERC20 } from "contracts/mock/MockERC20.sol";
+import { VVVVesting } from "contracts/vesting/VVVVesting.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /**
  * @title VVVVesting Fuzz Tests
@@ -33,11 +33,19 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
         uint256 startTime = block.timestamp;
 
         setVestingScheduleFromDeployer(
-            sampleUser, vestingScheduleIndex, totalAmount, amountWithdrawn, duration, startTime
+            sampleUser,
+            vestingScheduleIndex,
+            totalAmount,
+            amountWithdrawn,
+            duration,
+            startTime
         );
 
         uint256 vestedAmount = VVVVestingInstance.getVestedAmount(sampleUser, vestingScheduleIndex);
-        (, uint256 withdrawnTokens,,) = VVVVestingInstance.userVestingSchedules(sampleUser, vestingScheduleIndex);
+        (, uint256 withdrawnTokens, , ) = VVVVestingInstance.userVestingSchedules(
+            sampleUser,
+            vestingScheduleIndex
+        );
         uint256 amountToWithdraw = Math.min(vestedAmount - withdrawnTokens, _tokenAmountToWithdraw);
 
         withdrawVestedTokensAsUser(sampleUser, amountToWithdraw, sampleUser, vestingScheduleIndex);
@@ -53,7 +61,12 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
         uint256 vestingScheduleIndex = 0;
 
         setVestingScheduleFromDeployer(
-            _vestedUser, vestingScheduleIndex, totalAmount, amountWithdrawn, duration, startTime
+            _vestedUser,
+            vestingScheduleIndex,
+            totalAmount,
+            amountWithdrawn,
+            duration,
+            startTime
         );
 
         uint256 vestingTime = _vestingTime > 0 ? _vestingTime : 1;
@@ -61,7 +74,10 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
 
         uint256 vestedAmount = VVVVestingInstance.getVestedAmount(_vestedUser, vestingScheduleIndex);
 
-        uint256 referenceVestedAmount = Math.min(totalAmount, (totalAmount * (block.timestamp - startTime)) / duration);
+        uint256 referenceVestedAmount = Math.min(
+            totalAmount,
+            (totalAmount * (block.timestamp - startTime)) / duration
+        );
 
         assertEq(vestedAmount, referenceVestedAmount);
     }
