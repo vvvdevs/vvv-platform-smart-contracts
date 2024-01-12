@@ -5,7 +5,6 @@
  * @dev use "forge test --match-contract VVVVestingFuzzTests" to run tests
  * @dev use "forge coverage --match-contract VVVVestingFuzzTests" to run coverage
  */
-
 pragma solidity ^0.8.23;
 
 import { VVVVestingTestBase } from "test/vesting/VVVVestingTestBase.sol";
@@ -43,7 +42,10 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
         setVestingScheduleFromDeployer(sampleUser, vestingScheduleIndex, totalAmount, amountWithdrawn, duration, startTime);
 
         uint256 vestedAmount = VVVVestingInstance.getVestedAmount(sampleUser, vestingScheduleIndex);
-        (, uint256 withdrawnTokens, , ) = VVVVestingInstance.userVestingSchedules(sampleUser, vestingScheduleIndex);
+        (, uint256 withdrawnTokens, , ) = VVVVestingInstance.userVestingSchedules(
+            sampleUser,
+            vestingScheduleIndex
+        );
         uint256 amountToWithdraw = Math.min(vestedAmount - withdrawnTokens, _tokenAmountToWithdraw);
 
         withdrawVestedTokensAsUser(sampleUser, amountToWithdraw, sampleUser, vestingScheduleIndex);
@@ -64,11 +66,12 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
         advanceBlockNumberAndTimestampInSeconds(vestingTime);
 
         uint256 vestedAmount = VVVVestingInstance.getVestedAmount(_vestedUser, vestingScheduleIndex);
-        
-        uint256 referenceVestedAmount = Math.min(totalAmount, (totalAmount * (block.timestamp - startTime)) / duration);
+
+        uint256 referenceVestedAmount = Math.min(
+            totalAmount,
+            (totalAmount * (block.timestamp - startTime)) / duration
+        );
 
         assertEq(vestedAmount, referenceVestedAmount);
     }
-
 }
-
