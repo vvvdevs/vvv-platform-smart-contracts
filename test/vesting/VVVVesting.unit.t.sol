@@ -290,19 +290,28 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 startTime = block.timestamp;
         uint256 intervalLength = 397;
         uint256 tokenAmountPerInterval = totalAmount / (durationInSeconds / intervalLength);
-
+        uint256 numberOfIntervalsToAdvanceTimestamp = 10; // 10 intervals = 3970 seconds
+        uint256 vestedAmountCheckDivisor = 1000; // 0.1% of totalAmount, used to check a threshold for truncation error
+        
         //397/4159 = 0.09545563837460928, so I'll advance 10 intervals to get 95% of the way to the end of the schedule
-        //at this point, the total vested amount should be totalAmount - tokenAmountPerInterval - remainder, due to truncation
-        //then I'll advance 1 more interval to get to the end of the schedule, at which point total vested amount should be totalAmount
+        //at this point, the total vested amount should be totalAmount - tokenAmountPerInterval - truncation error
+        //(also equal to 9*tokenAmountPerInterval - truncation error)
+
+        //then advance 1 more interval to get beyond the end of the schedule, at which point total vested amount should be totalAmount
 
         setVestingScheduleFromDeployer(sampleUser, vestingScheduleIndex, totalAmount, durationInSeconds, startTime, intervalLength);
 
-        advanceBlockNumberAndTimestampInSeconds(intervalLength*10);
+        advanceBlockNumberAndTimestampInSeconds(intervalLength*numberOfIntervalsToAdvanceTimestamp);
 
         uint256 vestedAmount = VVVVestingInstance.getVestedAmount(sampleUser, vestingScheduleIndex);
 
+        emit log_named_uint("vestedAmount", vestedAmount);
+        emit log_named_uint("totalAmount", totalAmount);
+
         //using < because I don't know the remainder
         assertTrue(vestedAmount <= totalAmount - tokenAmountPerInterval);
+        //make sure the vested amount is close to the expected amount given truncation
+        assertTrue(vestedAmount > totalAmount - tokenAmountPerInterval - tokenAmountPerInterval/vestedAmountCheckDivisor); 
 
         advanceBlockNumberAndTimestampInSeconds(intervalLength);
 
