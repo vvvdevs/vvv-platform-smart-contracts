@@ -39,9 +39,8 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
         uint256 duration = 120; 
         uint256 startTime = block.timestamp;
         uint256 intervalLength = 30;
-        uint256 tokenAmountPerInterval = 1000;
 
-        setVestingScheduleFromDeployer(sampleUser, vestingScheduleIndex, totalAmount, duration, startTime, intervalLength, tokenAmountPerInterval);
+        setVestingScheduleFromDeployer(sampleUser, vestingScheduleIndex, totalAmount, duration, startTime, intervalLength);
 
         uint256 vestedAmount = VVVVestingInstance.getVestedAmount(sampleUser, vestingScheduleIndex);
         (, uint256 withdrawnTokens, , , ,) = VVVVestingInstance.userVestingSchedules(sampleUser, vestingScheduleIndex);
@@ -58,9 +57,9 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
         uint256 startTime = block.timestamp;
         uint256 vestingScheduleIndex = 0;
         uint256 intervalLength = 30;
-        uint256 tokenAmountPerInterval = 2500 * 1e18; //calculated manually 30/120 = x/10k => x = 2500
+        uint256 tokenAmountPerInterval = totalAmount / (duration / intervalLength);
 
-        setVestingScheduleFromDeployer(_vestedUser, vestingScheduleIndex, totalAmount, duration, startTime, intervalLength, tokenAmountPerInterval);
+        setVestingScheduleFromDeployer(_vestedUser, vestingScheduleIndex, totalAmount, duration, startTime, intervalLength);
         
         uint256 vestingTime = _vestingTime > 0 ? _vestingTime : 1;
         advanceBlockNumberAndTimestampInSeconds(vestingTime);
