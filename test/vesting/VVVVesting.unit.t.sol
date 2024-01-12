@@ -7,11 +7,11 @@
  */
 pragma solidity ^0.8.23;
 
-import {VVVVestingTestBase} from "test/vesting/VVVVestingTestBase.sol";
-import {MockERC20} from "contracts/mock/MockERC20.sol";
-import {VVVVesting} from "contracts/vesting/VVVVesting.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import { VVVVestingTestBase } from "test/vesting/VVVVestingTestBase.sol";
+import { MockERC20 } from "contracts/mock/MockERC20.sol";
+import { VVVVesting } from "contracts/vesting/VVVVesting.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 contract VVVVestingUnitTests is VVVVestingTestBase {
     //=====================================================================
@@ -56,7 +56,11 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         vm.startPrank(sampleUser, sampleUser);
         vm.expectRevert();
         VVVVestingInstance.setVestingSchedule(
-            sampleUser, vestingScheduleIndex, totalAmount, durationInSeconds, startTime
+            sampleUser,
+            vestingScheduleIndex,
+            totalAmount,
+            durationInSeconds,
+            startTime
         );
         vm.stopPrank();
 
@@ -76,7 +80,11 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         vm.startPrank(deployer, deployer);
         vm.expectRevert(VVVVesting.InvalidScheduleIndex.selector);
         VVVVestingInstance.setVestingSchedule(
-            sampleUser, vestingScheduleIndex, totalAmount, durationInSeconds, startTime
+            sampleUser,
+            vestingScheduleIndex,
+            totalAmount,
+            durationInSeconds,
+            startTime
         );
         vm.stopPrank();
     }
@@ -90,8 +98,12 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
 
         setVestingScheduleFromDeployer(sampleUser, vestingScheduleIndex, totalAmount, duration, startTime);
 
-        (uint256 _totalAmount, uint256 _amountWithdrawn, uint256 _duration, uint256 _startTime) =
-            VVVVestingInstance.userVestingSchedules(sampleUser, 0);
+        (
+            uint256 _totalAmount,
+            uint256 _amountWithdrawn,
+            uint256 _duration,
+            uint256 _startTime
+        ) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
 
         assertTrue(_totalAmount == totalAmount);
         assertTrue(_amountWithdrawn == 0);
@@ -108,8 +120,12 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
 
         setVestingScheduleFromDeployer(sampleUser, vestingScheduleIndex, totalAmount, duration, startTime);
 
-        (uint256 _totalAmount, uint256 _amountWithdrawn, uint256 _duration, uint256 _startTime) =
-            VVVVestingInstance.userVestingSchedules(sampleUser, 0);
+        (
+            uint256 _totalAmount,
+            uint256 _amountWithdrawn,
+            uint256 _duration,
+            uint256 _startTime
+        ) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
 
         assertTrue(_totalAmount == totalAmount);
         assertTrue(_amountWithdrawn == 0);
@@ -120,10 +136,20 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 duration2 = 60 * 60 * 24 * 365 * 3; //3 years
         uint256 startTime2 = block.timestamp + 60 * 60 * 24 * 3; //3 days from now
 
-        setVestingScheduleFromDeployer(sampleUser, vestingScheduleIndex, totalAmount2, duration2, startTime2);
+        setVestingScheduleFromDeployer(
+            sampleUser,
+            vestingScheduleIndex,
+            totalAmount2,
+            duration2,
+            startTime2
+        );
 
-        (uint256 _totalAmount2, uint256 _amountWithdrawn2, uint256 _duration2, uint256 _startTime2) =
-            VVVVestingInstance.userVestingSchedules(sampleUser, 0);
+        (
+            uint256 _totalAmount2,
+            uint256 _amountWithdrawn2,
+            uint256 _duration2,
+            uint256 _startTime2
+        ) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
 
         assertTrue(_totalAmount2 == totalAmount2);
         assertTrue(_amountWithdrawn2 == 0);
@@ -140,8 +166,12 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
 
         setVestingScheduleFromDeployer(sampleUser, vestingScheduleIndex, totalAmount, duration, startTime);
 
-        (uint256 _totalAmount, uint256 _amountWithdrawn, uint256 _duration, uint256 _startTime) =
-            VVVVestingInstance.userVestingSchedules(sampleUser, 0);
+        (
+            uint256 _totalAmount,
+            uint256 _amountWithdrawn,
+            uint256 _duration,
+            uint256 _startTime
+        ) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
 
         assertTrue(_totalAmount == totalAmount);
         assertTrue(_amountWithdrawn == 0);
@@ -150,8 +180,12 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
 
         removeVestingScheduleFromDeployer(sampleUser, vestingScheduleIndex);
 
-        (uint256 _totalAmount2, uint256 _amountWithdrawn2, uint256 _duration2, uint256 _startTime2) =
-            VVVVestingInstance.userVestingSchedules(sampleUser, 0);
+        (
+            uint256 _totalAmount2,
+            uint256 _amountWithdrawn2,
+            uint256 _duration2,
+            uint256 _startTime2
+        ) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
 
         assertTrue(_totalAmount2 == 0);
         assertTrue(_amountWithdrawn2 == 0);
@@ -169,19 +203,31 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 startTime = block.timestamp;
         uint256 startBlock = block.number;
 
-        setVestingScheduleFromDeployer(sampleUser, vestingScheduleIndex, totalAmount, durationInSeconds, startTime);
+        setVestingScheduleFromDeployer(
+            sampleUser,
+            vestingScheduleIndex,
+            totalAmount,
+            durationInSeconds,
+            startTime
+        );
         advanceBlockNumberAndTimestampInBlocks(durationInSeconds / 12 / 2); //seconds/(seconds per block)/fraction of durationInSeconds
 
         uint256 vestedAmount = VVVVestingInstance.getVestedAmount(sampleUser, vestingScheduleIndex);
-        uint256 vestingContractBalanceBeforeWithdraw = VVVTokenInstance.balanceOf(address(VVVVestingInstance));
+        uint256 vestingContractBalanceBeforeWithdraw = VVVTokenInstance.balanceOf(
+            address(VVVVestingInstance)
+        );
 
         withdrawVestedTokensAsUser(sampleUser, vestedAmount, sampleUser, vestingScheduleIndex);
 
-        (, uint256 _amountWithdrawn2,,) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
+        (, uint256 _amountWithdrawn2, , ) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
         assertTrue(_amountWithdrawn2 == vestedAmount);
 
-        uint256 vestingContractBalanceAfterWithdraw = VVVTokenInstance.balanceOf(address(VVVVestingInstance));
-        assertTrue(vestingContractBalanceBeforeWithdraw == vestedAmount + vestingContractBalanceAfterWithdraw);
+        uint256 vestingContractBalanceAfterWithdraw = VVVTokenInstance.balanceOf(
+            address(VVVVestingInstance)
+        );
+        assertTrue(
+            vestingContractBalanceBeforeWithdraw == vestedAmount + vestingContractBalanceAfterWithdraw
+        );
     }
 
     ///vests more tokens than the contract token balance, so that both error cases can be reached
@@ -194,7 +240,13 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 durationInSeconds = 120; //120 seconds
         uint256 startTime = block.timestamp;
 
-        setVestingScheduleFromDeployer(sampleUser, vestingScheduleIndex, totalAmount, durationInSeconds, startTime);
+        setVestingScheduleFromDeployer(
+            sampleUser,
+            vestingScheduleIndex,
+            totalAmount,
+            durationInSeconds,
+            startTime
+        );
         advanceBlockNumberAndTimestampInBlocks(durationInSeconds); //seconds/(seconds per block) - be sure to be past 100% vesting
 
         uint256 vestedAmount = VVVVestingInstance.getVestedAmount(sampleUser, vestingScheduleIndex);
@@ -224,7 +276,13 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 durationInSeconds = 120; //120 seconds
         uint256 startTime = block.timestamp;
 
-        setVestingScheduleFromDeployer(sampleUser, vestingScheduleIndex, totalAmount, durationInSeconds, startTime);
+        setVestingScheduleFromDeployer(
+            sampleUser,
+            vestingScheduleIndex,
+            totalAmount,
+            durationInSeconds,
+            startTime
+        );
         advanceBlockNumberAndTimestampInBlocks(durationInSeconds * 10); //seconds/(seconds per block) - be sure to be past 100% vesting
 
         //withdraw all vested tokens after schedule is finished
@@ -244,7 +302,13 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 durationInSeconds = 120; //120 seconds
         uint256 startTime = block.timestamp + 60 * 60 * 24 * 2; //2 days from now
 
-        setVestingScheduleFromDeployer(sampleUser, vestingScheduleIndex, totalAmount, durationInSeconds, startTime);
+        setVestingScheduleFromDeployer(
+            sampleUser,
+            vestingScheduleIndex,
+            totalAmount,
+            durationInSeconds,
+            startTime
+        );
 
         vm.startPrank(sampleUser, sampleUser);
         vm.expectRevert(VVVVesting.AmountIsGreaterThanWithdrawable.selector);
@@ -274,7 +338,10 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         VVVVestingInstance.setVestedToken(newVestedTokenAddress);
         vm.stopPrank();
 
-        emit log_named_address("address(VVVVestingInstance.VVVToken())", address(VVVVestingInstance.VVVToken()));
+        emit log_named_address(
+            "address(VVVVestingInstance.VVVToken())",
+            address(VVVVestingInstance.VVVToken())
+        );
         emit log_named_address("newVestedTokenAddress", newVestedTokenAddress);
         assertTrue(address(VVVVestingInstance.VVVToken()) == newVestedTokenAddress);
     }

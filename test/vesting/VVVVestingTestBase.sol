@@ -5,9 +5,9 @@ pragma solidity ^0.8.23;
  * @title VVVVesting Test Base
  *   @dev storage, setup, and helper functions for VVVVesting tests
  */
-import {Test} from "lib/forge-std/src/Test.sol"; //for stateless tests
-import {VVVVesting} from "contracts/vesting/VVVVesting.sol";
-import {MockERC20} from "contracts/mock/MockERC20.sol";
+import { Test } from "lib/forge-std/src/Test.sol"; //for stateless tests
+import { VVVVesting } from "contracts/vesting/VVVVesting.sol";
+import { MockERC20 } from "contracts/mock/MockERC20.sol";
 
 abstract contract VVVVestingTestBase is Test {
     MockERC20 public VVVTokenInstance;
@@ -44,7 +44,13 @@ abstract contract VVVVestingTestBase is Test {
         uint256 _startTime
     ) public {
         vm.startPrank(deployer, deployer);
-        VVVVestingInstance.setVestingSchedule(_user, _vestingScheduleIndex, _totalAmount, _duration, _startTime);
+        VVVVestingInstance.setVestingSchedule(
+            _user,
+            _vestingScheduleIndex,
+            _totalAmount,
+            _duration,
+            _startTime
+        );
         vm.stopPrank();
     }
 
