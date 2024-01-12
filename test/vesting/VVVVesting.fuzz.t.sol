@@ -39,10 +39,20 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
         uint256 startTime = block.timestamp;
         uint256 intervalLength = 30;
 
-        setVestingScheduleFromDeployer(sampleUser, vestingScheduleIndex, totalAmount, duration, startTime, intervalLength);
+        setVestingScheduleFromDeployer(
+            sampleUser,
+            vestingScheduleIndex,
+            totalAmount,
+            duration,
+            startTime,
+            intervalLength
+        );
 
         uint256 vestedAmount = VVVVestingInstance.getVestedAmount(sampleUser, vestingScheduleIndex);
-        (, uint256 withdrawnTokens, , , ,) = VVVVestingInstance.userVestingSchedules(sampleUser, vestingScheduleIndex);
+        (, uint256 withdrawnTokens, , , , ) = VVVVestingInstance.userVestingSchedules(
+            sampleUser,
+            vestingScheduleIndex
+        );
         uint256 amountToWithdraw = Math.min(vestedAmount - withdrawnTokens, _tokenAmountToWithdraw);
 
         withdrawVestedTokensAsUser(sampleUser, amountToWithdraw, sampleUser, vestingScheduleIndex);
@@ -58,13 +68,20 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
         uint256 intervalLength = 30;
         uint256 tokenAmountPerInterval = totalAmount / (duration / intervalLength);
 
-        setVestingScheduleFromDeployer(_vestedUser, vestingScheduleIndex, totalAmount, duration, startTime, intervalLength);
-        
+        setVestingScheduleFromDeployer(
+            _vestedUser,
+            vestingScheduleIndex,
+            totalAmount,
+            duration,
+            startTime,
+            intervalLength
+        );
+
         uint256 vestingTime = _vestingTime > 0 ? _vestingTime : 1;
         advanceBlockNumberAndTimestampInSeconds(vestingTime);
 
         uint256 vestedAmount = VVVVestingInstance.getVestedAmount(_vestedUser, vestingScheduleIndex);
-        
+
         uint256 elapsedIntervals = (block.timestamp - startTime) / intervalLength;
 
         uint256 referenceVestedAmount = Math.min(totalAmount, elapsedIntervals * tokenAmountPerInterval);
