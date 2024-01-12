@@ -89,9 +89,6 @@ contract VVVVesting is Ownable {
 
     ///@notice emitted when user tries to withdraw more tokens than are available to withdraw
     error AmountIsGreaterThanWithdrawable(); 
-    
-    ///@notice emitted when array lengths do not match
-    error ArrayLengthMismatch();
 
     ///@notice emitted when the contract is deployed with invalid constructor arguments
     error InvalidConstructorArguments();
