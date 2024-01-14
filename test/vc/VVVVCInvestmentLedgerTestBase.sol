@@ -116,7 +116,7 @@ abstract contract VVVVCInvestmentLedgerTestBase is Test {
         return signature;
     }
 
-    function generateInvestParamsWithSignature() public view returns(VVVVCInvestmentLedger.InvestParams memory params) {
+    function generateInvestParamsWithSignature() public view returns(VVVVCInvestmentLedger.InvestParams memory) {
         VVVVCInvestmentLedger.InvestParams memory params = VVVVCInvestmentLedger.InvestParams({
             investmentRound: 1,
             investmentRoundLimit: 100_000 * PaymentTokenInstance.decimals(),

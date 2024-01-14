@@ -39,6 +39,13 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCInvestmentLedgerTestBase {
         assertTrue(LedgerInstance.isSignatureValid(params));
     }
 
+    function investAsUser(address _investor, VVVVCInvestmentLedger.InvestParams memory _params) public {
+        vm.startPrank(_investor, _investor);
+        PaymentTokenInstance.approve(address(LedgerInstance), _params.amountToInvest);
+        LedgerInstance.invest(_params);
+        vm.stopPrank();
+    }
+
     /**
      * @notice Tests investment function call by user
      * @dev defines an InvestParams struct, creates a signature for it, validates it, and invests some PaymentToken
@@ -47,17 +54,29 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCInvestmentLedgerTestBase {
         VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature();
         uint256 preInvestBalance = PaymentTokenInstance.balanceOf(sampleUser);
 
-        vm.startPrank(sampleUser, sampleUser);
-        //approve amount to invest
-        PaymentTokenInstance.approve(address(LedgerInstance), params.amountToInvest);
-        
-        //invest
-        LedgerInstance.invest(params);
-        vm.stopPrank();
+        investAsUser(sampleUser, params);
 
         //confirm that contract and user balances reflect the invested params.amountToInvest
         assertTrue(PaymentTokenInstance.balanceOf(address(LedgerInstance)) == params.amountToInvest);
         assertTrue(PaymentTokenInstance.balanceOf(sampleUser) + params.amountToInvest == preInvestBalance);
     }
+
+    function testTransferERC20PostInvestment() public {
+        VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature();
+        investAsUser(sampleUser, params);
+
+        uint256 preTransferRecipientBalance = PaymentTokenInstance.balanceOf(deployer);
+        uint256 preTransferContractBalance = PaymentTokenInstance.balanceOf(address(LedgerInstance));
+
+        vm.startPrank(deployer, deployer);
+        LedgerInstance.transferERC20(params.paymentTokenAddress, deployer, PaymentTokenInstance.balanceOf(address(LedgerInstance)));
+        vm.stopPrank();
+
+        uint256 postTransferRecipientBalance = PaymentTokenInstance.balanceOf(deployer);
+
+        assertTrue((postTransferRecipientBalance - preTransferRecipientBalance) == preTransferContractBalance);
+    }
+
+    function testTransferETH() public {}
 
 }
