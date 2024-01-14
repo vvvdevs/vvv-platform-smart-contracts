@@ -189,14 +189,4 @@ contract VVVVCInvestmentLedger is Ownable {
     function transferERC20(address _tokenAddress, address _to, uint256 _amount) external onlyOwner {
         IERC20(_tokenAddress).safeTransfer(_to, _amount);
     }
-
-    receive() external payable {}
-
-    /// @notice Allows admin to transfer ETH from this contract
-    function transferETH(address payable _to, uint256 _amount) external onlyOwner {
-        (bool os, ) = _to.call{ value: _amount }("");
-        if (!os) {
-            revert TransferFailed();
-        }
-    }
 }
