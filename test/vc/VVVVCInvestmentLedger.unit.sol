@@ -22,6 +22,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCInvestmentLedgerTestBase {
 
         PaymentTokenInstance.mint(sampleUser, paymentTokenMintAmount); //10k tokens
 
+        generateUserAddressListAndDealEtherAndToken(PaymentTokenInstance);
+
         vm.stopPrank();
     }
 
@@ -77,6 +79,30 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCInvestmentLedgerTestBase {
         assertTrue((postTransferRecipientBalance - preTransferRecipientBalance) == preTransferContractBalance);
     }
 
-    function testTransferETH() public {}
+    function testTransferETH() public {
+        vm.startPrank(sampleUser);
+        (bool os, ) = address(LedgerInstance).call{value: 1 ether}("");
+        assertTrue(os);
+        vm.stopPrank();
+
+        uint256 postTransferSenderBalance = sampleUser.balance;
+
+        uint256 preTransferRecipientBalance = deployer.balance;
+        uint256 preTransferContractBalance = address(LedgerInstance).balance;
+
+        vm.startPrank(deployer);
+        LedgerInstance.transferETH(payable(deployer), preTransferContractBalance);
+        vm.stopPrank();
+
+        uint256 postTransferRecipientBalance = deployer.balance;
+
+        emit log_named_uint("post-sender", postTransferSenderBalance);
+        emit log_named_uint("pre-recipient", preTransferRecipientBalance);
+        emit log_named_uint("pre-contract", preTransferContractBalance);
+        emit log_named_uint("post-recipient", postTransferRecipientBalance);
+
+        assertTrue((postTransferRecipientBalance - preTransferRecipientBalance) == preTransferContractBalance);
+
+    }
 
 }
