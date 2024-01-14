@@ -40,7 +40,6 @@ contract VVVVCInvestmentLedger is Ownable {
      * @param investmentRoundLimit The limit of the investment round
      * @param investmentRoundStartTimestamp The start timestamp of the investment round
      * @param investmentRoundEndTimestamp The end timestamp of the investment round
-     * @param investmentCustodian The custodian of the investment
      * @param paymentTokenAddress The address of the payment token
      * @param kycAddress The address of the kyc address
      * @param kycAddressAllocation The max amount the kyc address can invest
@@ -53,7 +52,6 @@ contract VVVVCInvestmentLedger is Ownable {
         uint256 investmentRoundLimit;
         uint256 investmentRoundStartTimestamp;
         uint256 investmentRoundEndTimestamp;
-        address investmentCustodian;
         address paymentTokenAddress;
         address kycAddress;
         uint256 kycAddressAllocation;
@@ -107,56 +105,56 @@ contract VVVVCInvestmentLedger is Ownable {
 
     /**
      * @notice Facilitates a kyc address's investment in a project
-     * @param p An InvestParams struct containing the investment parameters
+     * @param _params An InvestParams struct containing the investment parameters
      */
-    function invest(InvestParams memory p) external {
+    function invest(InvestParams memory _params) external {
         // check if signature is valid
-        if (!_isSignatureValid(p)) {
+        if (!_isSignatureValid(_params)) {
             revert InvalidSignature();
         }
 
         // check if the investment round is active
         if (
-            block.timestamp < p.investmentRoundStartTimestamp ||
-            block.timestamp > p.investmentRoundEndTimestamp
+            block.timestamp < _params.investmentRoundStartTimestamp ||
+            block.timestamp > _params.investmentRoundEndTimestamp
         ) {
             revert InactiveInvestmentRound();
         }
 
         // store kyc address and total amounts invested for this investment round
-        uint256 kycAddressInvestedThisRound = kycAddressInvestedPerRound[p.kycAddress][p.investmentRound];
-        uint256 totalInvestedThisRound = totalInvestedPerRound[p.investmentRound];
+        uint256 kycAddressInvestedThisRound = kycAddressInvestedPerRound[_params.kycAddress][_params.investmentRound];
+        uint256 totalInvestedThisRound = totalInvestedPerRound[_params.investmentRound];
 
         // check if kyc address has already invested the max amount for this round,
         // or if the total invested for this round has reached the limit
         if (
-            p.amountToInvest > p.kycAddressAllocation - kycAddressInvestedThisRound ||
-            p.amountToInvest > p.investmentRoundLimit - totalInvestedThisRound
+            _params.amountToInvest > _params.kycAddressAllocation - kycAddressInvestedThisRound ||
+            _params.amountToInvest > _params.investmentRoundLimit - totalInvestedThisRound
         ) {
             revert ExceedsAllocation();
         }
 
         // update kyc address and total amounts invested for this investment round
-        kycAddressInvestedPerRound[p.kycAddress][p.investmentRound] += p.amountToInvest;
-        totalInvestedPerRound[p.investmentRound] += p.amountToInvest;
+        kycAddressInvestedPerRound[_params.kycAddress][_params.investmentRound] += _params.amountToInvest;
+        totalInvestedPerRound[_params.investmentRound] += _params.amountToInvest;
 
         // transfer tokens from msg.sender to investmentCustodian
-        IERC20(p.paymentTokenAddress).safeTransferFrom(
+        IERC20(_params.paymentTokenAddress).safeTransferFrom(
             msg.sender,
-            p.investmentCustodian,
-            p.amountToInvest
+            address(this),
+            _params.amountToInvest
         );
 
         // emit VCInvestment event
-        emit VCInvestment(p.investmentRound, p.kycAddress, p.amountToInvest);
+        emit VCInvestment(_params.investmentRound, _params.kycAddress, _params.amountToInvest);
     }
 
     /**
      * @notice Checks if the provided signature is valid
-     * @param p An InvestParams struct containing the investment parameters
+     * @param _params An InvestParams struct containing the investment parameters
      * @return true if the signer address is recovered from the signature, false otherwise
      */
-    function _isSignatureValid(InvestParams memory p) internal view returns (bool) {
+    function _isSignatureValid(InvestParams memory _params) internal view returns (bool) {
         bytes32 digest = keccak256(
             abi.encodePacked(
                 "\x19\x01",
@@ -164,28 +162,27 @@ contract VVVVCInvestmentLedger is Ownable {
                 keccak256(
                     abi.encode(
                         INVESTMENT_TYPEHASH,
-                        p.investmentRound,
-                        p.investmentRoundLimit,
-                        p.investmentRoundStartTimestamp,
-                        p.investmentRoundEndTimestamp,
-                        p.investmentCustodian,
-                        p.paymentTokenAddress,
-                        p.kycAddress,
-                        p.kycAddressAllocation,
-                        p.deadline,
+                        _params.investmentRound,
+                        _params.investmentRoundLimit,
+                        _params.investmentRoundStartTimestamp,
+                        _params.investmentRoundEndTimestamp,
+                        _params.paymentTokenAddress,
+                        _params.kycAddress,
+                        _params.kycAddressAllocation,
+                        _params.deadline,
                         block.chainid
                     )
                 )
             )
         );
 
-        address recoveredAddress = ECDSA.recover(digest, p.signature);
+        address recoveredAddress = ECDSA.recover(digest, _params.signature);
         return recoveredAddress == signer && recoveredAddress != address(0);
     }
 
     /// @notice external wrapper for _isSignatureValid
-    function isSignatureValid(InvestParams memory p) external view returns (bool) {
-        return _isSignatureValid(p);
+    function isSignatureValid(InvestParams memory _params) external view returns (bool) {
+        return _isSignatureValid(_params);
     }
 
     /// @notice Allows admin to transfer ERC20 tokens from this contract
