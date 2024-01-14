@@ -25,22 +25,12 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCInvestmentLedgerTestBase {
         vm.stopPrank();
     }
 
-    /// @notice Tests deployment of VVVVCInvestmentLedger
-    function testDeployment() public {
-        assertTrue(address(LedgerInstance) != address(0));
-    }
-
-    /**
-     * @notice Tests creation and validation of EIP712 signatures
-     * @dev defines an InvestParams struct, creates a signature for it, and validates it with the same struct parameters
-     */
-    function testValidateSignature() public {
-        VVVVCInvestmentLedger.InvestParams memory p = VVVVCInvestmentLedger.InvestParams({
+    function generateInvestParamsWithSignature() public view returns(VVVVCInvestmentLedger.InvestParams memory params) {
+        VVVVCInvestmentLedger.InvestParams memory params = VVVVCInvestmentLedger.InvestParams({
             investmentRound: 1,
             investmentRoundLimit: 100_000 * PaymentTokenInstance.decimals(),
             investmentRoundStartTimestamp: block.timestamp,
             investmentRoundEndTimestamp: block.timestamp + 1 days,
-            investmentCustodian: deployer,
             paymentTokenAddress: address(PaymentTokenInstance),
             kycAddress: sampleUser,
             kycAddressAllocation: userPaymentTokenDefaultAllocation,
@@ -49,7 +39,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCInvestmentLedgerTestBase {
             signature: bytes("placeholder")
         });
 
-        domainSeparator = 
+        bytes32 domainSeparator = 
             keccak256(
                 abi.encode(
                     domainTypehash,
@@ -63,11 +53,45 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCInvestmentLedgerTestBase {
         bytes memory sig = getEIP712SignatureForInvest(
             domainSeparator, 
             investmentTypehash, 
-            p
+            params
         );
 
-        p.signature = sig;        
-        assertTrue(LedgerInstance.isSignatureValid(p));
+        params.signature = sig;  
+
+        return params;
+    }
+
+    /// @notice Tests deployment of VVVVCInvestmentLedger
+    function testDeployment() public {
+        assertTrue(address(LedgerInstance) != address(0));
+    }
+
+    /**
+     * @notice Tests creation and validation of EIP712 signatures
+     * @dev defines an InvestParams struct, creates a signature for it, and validates it with the same struct parameters
+     */
+    function testValidateSignature() public {
+        VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature();
+        assertTrue(LedgerInstance.isSignatureValid(params));
+    }
+
+    /**
+     * @notice Tests investment function call by user
+     * @dev defines an InvestParams struct, creates a signature for it, validates it, and invests some PaymentToken
+     */
+    function testInvest() public {
+        VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature();
+        
+        vm.startPrank(sampleUser, sampleUser);
+        //approve amount to invest
+        PaymentTokenInstance.approve(address(LedgerInstance), params.amountToInvest);
+        
+        //invest
+        LedgerInstance.invest(params);
+        vm.stopPrank();
+
+        //confirm that contract balance reflects the added amount from params.amountToInvest
+        assertTrue(PaymentTokenInstance.balanceOf(address(LedgerInstance)) == params.amountToInvest);
     }
 
 }

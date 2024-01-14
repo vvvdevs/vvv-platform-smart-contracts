@@ -24,7 +24,6 @@ abstract contract VVVVCInvestmentLedgerTestBase is Test {
         keccak256(
             bytes("VCInvestment(bytes32 investmentRound,address kycAddress,uint256 investmentAmount)")
         );
-    bytes32 domainSeparator;
 
     uint256 deployerKey = 1234;
     uint256 testSignerKey = 12345;
@@ -88,7 +87,7 @@ abstract contract VVVVCInvestmentLedgerTestBase is Test {
     function getEIP712SignatureForInvest(
         bytes32 _domain_separator,
         bytes32 _investment_typehash,
-        VVVVCInvestmentLedger.InvestParams memory p
+        VVVVCInvestmentLedger.InvestParams memory _params
     ) public view returns (bytes memory) {
         bytes32 digest = keccak256(
             abi.encodePacked(
@@ -97,15 +96,14 @@ abstract contract VVVVCInvestmentLedgerTestBase is Test {
                 keccak256(
                     abi.encode(
                         _investment_typehash,
-                        p.investmentRound,
-                        p.investmentRoundLimit,
-                        p.investmentRoundStartTimestamp,
-                        p.investmentRoundEndTimestamp,
-                        p.investmentCustodian,
-                        p.paymentTokenAddress,
-                        p.kycAddress,
-                        p.kycAddressAllocation,
-                        p.deadline,
+                        _params.investmentRound,
+                        _params.investmentRoundLimit,
+                        _params.investmentRoundStartTimestamp,
+                        _params.investmentRoundEndTimestamp,
+                        _params.paymentTokenAddress,
+                        _params.kycAddress,
+                        _params.kycAddressAllocation,
+                        _params.deadline,
                         chainId
                     )
                 )
