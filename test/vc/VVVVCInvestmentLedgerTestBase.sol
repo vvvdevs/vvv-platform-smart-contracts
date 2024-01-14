@@ -62,15 +62,16 @@ abstract contract VVVVCInvestmentLedgerTestBase is Test {
     }
 
     // generate list of random addresses and deal them payment tokens and ETH
-    function generateUserAddressListAndDealEtherAndMockStable(MockERC20 _token) public {
+    function generateUserAddressListAndDealEtherAndToken(MockERC20 _token) public {
         for (uint256 i = 0; i < users.length; i++) {
             users[i] = address(uint160(uint256(keccak256(abi.encodePacked(block.timestamp, i)))));
             vm.deal(users[i], 1 ether); // and YOU get an ETH
             _token.mint(users[i], paymentTokenMintAmount);
         }
 
-        sampleKycAddress = users[0];
-        sampleUser = users[1];
+        vm.deal(sampleUser, 10 ether);
+        vm.deal(sampleKycAddress, 10 ether);
+
     }
 
     // create concat'd 65 byte signature that ethers would generate instead of r,s,v
