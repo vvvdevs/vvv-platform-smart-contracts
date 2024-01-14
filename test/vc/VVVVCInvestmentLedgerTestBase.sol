@@ -116,5 +116,39 @@ abstract contract VVVVCInvestmentLedgerTestBase is Test {
         return signature;
     }
 
+    function generateInvestParamsWithSignature() public view returns(VVVVCInvestmentLedger.InvestParams memory params) {
+        VVVVCInvestmentLedger.InvestParams memory params = VVVVCInvestmentLedger.InvestParams({
+            investmentRound: 1,
+            investmentRoundLimit: 100_000 * PaymentTokenInstance.decimals(),
+            investmentRoundStartTimestamp: block.timestamp,
+            investmentRoundEndTimestamp: block.timestamp + 1 days,
+            paymentTokenAddress: address(PaymentTokenInstance),
+            kycAddress: sampleUser,
+            kycAddressAllocation: userPaymentTokenDefaultAllocation,
+            amountToInvest: 1_000 * PaymentTokenInstance.decimals(),
+            deadline: block.timestamp + 1 hours,
+            signature: bytes("placeholder")
+        });
 
+        bytes32 domainSeparator = 
+            keccak256(
+                abi.encode(
+                    domainTypehash,
+                    keccak256(bytes("VVV VC Investment Ledger")),
+                    keccak256(bytes("1")),
+                    chainId,
+                    address(LedgerInstance)
+                )
+            );
+
+        bytes memory sig = getEIP712SignatureForInvest(
+            domainSeparator, 
+            investmentTypehash, 
+            params
+        );
+
+        params.signature = sig;  
+
+        return params;
+    }
 }
