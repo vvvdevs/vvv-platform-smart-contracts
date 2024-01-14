@@ -25,42 +25,6 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCInvestmentLedgerTestBase {
         vm.stopPrank();
     }
 
-    function generateInvestParamsWithSignature() public view returns(VVVVCInvestmentLedger.InvestParams memory params) {
-        VVVVCInvestmentLedger.InvestParams memory params = VVVVCInvestmentLedger.InvestParams({
-            investmentRound: 1,
-            investmentRoundLimit: 100_000 * PaymentTokenInstance.decimals(),
-            investmentRoundStartTimestamp: block.timestamp,
-            investmentRoundEndTimestamp: block.timestamp + 1 days,
-            paymentTokenAddress: address(PaymentTokenInstance),
-            kycAddress: sampleUser,
-            kycAddressAllocation: userPaymentTokenDefaultAllocation,
-            amountToInvest: 1_000 * PaymentTokenInstance.decimals(),
-            deadline: block.timestamp + 1 hours,
-            signature: bytes("placeholder")
-        });
-
-        bytes32 domainSeparator = 
-            keccak256(
-                abi.encode(
-                    domainTypehash,
-                    keccak256(bytes("VVV VC Investment Ledger")),
-                    keccak256(bytes("1")),
-                    chainId,
-                    address(LedgerInstance)
-                )
-            );
-
-        bytes memory sig = getEIP712SignatureForInvest(
-            domainSeparator, 
-            investmentTypehash, 
-            params
-        );
-
-        params.signature = sig;  
-
-        return params;
-    }
-
     /// @notice Tests deployment of VVVVCInvestmentLedger
     function testDeployment() public {
         assertTrue(address(LedgerInstance) != address(0));
@@ -81,7 +45,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCInvestmentLedgerTestBase {
      */
     function testInvest() public {
         VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature();
-        
+        uint256 preInvestBalance = PaymentTokenInstance.balanceOf(sampleUser);
+
         vm.startPrank(sampleUser, sampleUser);
         //approve amount to invest
         PaymentTokenInstance.approve(address(LedgerInstance), params.amountToInvest);
@@ -90,8 +55,9 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCInvestmentLedgerTestBase {
         LedgerInstance.invest(params);
         vm.stopPrank();
 
-        //confirm that contract balance reflects the added amount from params.amountToInvest
+        //confirm that contract and user balances reflect the invested params.amountToInvest
         assertTrue(PaymentTokenInstance.balanceOf(address(LedgerInstance)) == params.amountToInvest);
+        assertTrue(PaymentTokenInstance.balanceOf(sampleUser) + params.amountToInvest == preInvestBalance);
     }
 
 }
