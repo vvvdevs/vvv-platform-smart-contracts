@@ -14,7 +14,7 @@ abstract contract VVVVCInvestmentLedgerTestBase is Test {
     MockERC20 PaymentTokenInstance;
     VVVVCInvestmentLedger LedgerInstance;
 
-    // EIP-712 definitions, copied from VVVVCInvestmentLedger.sol 
+    // EIP-712 definitions, copied from VVVVCInvestmentLedger.sol
     // because they are private/immutable there
     bytes32 domainTypehash =
         keccak256(
@@ -27,7 +27,7 @@ abstract contract VVVVCInvestmentLedgerTestBase is Test {
 
     uint256 deployerKey = 1234;
     uint256 testSignerKey = 12345;
-    uint256 kycAddressKey = 123456;   
+    uint256 kycAddressKey = 123456;
     uint256 sampleUserKey = 1234567;
     uint256 sampleKycAddressKey = 12345678;
 
@@ -38,7 +38,6 @@ abstract contract VVVVCInvestmentLedgerTestBase is Test {
     address sampleUser = vm.addr(sampleUserKey);
     address[] users = new address[](100); // 100 users
 
-
     uint256 initialPaymentTokenSupply = 1_000_000 * 1e6; // for both tokens
     uint256 paymentTokenMintAmount = 10_000 * 1e6;
     uint256 userPaymentTokenDefaultAllocation = 10_000 * 1e6;
@@ -46,7 +45,7 @@ abstract contract VVVVCInvestmentLedgerTestBase is Test {
     uint256 blockNumber;
     uint256 blockTimestamp;
     uint256 chainId = 31337; //test chain id - leave this alone
-    
+
     function advanceBlockNumberAndTimestampInBlocks(uint256 blocks) public {
         blockNumber += blocks;
         blockTimestamp += blocks * 12; //seconds per block
@@ -71,7 +70,6 @@ abstract contract VVVVCInvestmentLedgerTestBase is Test {
 
         vm.deal(sampleUser, 10 ether);
         vm.deal(sampleKycAddress, 10 ether);
-
     }
 
     // create concat'd 65 byte signature that ethers would generate instead of r,s,v
@@ -117,7 +115,11 @@ abstract contract VVVVCInvestmentLedgerTestBase is Test {
         return signature;
     }
 
-    function generateInvestParamsWithSignature() public view returns(VVVVCInvestmentLedger.InvestParams memory) {
+    function generateInvestParamsWithSignature()
+        public
+        view
+        returns (VVVVCInvestmentLedger.InvestParams memory)
+    {
         VVVVCInvestmentLedger.InvestParams memory params = VVVVCInvestmentLedger.InvestParams({
             investmentRound: 1,
             investmentRoundLimit: 100_000 * PaymentTokenInstance.decimals(),
@@ -131,24 +133,19 @@ abstract contract VVVVCInvestmentLedgerTestBase is Test {
             signature: bytes("placeholder")
         });
 
-        bytes32 domainSeparator = 
-            keccak256(
-                abi.encode(
-                    domainTypehash,
-                    keccak256(bytes("VVV VC Investment Ledger")),
-                    keccak256(bytes("1")),
-                    chainId,
-                    address(LedgerInstance)
-                )
-            );
-
-        bytes memory sig = getEIP712SignatureForInvest(
-            domainSeparator, 
-            investmentTypehash, 
-            params
+        bytes32 domainSeparator = keccak256(
+            abi.encode(
+                domainTypehash,
+                keccak256(bytes("VVV VC Investment Ledger")),
+                keccak256(bytes("1")),
+                chainId,
+                address(LedgerInstance)
+            )
         );
 
-        params.signature = sig;  
+        bytes memory sig = getEIP712SignatureForInvest(domainSeparator, investmentTypehash, params);
+
+        params.signature = sig;
 
         return params;
     }
