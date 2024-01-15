@@ -12,4 +12,8 @@ contract MyToken is ERC721 {
         ++tokenId;
         _safeMint(to, tokenId);
     }
+
+    function mint(address to, uint256 _tokenId) public {
+        _mint(to, _tokenId);
+    }
 }

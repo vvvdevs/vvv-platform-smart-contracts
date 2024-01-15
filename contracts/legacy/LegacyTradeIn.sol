@@ -14,21 +14,24 @@ contract LegacyNFTTradeIn is Ownable {
 
     event TradeInCompleted(uint256 tokenId, bytes userId);
 
-    constructor(address _legacyNFT, uint256 _start_time, uint256 _end_time) Ownable() {
+    constructor(address _legacyNFT, uint256 _start_time, uint256 _end_time) Ownable(msg.sender) {
         legacyNFT = IERC721(_legacyNFT);
         start_time = _start_time;
         end_time = _end_time;
     }
 
     modifier tradeInActive() {
-        require(block.timestamp >= start_time && block.timestamp < end_time && !paused, "Trade-in not active");
+        require(
+            block.timestamp >= start_time && block.timestamp < end_time && !paused,
+            "Trade-in not active"
+        );
         _;
     }
 
     function tradeIn(uint256 tokenId, bytes memory userId) external tradeInActive {
         require(legacyNFT.ownerOf(tokenId) == msg.sender, "Not the owner");
         legacyNFT.transferFrom(msg.sender, burnAddress, tokenId);
-        
+
         emit TradeInCompleted(tokenId, userId);
     }
 

@@ -201,7 +201,6 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 totalAmount = 10_000 * 1e18; //10k tokens
         uint256 durationInSeconds = 120; //120 seconds
         uint256 startTime = block.timestamp;
-        uint256 startBlock = block.number;
 
         setVestingScheduleFromDeployer(
             sampleUser,
