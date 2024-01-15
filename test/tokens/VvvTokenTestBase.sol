@@ -1,11 +1,9 @@
 //SPDX-License-Identifier: MIT
-pragma solidity ^0.8.21;
+pragma solidity ^0.8.23;
 
 /**
  * @dev Base for testing VvvToken.sol
  */
-
-
 import "lib/forge-std/src/Test.sol";
 import { VVVToken } from "contracts/tokens/VvvToken.sol";
 
