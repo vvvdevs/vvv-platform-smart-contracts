@@ -49,6 +49,19 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCInvestmentLedgerTestBase {
     }
 
     /**
+     * @notice Test that a false signature is not validated
+     * @dev defines an InvestParams struct, creates a signature for it, and validates it with different struct parameters
+     */
+    function testInvalidateFalseSignature() public {
+        VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature();
+
+        //round start timestamp is off by one second
+        params.investmentRoundStartTimestamp += 1;
+
+        assertFalse(LedgerInstance.isSignatureValid(params));
+    }
+
+    /**
      * @notice Tests investment function call by user
      * @dev defines an InvestParams struct, creates a signature for it, validates it, and invests some PaymentToken
      */
@@ -63,6 +76,24 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCInvestmentLedgerTestBase {
         assertTrue(PaymentTokenInstance.balanceOf(sampleUser) + params.amountToInvest == preInvestBalance);
     }
 
+    /**
+     * @notice Tests investment function call by user with invalid signature
+     * @dev defines an InvestParams struct, creates a signature for it, changes a param and should fail to invest
+     */
+    function testFailInvestWithInvalidSignature() public {
+        VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature();
+        params.investmentRoundStartTimestamp += 1;
+
+        investAsUser(sampleUser, params);
+
+        //confirm that contract and user balances reflect the invested params.amountToInvest
+        assertTrue(PaymentTokenInstance.balanceOf(address(LedgerInstance)) == 0);
+        assertTrue(PaymentTokenInstance.balanceOf(sampleUser) == userPaymentTokenDefaultAllocation);
+    }
+
+    /**
+     * @notice Tests transfer of ERC20 tokens by admin
+     */
     function testTransferERC20PostInvestment() public {
         VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature();
         investAsUser(sampleUser, params);
@@ -71,11 +102,17 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCInvestmentLedgerTestBase {
         uint256 preTransferContractBalance = PaymentTokenInstance.balanceOf(address(LedgerInstance));
 
         vm.startPrank(deployer, deployer);
-        LedgerInstance.transferERC20(params.paymentTokenAddress, deployer, PaymentTokenInstance.balanceOf(address(LedgerInstance)));
+        LedgerInstance.transferERC20(
+            params.paymentTokenAddress,
+            deployer,
+            PaymentTokenInstance.balanceOf(address(LedgerInstance))
+        );
         vm.stopPrank();
 
         uint256 postTransferRecipientBalance = PaymentTokenInstance.balanceOf(deployer);
 
-        assertTrue((postTransferRecipientBalance - preTransferRecipientBalance) == preTransferContractBalance);
+        assertTrue(
+            (postTransferRecipientBalance - preTransferRecipientBalance) == preTransferContractBalance
+        );
     }
 }

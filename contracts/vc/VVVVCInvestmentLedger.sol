@@ -23,14 +23,13 @@ contract VVVVCInvestmentLedger is Ownable {
             bytes("VCInvestment(bytes32 investmentRound,address kycAddress,uint256 investmentAmount)")
         );
     bytes32 private immutable DOMAIN_SEPARATOR;
-    
-    
+
     /// @notice The address authorized to sign investment transactions
     address public signer;
 
     /// @notice stores kyc address amounts invested for each investment round
     mapping(address => mapping(uint256 => uint256)) public kycAddressInvestedPerRound;
-    
+
     /// @notice stores total amounts invested for each investment round
     mapping(uint256 => uint256) public totalInvestedPerRound;
 
@@ -122,7 +121,9 @@ contract VVVVCInvestmentLedger is Ownable {
         }
 
         // store kyc address and total amounts invested for this investment round
-        uint256 kycAddressInvestedThisRound = kycAddressInvestedPerRound[_params.kycAddress][_params.investmentRound];
+        uint256 kycAddressInvestedThisRound = kycAddressInvestedPerRound[_params.kycAddress][
+            _params.investmentRound
+        ];
         uint256 totalInvestedThisRound = totalInvestedPerRound[_params.investmentRound];
 
         // check if kyc address has already invested the max amount for this round,
