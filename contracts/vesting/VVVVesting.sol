@@ -154,12 +154,7 @@ contract VVVVesting is Ownable {
      *     @param _params SetVestingScheduleParams struct
      */
     function _setVestingSchedule(SetVestingScheduleParams memory _params) private {
-        VestingSchedule memory newSchedule = VestingSchedule(
-            _params.vestingSchedule.totalTokenAmountToVest,
-            0,
-            _params.vestingSchedule.duration,
-            _params.vestingSchedule.startTime
-        );
+        VestingSchedule memory newSchedule = _params.vestingSchedule;
 
         if (_params.vestingScheduleIndex == userVestingSchedules[_params.vestedUser].length) {
             userVestingSchedules[_params.vestedUser].push(newSchedule);
