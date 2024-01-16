@@ -6,6 +6,8 @@ require("hardhat-gas-reporter");
 require("hardhat-abi-exporter");
 require("hardhat-contract-sizer");
 
+require("./tasks/deploy/deploy-legacy-trade-in")
+
 const dev_wallet_key = process.env.PRIVATE_KEY;
 const mainnet_wallet_key = process.env.MAINNET_PRIVATE_KEY;
 const etherscan_api_key = process.env.ETHERSCAN_API_KEY;
