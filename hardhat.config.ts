@@ -6,7 +6,7 @@ require("hardhat-gas-reporter");
 require("hardhat-abi-exporter");
 require("hardhat-contract-sizer");
 
-require("./tasks/deploy/deploy-legacy-trade-in")
+require("./tasks/deploy/deploy-legacy-trade-in");
 
 const dev_wallet_key = process.env.PRIVATE_KEY;
 const mainnet_wallet_key = process.env.MAINNET_PRIVATE_KEY;
@@ -14,7 +14,7 @@ const etherscan_api_key = process.env.ETHERSCAN_API_KEY;
 
 module.exports = {
   solidity: {
-    version: "0.8.21",
+    version: "0.8.23",
     settings: {
       optimizer: {
         enabled: true,
@@ -27,19 +27,19 @@ module.exports = {
   networks: {
     goerli: {
       chainId: 5,
-      url: process.env.ETH_GOERLI_TESTNET_URL || "",
+      url: "https://goerli.infura.io/v3/" + process.env.INFURA_API_KEY,
       accounts:
         process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
     sepolia: {
       chainId: 11155111,
-      url: process.env.ETH_SEPOLIA_TESTNET_URL || "",
+      url: "https://sepolia.infura.io/v3/" + process.env.INFURA_API_KEY,
       accounts:
         process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
     mainnet: {
       chainId: 1,
-      url: process.env.ETH_MAINNET_TESTNET_URL || "",
+      url: "https://mainnet.infura.io/v3/" + process.env.INFURA_API_KEY,
       accounts:
         process.env.MAINNET_PRIVATE_KEY !== undefined
           ? [process.env.PRIVATE_KEY]

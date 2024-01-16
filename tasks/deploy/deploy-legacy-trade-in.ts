@@ -13,5 +13,18 @@ task("deploy-legacy-trade-in", "Deploy LegacyTradeIn contract")
     );
     await deployed_legacy.deployed();
 
+    console.log("waiting for 15 seconds for the contract to be indexed on etherscan");
+    await new Promise(resolve => setTimeout(resolve, 15000));
+
+    console.log("verifying the contract on etherscan");
+    await hre.run("verify:verify", {
+      address: deployed_legacy.address,
+      constructorArguments: [
+        taskArgs.legacycontract,
+        taskArgs.starttime,
+        taskArgs.endtime,
+      ],
+    });
+
     console.log(`deployed to ${deployed_legacy.address}`);
   });
