@@ -71,9 +71,6 @@ contract VVVVCInvestmentLedger is Ownable {
         uint256 investmentAmount
     );
 
-    /// @notice Error thrown when the caller is not a KYC address
-    error CallerIsNotKYCAddress();
-
     /// @notice Error thrown when the caller or investment round allocation has been exceeded
     error ExceedsAllocation();
 
@@ -85,9 +82,6 @@ contract VVVVCInvestmentLedger is Ownable {
 
     /// @notice Error thrown when the KYC address is the zero address
     error KYCAddressCannotBeZeroAddress();
-
-    /// @notice Error thrown when transferring ETH or ERC20 tokens fails
-    error TransferFailed();
 
     /// @notice stores the signer address and initializes the EIP-712 domain separator
     constructor(address _signer) Ownable(msg.sender) {

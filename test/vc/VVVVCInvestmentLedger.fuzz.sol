@@ -62,9 +62,7 @@ contract VVVVCInvestmentLedgerFuzzTests is VVVVCInvestmentLedgerTestBase {
             )
         );
 
-        bytes memory signature = getEIP712SignatureForInvest(domainSeparator, investmentTypehash, params);
-
-        params.signature = signature;
+        params.signature = getEIP712SignatureForInvest(domainSeparator, investmentTypehash, params);
 
         //check that the investment ledger state is updated correctly given these conditions,
         //which should yield successful investments
