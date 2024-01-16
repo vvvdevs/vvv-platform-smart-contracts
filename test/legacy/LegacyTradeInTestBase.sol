@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.22;
+pragma solidity ^0.8.23;
 
 import { Test } from "lib/forge-std/src/Test.sol";
 import { LegacyTradeIn } from "contracts/legacy/LegacyTradeIn.sol";
