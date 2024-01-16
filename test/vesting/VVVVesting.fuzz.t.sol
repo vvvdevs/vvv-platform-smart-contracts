@@ -1,10 +1,4 @@
 //SPDX-License-Identifier: MIT
-
-/**
- * @title VVVVesting Fuzz Tests
- * @dev use "forge test --match-contract VVVVestingFuzzTests" to run tests
- * @dev use "forge coverage --match-contract VVVVestingFuzzTests" to run coverage
- */
 pragma solidity ^0.8.23;
 
 import { VVVVestingTestBase } from "test/vesting/VVVVestingTestBase.sol";
@@ -12,10 +6,12 @@ import { MockERC20 } from "contracts/mock/MockERC20.sol";
 import { VVVVesting } from "contracts/vesting/VVVVesting.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
+/**
+ * @title VVVVesting Fuzz Tests
+ * @dev use "forge test --match-contract VVVVestingFuzzTests" to run tests
+ * @dev use "forge coverage --match-contract VVVVestingFuzzTests" to run coverage
+ */
 contract VVVVestingFuzzTests is VVVVestingTestBase {
-    //=====================================================================
-    // SETUP
-    //=====================================================================
     function setUp() public {
         vm.startPrank(deployer, deployer);
 
@@ -27,18 +23,23 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
         vm.stopPrank();
     }
 
-    //=====================================================================
-    // FUZZ TESTS
-    //=====================================================================
     //test setting a vesting schedule and withdrawing tokens, assert that the correct amount of tokens are withdrawn
     //fuzzes with withdraw values between 0 and (vested-withdrawn)
     function testFuzz_WithdrawVestedTokens(uint256 _tokenAmountToWithdraw) public {
         uint256 vestingScheduleIndex = 0;
         uint256 totalAmount = 10_000 * 1e18; //10k tokens
+        uint256 amountWithdrawn = 0;
         uint256 duration = 120;
         uint256 startTime = block.timestamp;
 
-        setVestingScheduleFromDeployer(sampleUser, vestingScheduleIndex, totalAmount, duration, startTime);
+        setVestingScheduleFromDeployer(
+            sampleUser,
+            vestingScheduleIndex,
+            totalAmount,
+            amountWithdrawn,
+            duration,
+            startTime
+        );
 
         uint256 vestedAmount = VVVVestingInstance.getVestedAmount(sampleUser, vestingScheduleIndex);
         (, uint256 withdrawnTokens, , ) = VVVVestingInstance.userVestingSchedules(
@@ -54,6 +55,7 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
     //tests both that the correct amount of vested and withdrawn tokens are read
     function testFuzz_GetVestedAmount(address _vestedUser, uint8 _vestingTime) public {
         uint256 totalAmount = 10_000 * 1e18; //10k tokens
+        uint256 amountWithdrawn = 0;
         uint256 duration = 120;
         uint256 startTime = block.timestamp;
         uint256 vestingScheduleIndex = 0;
@@ -62,6 +64,7 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
             _vestedUser,
             vestingScheduleIndex,
             totalAmount,
+            amountWithdrawn,
             duration,
             startTime
         );

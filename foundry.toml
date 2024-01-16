@@ -6,4 +6,3 @@ test = 'test'
 cache_path  = 'cache_forge'
 solc_version = '0.8.23'
 runs = 200
-
