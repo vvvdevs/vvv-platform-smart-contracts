@@ -83,6 +83,9 @@ contract VVVVCInvestmentLedger is Ownable {
     /// @notice Error thrown when the signer address is not recovered from the provided signature
     error InvalidSignature();
 
+    /// @notice Error thrown when the KYC address is the zero address
+    error KYCAddressCannotBeZeroAddress();
+
     /// @notice Error thrown when transferring ETH or ERC20 tokens fails
     error TransferFailed();
 
@@ -110,6 +113,11 @@ contract VVVVCInvestmentLedger is Ownable {
         // check if signature is valid
         if (!_isSignatureValid(_params)) {
             revert InvalidSignature();
+        }
+
+        // check kyc address is not zero address
+        if (_params.kycAddress == address(0)) {
+            revert KYCAddressCannotBeZeroAddress();
         }
 
         // check if the investment round is active
@@ -178,7 +186,10 @@ contract VVVVCInvestmentLedger is Ownable {
         );
 
         address recoveredAddress = ECDSA.recover(digest, _params.signature);
-        return recoveredAddress == signer && recoveredAddress != address(0);
+
+        bool isSigner = recoveredAddress == signer && recoveredAddress != address(0);
+        bool isExpired = block.timestamp > _params.deadline;
+        return isSigner && !isExpired;
     }
 
     /// @notice external wrapper for _isSignatureValid

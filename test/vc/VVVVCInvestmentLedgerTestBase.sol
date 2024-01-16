@@ -84,17 +84,17 @@ abstract contract VVVVCInvestmentLedgerTestBase is Test {
     }
 
     function getEIP712SignatureForInvest(
-        bytes32 _domain_separator,
-        bytes32 _investment_typehash,
+        bytes32 _domainSeparator,
+        bytes32 _investmentTypehash,
         VVVVCInvestmentLedger.InvestParams memory _params
     ) public view returns (bytes memory) {
         bytes32 digest = keccak256(
             abi.encodePacked(
                 "\x19\x01",
-                _domain_separator,
+                _domainSeparator,
                 keccak256(
                     abi.encode(
-                        _investment_typehash,
+                        _investmentTypehash,
                         _params.investmentRound,
                         _params.investmentRoundLimit,
                         _params.investmentRoundStartTimestamp,
