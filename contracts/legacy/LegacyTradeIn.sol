@@ -4,7 +4,7 @@ pragma solidity ^0.8.23;
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract LegacyNFTTradeIn is Ownable {
+contract LegacyTradeIn is Ownable {
     address public burnAddress = address(0xdead);
     uint256 public start_time;
     uint256 public end_time;

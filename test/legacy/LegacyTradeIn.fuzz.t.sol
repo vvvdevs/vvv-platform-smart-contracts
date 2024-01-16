@@ -7,7 +7,7 @@ contract LegacyTradeInFuzzTests is LegacyTradeInBase {
     function setUp() public override {
         super.setUp();
         vm.startPrank(user1);
-        legacyNFTInstance.setApprovalForAll(address(legacyNFTTradeInInstance), true);
+        legacyNFTInstance.setApprovalForAll(address(LegacyTradeInInstance), true);
         vm.stopPrank();
     }
 
@@ -34,7 +34,7 @@ contract LegacyTradeInFuzzTests is LegacyTradeInBase {
         legacyNFTInstance.mint(user1, tokenId);
 
         vm.warp(timestamp);
-        if (timestamp >= startTime && timestamp < endTime && !legacyNFTTradeInInstance.paused()) {
+        if (timestamp >= startTime && timestamp < endTime && !LegacyTradeInInstance.paused()) {
             tradeInAsUser(user1, tokenId);
             assertEq(
                 legacyNFTInstance.ownerOf(tokenId),
@@ -44,7 +44,7 @@ contract LegacyTradeInFuzzTests is LegacyTradeInBase {
         } else {
             vm.startPrank(user1);
             vm.expectRevert("Trade-in not active");
-            legacyNFTTradeInInstance.tradeIn(tokenId, "user-id");
+            LegacyTradeInInstance.tradeIn(tokenId, "user-id");
             vm.stopPrank();
         }
     }

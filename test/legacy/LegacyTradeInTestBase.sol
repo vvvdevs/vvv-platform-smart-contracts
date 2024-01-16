@@ -2,12 +2,12 @@
 pragma solidity ^0.8.23;
 
 import { Test } from "lib/forge-std/src/Test.sol";
-import { LegacyNFTTradeIn } from "contracts/legacy/LegacyTradeIn.sol";
+import { LegacyTradeIn } from "contracts/legacy/LegacyTradeIn.sol";
 import { MyToken } from "contracts/mock/MockERC721.sol";
 
 contract LegacyTradeInBase is Test {
     MyToken public legacyNFTInstance;
-    LegacyNFTTradeIn public legacyNFTTradeInInstance;
+    LegacyTradeIn public LegacyTradeInInstance;
 
     address public deployer = address(1);
     address public user1 = address(2);
@@ -20,7 +20,7 @@ contract LegacyTradeInBase is Test {
     function setUp() public virtual {
         vm.startPrank(deployer);
         legacyNFTInstance = new MyToken();
-        legacyNFTTradeInInstance = new LegacyNFTTradeIn(address(legacyNFTInstance), startTime, endTime);
+        LegacyTradeInInstance = new LegacyTradeIn(address(legacyNFTInstance), startTime, endTime);
 
         legacyNFTInstance.safeMint(user1);
         legacyNFTInstance.safeMint(user2);
@@ -29,7 +29,7 @@ contract LegacyTradeInBase is Test {
 
     function tradeInAsUser(address user, uint256 tokenId) internal {
         vm.startPrank(user);
-        legacyNFTTradeInInstance.tradeIn(tokenId, "user-id");
+        LegacyTradeInInstance.tradeIn(tokenId, "user-id");
         vm.stopPrank();
     }
 }

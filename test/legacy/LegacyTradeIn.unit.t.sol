@@ -11,7 +11,7 @@ contract LegacyTradeInUnitTests is LegacyTradeInBase {
     function testTradeInNFTSuccess() public {
         uint256 tokenId = 1;
         vm.startPrank(user1);
-        legacyNFTInstance.setApprovalForAll(address(legacyNFTTradeInInstance), true);
+        legacyNFTInstance.setApprovalForAll(address(LegacyTradeInInstance), true);
         tradeInAsUser(user1, tokenId);
 
         assertEq(
@@ -26,7 +26,7 @@ contract LegacyTradeInUnitTests is LegacyTradeInBase {
         uint256 tokenId = 1;
         vm.startPrank(user2);
         vm.expectRevert("Not the owner");
-        legacyNFTTradeInInstance.tradeIn(tokenId, "user-id");
+        LegacyTradeInInstance.tradeIn(tokenId, "user-id");
         vm.stopPrank();
     }
 
@@ -35,7 +35,7 @@ contract LegacyTradeInUnitTests is LegacyTradeInBase {
         uint256 tokenId = 1;
         vm.startPrank(user1);
         vm.expectRevert("Trade-in not active");
-        legacyNFTTradeInInstance.tradeIn(tokenId, "user-id");
+        LegacyTradeInInstance.tradeIn(tokenId, "user-id");
         vm.stopPrank();
     }
 
@@ -45,7 +45,7 @@ contract LegacyTradeInUnitTests is LegacyTradeInBase {
 
         vm.startPrank(user1);
         vm.expectRevert("Trade-in not active");
-        legacyNFTTradeInInstance.tradeIn(tokenId, "user-id");
+        LegacyTradeInInstance.tradeIn(tokenId, "user-id");
         vm.stopPrank();
     }
 
@@ -54,36 +54,36 @@ contract LegacyTradeInUnitTests is LegacyTradeInBase {
         uint256 newEndTime = newStartTime + 30 days;
 
         vm.startPrank(deployer);
-        legacyNFTTradeInInstance.setTradeInPhase(newStartTime, newEndTime);
+        LegacyTradeInInstance.setTradeInPhase(newStartTime, newEndTime);
         vm.stopPrank();
 
-        assertEq(legacyNFTTradeInInstance.start_time(), newStartTime, "Start time should be updated");
-        assertEq(legacyNFTTradeInInstance.end_time(), newEndTime, "End time should be updated");
+        assertEq(LegacyTradeInInstance.start_time(), newStartTime, "Start time should be updated");
+        assertEq(LegacyTradeInInstance.end_time(), newEndTime, "End time should be updated");
     }
 
     function testSetPaused() public {
         setPaused(true);
-        assertTrue(legacyNFTTradeInInstance.paused(), "Contract should be paused");
+        assertTrue(LegacyTradeInInstance.paused(), "Contract should be paused");
 
         setPaused(false);
-        assertFalse(legacyNFTTradeInInstance.paused(), "Contract should be unpaused");
+        assertFalse(LegacyTradeInInstance.paused(), "Contract should be unpaused");
         vm.stopPrank();
     }
 
     function testSetPausedNotOwner() public {
         vm.expectRevert();
-        legacyNFTTradeInInstance.setPaused(true);
+        LegacyTradeInInstance.setPaused(true);
     }
 
     function setPaused(bool _paused) internal {
         vm.startPrank(deployer);
-        legacyNFTTradeInInstance.setPaused(_paused);
+        LegacyTradeInInstance.setPaused(_paused);
         vm.stopPrank();
     }
 
     function setTradeInPhase(uint256 _start_time, uint256 _end_time) internal {
         vm.startPrank(deployer);
-        legacyNFTTradeInInstance.setTradeInPhase(_start_time, _end_time);
+        LegacyTradeInInstance.setTradeInPhase(_start_time, _end_time);
         vm.stopPrank();
     }
 }
