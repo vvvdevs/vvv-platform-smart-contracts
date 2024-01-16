@@ -5,7 +5,7 @@
  * @dev use "forge test --match-contract VVVVestingFuzzTests" to run tests
  * @dev use "forge coverage --match-contract VVVVestingFuzzTests" to run coverage
  */
-pragma solidity ^0.8.23;
+pragma solidity ^0.8.22;
 
 import { VVVVestingTestBase } from "test/vesting/VVVVestingTestBase.sol";
 import { MockERC20 } from "contracts/mock/MockERC20.sol";

@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.23;
+pragma solidity ^0.8.22;
 
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { ILegacyTradeIn } from "./ILegacyTradeIn.sol";
 
-contract LegacyTradeIn is Ownable {
+contract LegacyTradeIn is ILegacyTradeIn, Ownable {
     address public burnAddress = address(0xdead);
     uint256 public start_time;
     uint256 public end_time;
     bool public paused = false;
 
     IERC721 public legacyNFT;
-
-    event TradeInCompleted(uint256 tokenId, bytes userId);
 
     constructor(address _legacyNFT, uint256 _start_time, uint256 _end_time) Ownable(msg.sender) {
         legacyNFT = IERC721(_legacyNFT);
@@ -28,11 +27,11 @@ contract LegacyTradeIn is Ownable {
         _;
     }
 
-    function tradeIn(uint256 tokenId, bytes memory userId) external tradeInActive {
-        require(legacyNFT.ownerOf(tokenId) == msg.sender, "Not the owner");
-        legacyNFT.transferFrom(msg.sender, burnAddress, tokenId);
+    function tradeIn(uint256 _tokenId, bytes memory _userId) external tradeInActive {
+        require(legacyNFT.ownerOf(_tokenId) == msg.sender, "Not the owner");
+        legacyNFT.transferFrom(msg.sender, burnAddress, _tokenId);
 
-        emit TradeInCompleted(tokenId, userId);
+        emit TradeInCompleted(_tokenId, _userId);
     }
 
     function setTradeInPhase(uint256 _start_time, uint256 _end_time) external onlyOwner {
