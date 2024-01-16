@@ -35,6 +35,7 @@ contract LegacyTradeIn is ILegacyTradeIn, Ownable {
     }
 
     function setTradeInPhase(uint256 _start_time, uint256 _end_time) external onlyOwner {
+        require(_start_time < _end_time, "Start time must be before end time");
         start_time = _start_time;
         end_time = _end_time;
     }

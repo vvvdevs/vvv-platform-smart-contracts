@@ -61,6 +61,13 @@ contract LegacyTradeInUnitTests is LegacyTradeInBase {
         assertEq(LegacyTradeInInstance.end_time(), newEndTime, "End time should be updated");
     }
 
+    function testSetTradeInPhaseInvalidDates() public {
+        vm.startPrank(deployer);
+        vm.expectRevert("Start time must be before end time");
+        LegacyTradeInInstance.setTradeInPhase(block.timestamp, block.timestamp);
+        vm.stopPrank();
+    }
+
     function testSetPaused() public {
         setPaused(true);
         assertTrue(LegacyTradeInInstance.paused(), "Contract should be paused");
