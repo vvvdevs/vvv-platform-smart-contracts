@@ -29,18 +29,15 @@ abstract contract VVVVCInvestmentLedgerTestBase is Test {
 
     uint256 deployerKey = 1234;
     uint256 testSignerKey = 12345;
-    uint256 kycAddressKey = 123456;
     uint256 sampleUserKey = 1234567;
     uint256 sampleKycAddressKey = 12345678;
 
     address deployer = vm.addr(deployerKey);
     address testSigner = vm.addr(testSignerKey);
-    address kycAddress = vm.addr(kycAddressKey);
     address sampleKycAddress = vm.addr(sampleKycAddressKey);
     address sampleUser = vm.addr(sampleUserKey);
     address[] users = new address[](100); // 100 users
 
-    uint256 initialPaymentTokenSupply = 1_000_000 * 1e6; // for both tokens
     uint256 paymentTokenMintAmount = 10_000 * 1e6;
     uint256 userPaymentTokenDefaultAllocation = 10_000 * 1e6;
 
@@ -150,5 +147,12 @@ abstract contract VVVVCInvestmentLedgerTestBase is Test {
         params.signature = sig;
 
         return params;
+    }
+
+    function investAsUser(address _investor, VVVVCInvestmentLedger.InvestParams memory _params) public {
+        vm.startPrank(_investor, _investor);
+        PaymentTokenInstance.approve(address(LedgerInstance), _params.amountToInvest);
+        LedgerInstance.invest(_params);
+        vm.stopPrank();
     }
 }
