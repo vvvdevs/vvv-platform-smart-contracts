@@ -18,7 +18,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCInvestmentLedgerTestBase {
         ProjectTokenInstance = new MockERC20(18);
         PaymentTokenInstance = new MockERC20(6); //usdc has 6 decimals
 
-        LedgerInstance = new VVVVCInvestmentLedger(testSigner);
+        string memory environmentTag = "development";
+        LedgerInstance = new VVVVCInvestmentLedger(testSigner, environmentTag);
 
         PaymentTokenInstance.mint(sampleUser, paymentTokenMintAmount); //10k tokens
 

@@ -81,14 +81,14 @@ contract VVVVCInvestmentLedger is Ownable {
     error InvalidSignature();
 
     /// @notice stores the signer address and initializes the EIP-712 domain separator
-    constructor(address _signer) Ownable(msg.sender) {
+    constructor(address _signer, string memory _environmentTag) Ownable(msg.sender) {
         signer = _signer;
 
         // EIP-712 domain separator
         DOMAIN_SEPARATOR = keccak256(
             abi.encode(
                 DOMAIN_TYPEHASH,
-                keccak256(bytes("VVV VC Investment Ledger")),
+                keccak256(abi.encodePacked("VVV_", _environmentTag)), 
                 keccak256(bytes("1")),
                 block.chainid,
                 address(this)

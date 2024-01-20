@@ -22,8 +22,10 @@ abstract contract VVVVCInvestmentLedgerTestBase is Test {
         );
     bytes32 investmentTypehash =
         keccak256(
-            bytes("VCInvestment(bytes32 investmentRound,address kycAddress,uint256 investmentAmount)")
+            bytes("VCInvestment(uint256 investmentRound,address kycAddress,uint256 investmentAmount)")
         );
+
+    string environmentTag = "development";
 
     uint256 deployerKey = 1234;
     uint256 testSignerKey = 12345;
@@ -136,7 +138,7 @@ abstract contract VVVVCInvestmentLedgerTestBase is Test {
         bytes32 domainSeparator = keccak256(
             abi.encode(
                 domainTypehash,
-                keccak256(bytes("VVV VC Investment Ledger")),
+                keccak256(abi.encodePacked("VVV_", environmentTag)), 
                 keccak256(bytes("1")),
                 chainId,
                 address(LedgerInstance)
