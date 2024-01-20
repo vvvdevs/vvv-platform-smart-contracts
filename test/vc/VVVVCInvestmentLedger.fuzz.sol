@@ -19,6 +19,8 @@ contract VVVVCInvestmentLedgerFuzzTests is VVVVCInvestmentLedgerTestBase {
         PaymentTokenInstance = new MockERC20(6); //usdc has 6 decimals
 
         LedgerInstance = new VVVVCInvestmentLedger(testSigner, environmentTag);
+        domainSeparator = LedgerInstance.DOMAIN_SEPARATOR();
+        investmentTypehash = LedgerInstance.INVESTMENT_TYPEHASH();
 
         PaymentTokenInstance.mint(sampleUser, paymentTokenMintAmount); //10k tokens
 
@@ -51,16 +53,6 @@ contract VVVVCInvestmentLedgerFuzzTests is VVVVCInvestmentLedgerTestBase {
             deadline: _deadline,
             signature: bytes("placeholder")
         });
-
-        bytes32 domainSeparator = keccak256(
-            abi.encode(
-                domainTypehash,
-                keccak256(abi.encodePacked("VVV_", environmentTag)),
-                keccak256(bytes("1")),
-                chainId,
-                address(LedgerInstance)
-            )
-        );
 
         params.signature = getEIP712SignatureForInvest(domainSeparator, investmentTypehash, params);
 

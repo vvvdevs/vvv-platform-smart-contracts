@@ -14,15 +14,15 @@ contract VVVVCInvestmentLedger is Ownable {
     using SafeERC20 for IERC20;
 
     /// @notice EIP-712 standard definitions
-    bytes32 private constant DOMAIN_TYPEHASH =
+    bytes32 public constant DOMAIN_TYPEHASH =
         keccak256(
             bytes("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")
         );
-    bytes32 private constant INVESTMENT_TYPEHASH =
+    bytes32 public constant INVESTMENT_TYPEHASH =
         keccak256(
             bytes("VCInvestment(uint256 investmentRound,address kycAddress,uint256 investmentAmount)")
         );
-    bytes32 private immutable DOMAIN_SEPARATOR;
+    bytes32 public immutable DOMAIN_SEPARATOR;
 
     /// @notice The address authorized to sign investment transactions
     address public signer;
