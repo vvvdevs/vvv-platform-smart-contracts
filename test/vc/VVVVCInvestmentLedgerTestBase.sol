@@ -14,16 +14,10 @@ abstract contract VVVVCInvestmentLedgerTestBase is Test {
     MockERC20 PaymentTokenInstance;
     VVVVCInvestmentLedger LedgerInstance;
 
-    // EIP-712 definitions, copied from VVVVCInvestmentLedger.sol
-    // because they are private/immutable there
-    bytes32 domainTypehash =
-        keccak256(
-            bytes("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")
-        );
-    bytes32 investmentTypehash =
-        keccak256(
-            bytes("VCInvestment(uint256 investmentRound,address kycAddress,uint256 investmentAmount)")
-        );
+    //placeholders for eip712 variables before they are defined
+    //by reading the investment ledger contract
+    bytes32 domainSeparator;
+    bytes32 investmentTypehash;
 
     string environmentTag = "development";
 
@@ -131,16 +125,6 @@ abstract contract VVVVCInvestmentLedgerTestBase is Test {
             deadline: block.timestamp + 1 hours,
             signature: bytes("placeholder")
         });
-
-        bytes32 domainSeparator = keccak256(
-            abi.encode(
-                domainTypehash,
-                keccak256(abi.encodePacked("VVV_", environmentTag)),
-                keccak256(bytes("1")),
-                chainId,
-                address(LedgerInstance)
-            )
-        );
 
         bytes memory sig = getEIP712SignatureForInvest(domainSeparator, investmentTypehash, params);
 
