@@ -422,12 +422,16 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
                 uint256 _totalAmount,
                 uint256 _amountWithdrawn,
                 uint256 _duration,
-                uint256 _startTime
+                uint256 _startTime,
+                uint256 _intervalLength,
+                uint256 _tokenAmountPerInterval
             ) = VVVVestingInstance.userVestingSchedules(setVestingScheduleParams[i].vestedUser, 0);
             assertTrue(_totalAmount == setVestingScheduleParams[i].vestingSchedule.totalTokenAmountToVest);
             assertTrue(_amountWithdrawn == 0);
             assertTrue(_duration == setVestingScheduleParams[i].vestingSchedule.duration);
             assertTrue(_startTime == setVestingScheduleParams[i].vestingSchedule.startTime);
+            assertTrue(_intervalLength == setVestingScheduleParams[i].vestingSchedule.intervalLength);
+            assertTrue(_tokenAmountPerInterval == (_totalAmount / (_duration / _intervalLength)));
         }
     }
 
@@ -453,7 +457,9 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
                 uint256 _totalAmount,
                 uint256 _amountWithdrawn,
                 uint256 _duration,
-                uint256 _startTime
+                uint256 _startTime,
+                uint256 _intervalLength,
+                uint256 _tokenAmountPerInterval
             ) = VVVVestingInstance.userVestingSchedules(
                     setVestingScheduleParams[i].vestedUser,
                     setVestingScheduleParams[i].vestingScheduleIndex
@@ -462,6 +468,8 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             assertTrue(_amountWithdrawn == 0);
             assertTrue(_duration == setVestingScheduleParams[i].vestingSchedule.duration);
             assertTrue(_startTime == setVestingScheduleParams[i].vestingSchedule.startTime);
+            assertTrue(_intervalLength == setVestingScheduleParams[i].vestingSchedule.intervalLength);
+            assertTrue(_tokenAmountPerInterval == (_totalAmount / (_duration / _intervalLength)));
         }
     }
 
@@ -487,6 +495,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
     function testRemainderFromDivisionTruncationIsWithdrawable() public {
         uint256 vestingScheduleIndex = 0;
         uint256 totalAmount = 3888888886666664444227;
+        uint256 amountWithdrawn = 0;
         uint256 durationInSeconds = 4159;
         uint256 startTime = block.timestamp;
         uint256 intervalLength = 397;
@@ -503,6 +512,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             sampleUser,
             vestingScheduleIndex,
             totalAmount,
+            amountWithdrawn,
             durationInSeconds,
             startTime,
             intervalLength

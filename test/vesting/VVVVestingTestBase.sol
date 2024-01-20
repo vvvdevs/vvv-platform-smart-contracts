@@ -89,9 +89,10 @@ abstract contract VVVVestingTestBase is Test {
                     uint160(uint256(keccak256(abi.encodePacked(i))))
                 );
                 setVestingScheduleParams[i].vestingScheduleIndex = 0;
-                setVestingScheduleParams[i].vestingSchedule.totalTokenAmountToVest = i * 10_000 * 1e18; //10k tokens
-                setVestingScheduleParams[i].vestingSchedule.duration = i * 60 * 24 * 365 * 2; //2 years
+                setVestingScheduleParams[i].vestingSchedule.totalTokenAmountToVest = (i+1) * 10_000 * 1e18; //10k tokens
+                setVestingScheduleParams[i].vestingSchedule.duration = (i+1) * 60 * 24 * 365 * 2; //2 years
                 setVestingScheduleParams[i].vestingSchedule.startTime = block.timestamp + i * 60 * 24 * 2; //2 days from now
+                setVestingScheduleParams[i].vestingSchedule.intervalLength = 60 * 24 * 30; //30 days
             }
         } else if (
             keccak256(abi.encodePacked(paramToVary)) == keccak256(abi.encodePacked("vestingScheduleIndex"))
@@ -102,8 +103,9 @@ abstract contract VVVVestingTestBase is Test {
                 );
                 setVestingScheduleParams[i].vestingScheduleIndex = i;
                 setVestingScheduleParams[i].vestingSchedule.totalTokenAmountToVest = 10_000 * 1e18; //10k tokens
-                setVestingScheduleParams[i].vestingSchedule.duration = i * 60 * 24 * 365 * 2; //2 years
-                setVestingScheduleParams[i].vestingSchedule.startTime = block.timestamp + i * 60 * 24 * 2; //2 days from now
+                setVestingScheduleParams[i].vestingSchedule.duration = 60 * 24 * 365 * 2; //2 years
+                setVestingScheduleParams[i].vestingSchedule.startTime = block.timestamp * 60 * 24 * 2; //2 days from now
+                setVestingScheduleParams[i].vestingSchedule.intervalLength = 60 * 24 * 30; //30 days
             }
         } else {
             revert("invalid paramToVary");
