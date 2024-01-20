@@ -115,13 +115,13 @@ abstract contract VVVVCInvestmentLedgerTestBase is Test {
     {
         VVVVCInvestmentLedger.InvestParams memory params = VVVVCInvestmentLedger.InvestParams({
             investmentRound: 1,
-            investmentRoundLimit: 100_000 * PaymentTokenInstance.decimals(),
+            investmentRoundLimit: 100_000 * 10 ** PaymentTokenInstance.decimals(),
             investmentRoundStartTimestamp: block.timestamp,
             investmentRoundEndTimestamp: block.timestamp + 1 days,
             paymentTokenAddress: address(PaymentTokenInstance),
             kycAddress: sampleUser,
             kycAddressAllocation: userPaymentTokenDefaultAllocation,
-            amountToInvest: 1_000 * PaymentTokenInstance.decimals(),
+            amountToInvest: 1_000 * 10 ** PaymentTokenInstance.decimals(),
             deadline: block.timestamp + 1 hours,
             signature: bytes("placeholder")
         });

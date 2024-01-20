@@ -72,6 +72,49 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCInvestmentLedgerTestBase {
     }
 
     /**
+     * @notice Tests that a user can invest multiple times in a single round within the user and round limits
+     * @dev in generateInvestParamsWithSignature, the user is allocated 1000 tokens, and the round limit is 10000 tokens
+     * @dev so 10 investments work, but 11 won't
+     */
+    function testMultipleInvestmentsInSingleRound() public {
+        VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature();
+        uint256 numberOfInvestments = 10;
+
+        for (uint256 i = 0; i < numberOfInvestments; i++) {
+            investAsUser(sampleUser, params);
+        }
+
+        assertTrue(
+            PaymentTokenInstance.balanceOf(address(LedgerInstance)) ==
+                params.amountToInvest * numberOfInvestments
+        );
+    }
+
+    /**
+     * @notice Tests that a user cannot invest multiple times in a single round to exceed their limits
+     * @dev in generateInvestParamsWithSignature, the user is allocated 1000 tokens, and the round limit is 10000 tokens
+     * @dev so 10 investments work, but 11 won't
+     */
+    function testTooManyInvestmentsInSingleRound() public {
+        VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature();
+        uint256 numberOfInvestments = 10;
+
+        for (uint256 i = 0; i < numberOfInvestments; i++) {
+            investAsUser(sampleUser, params);
+        }
+
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVVVCInvestmentLedger.ExceedsAllocation.selector);
+        LedgerInstance.invest(params);
+        vm.stopPrank();
+
+        assertTrue(
+            PaymentTokenInstance.balanceOf(address(LedgerInstance)) ==
+                params.amountToInvest * numberOfInvestments
+        );
+    }
+
+    /**
      * @notice Tests investment function call by user with invalid signature
      * @dev defines an InvestParams struct, creates a signature for it, changes a param and should fail to invest
      */
