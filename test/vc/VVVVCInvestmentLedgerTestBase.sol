@@ -138,7 +138,7 @@ abstract contract VVVVCInvestmentLedgerTestBase is Test {
         bytes32 domainSeparator = keccak256(
             abi.encode(
                 domainTypehash,
-                keccak256(abi.encodePacked("VVV_", environmentTag)), 
+                keccak256(abi.encodePacked("VVV_", environmentTag)),
                 keccak256(bytes("1")),
                 chainId,
                 address(LedgerInstance)
