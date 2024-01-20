@@ -134,7 +134,7 @@ contract VVVVCInvestmentLedger is Ownable {
         kycAddressInvestedPerRound[_params.kycAddress][_params.investmentRound] += _params.amountToInvest;
         totalInvestedPerRound[_params.investmentRound] += _params.amountToInvest;
 
-        // transfer tokens from msg.sender to investmentCustodian
+        // transfer tokens from msg.sender to this contract
         IERC20(_params.paymentTokenAddress).safeTransferFrom(
             msg.sender,
             address(this),
@@ -174,7 +174,7 @@ contract VVVVCInvestmentLedger is Ownable {
 
         address recoveredAddress = ECDSA.recover(digest, _params.signature);
 
-        bool isSigner = recoveredAddress == signer
+        bool isSigner = recoveredAddress == signer;
         bool isExpired = block.timestamp > _params.deadline;
         return isSigner && !isExpired;
     }
