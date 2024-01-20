@@ -30,22 +30,10 @@ contract VVVVesting is Ownable {
     }
 
     /**
-     * @notice struct representing parameters for setting a vesting schedule
-     *     @param vestedUser the address of the user whose vesting schedule is being set
-     *     @param vestingScheduleIndex the index of the vesting schedule being set
-     *     @param vestingSchedule the vesting schedule being set
-     */
-    struct SetVestingScheduleParams {
-        address vestedUser;
-        uint256 vestingScheduleIndex;
-        VestingSchedule vestingSchedule;
-    }
-
-    /**
-     * @notice struct representing parameters for setting a vesting schedule
-     *     @param vestedUser the address of the user whose vesting schedule is being set
-     *     @param vestingScheduleIndex the index of the vesting schedule being set
-     *     @param vestingSchedule the vesting schedule being set
+       @notice struct representing parameters for setting a vesting schedule
+       @param vestedUser the address of the user whose vesting schedule is being set
+       @param vestingScheduleIndex the index of the vesting schedule being set
+       @param vestingSchedule the vesting schedule being set
      */
     struct SetVestingScheduleParams {
         address vestedUser;
@@ -79,18 +67,18 @@ contract VVVVesting is Ownable {
     );
 
     /**
-     * @notice emitted when a user's vesting schedule is removed
-     *     @param _vestedUser the address of the user whose vesting schedule is being removed
-     *     @param _vestingScheduleIndex the index of the vesting schedule being removed
+        @notice emitted when a user's vesting schedule is removed
+        @param _vestedUser the address of the user whose vesting schedule is being removed
+        @param _vestingScheduleIndex the index of the vesting schedule being removed
      */
     event RemoveVestingSchedule(address indexed _vestedUser, uint256 _vestingScheduleIndex);
 
     /**
-     * @notice emitted when user withdraws tokens
-     *     @param _vestedUser the address of the user whose tokens are being withdrawn
-     *     @param _tokenDestination the address the tokens are being sent to
-     *     @param _tokenAmountToWithdraw the amount of tokens being withdrawn
-     *     @param _vestingScheduleIndex the index of the vesting schedule the tokens are being withdrawn from
+        @notice emitted when user withdraws tokens
+        @param _vestedUser the address of the user whose tokens are being withdrawn
+        @param _tokenDestination the address the tokens are being sent to
+        @param _tokenAmountToWithdraw the amount of tokens being withdrawn
+        @param _vestingScheduleIndex the index of the vesting schedule the tokens are being withdrawn from
      */
     event VestedTokenWithdrawal(
         address indexed _vestedUser,
@@ -100,8 +88,8 @@ contract VVVVesting is Ownable {
     );
 
     /**
-     * @notice emitted when the vested token is set
-     *     @param _vvvtoken the address of the VVV token being vested
+        @notice emitted when the vested token is set
+        @param _vvvtoken the address of the VVV token being vested
      */
     event SetVestedToken(address indexed _vvvtoken);
 
@@ -131,11 +119,11 @@ contract VVVVesting is Ownable {
     }
 
     /**
-     * @notice allows user to withdraw any portion of their currently available tokens for a given vesting schedule
-     *     @param _tokenAmountToWithdraw amount of tokens to withdraw
-     *     @param _tokenDestination address to send tokens to
-     *     @param _vestingScheduleIndex index of vesting schedule to withdraw from
-     *     @dev reverts if user withdrawable amount for that schedule is less than _tokenAmountToWithdraw
+        @notice allows user to withdraw any portion of their currently available tokens for a given vesting schedule
+        @param _tokenAmountToWithdraw amount of tokens to withdraw
+        @param _tokenDestination address to send tokens to
+        @param _vestingScheduleIndex index of vesting schedule to withdraw from
+        @dev reverts if user withdrawable amount for that schedule is less than _tokenAmountToWithdraw
      */
     function withdrawVestedTokens(
         uint256 _tokenAmountToWithdraw,
@@ -170,8 +158,8 @@ contract VVVVesting is Ownable {
     }
 
     /**
-     * @notice sets or replaces vesting schedule
-     *     @param _params SetVestingScheduleParams struct
+        @notice sets or replaces vesting schedule
+        @param _params SetVestingScheduleParams struct
      */
     function _setVestingSchedule(SetVestingScheduleParams memory _params) private {
         VestingSchedule memory newSchedule = _params.vestingSchedule;
@@ -249,25 +237,26 @@ contract VVVVesting is Ownable {
         uint256 _vestingScheduleStartTime,
         uint256 _vestingScheduleIntervalLength
     ) external onlyOwner {
+        VestingSchedule memory newSchedule;
+        newSchedule.totalTokenAmountToVest = _vestingScheduleTotalAmount;
+        newSchedule.tokenAmountWithdrawn = _vestingScheduleAmountWithdrawn;
+        newSchedule.duration = _vestingScheduleDuration;
+        newSchedule.startTime = _vestingScheduleStartTime;
+        newSchedule.intervalLength = _vestingScheduleIntervalLength;
+        
         SetVestingScheduleParams memory params = SetVestingScheduleParams(
             _vestedUser,
             _vestingScheduleIndex,
-            VestingSchedule(
-                _vestingScheduleTotalAmount,
-                _vestingScheduleAmountWithdrawn,
-                _vestingScheduleDuration,
-                _vestingScheduleStartTime,
-                _vestingScheduleIntervalLength
-            )
+            newSchedule
         );
 
         _setVestingSchedule(params);
     }
 
     /**
-     * @notice used to batch-call _setVestingSchedule
-     *     @notice only callable by admin
-     *     @param _params array of SetVestingScheduleParams structs
+        @notice used to batch-call _setVestingSchedule
+        @notice only callable by admin
+        @param _params array of SetVestingScheduleParams structs
      */
     function batchSetVestingSchedule(SetVestingScheduleParams[] calldata _params) external onlyOwner {
         for (uint256 i = 0; i < _params.length; ++i) {
@@ -276,10 +265,10 @@ contract VVVVesting is Ownable {
     }
 
     /**
-     * @notice removes vesting schedule while preserving indices of other schedules
-     *     @notice only callable by admin
-     *     @param _vestedUser the address of the user whose vesting schedule is being removed
-     *     @param _vestingScheduleIndex the index of the vesting schedule being removed
+        @notice removes vesting schedule while preserving indices of other schedules
+        @notice only callable by admin
+        @param _vestedUser the address of the user whose vesting schedule is being removed
+        @param _vestingScheduleIndex the index of the vesting schedule being removed
      */
     function removeVestingSchedule(address _vestedUser, uint256 _vestingScheduleIndex) external onlyOwner {
         delete userVestingSchedules[_vestedUser][_vestingScheduleIndex];
@@ -287,11 +276,11 @@ contract VVVVesting is Ownable {
     }
 
     /**
-     * @notice sets the address of the VVV token being vested
-     *     @notice emits SetVestedToken event
-     *     @param _vvvtoken the address of the VVV token being vested
-     *     @dev in-place update that carries over existing vesting schedules and user claims
-     *     @dev reverts if _vvvtoken is the zero address
+        @notice sets the address of the VVV token being vested
+        @notice emits SetVestedToken event
+        @param _vvvtoken the address of the VVV token being vested
+        @dev in-place update that carries over existing vesting schedules and user claims
+        @dev reverts if _vvvtoken is the zero address
      */
     function setVestedToken(address _vvvtoken) external onlyOwner {
         if (_vvvtoken == address(0)) {
