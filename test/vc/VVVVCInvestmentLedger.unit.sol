@@ -42,13 +42,6 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCInvestmentLedgerTestBase {
         assertTrue(LedgerInstance.isSignatureValid(params));
     }
 
-    function investAsUser(address _investor, VVVVCInvestmentLedger.InvestParams memory _params) public {
-        vm.startPrank(_investor, _investor);
-        PaymentTokenInstance.approve(address(LedgerInstance), _params.amountToInvest);
-        LedgerInstance.invest(_params);
-        vm.stopPrank();
-    }
-
     /**
      * @notice Test that a false signature is not validated
      * @dev defines an InvestParams struct, creates a signature for it, and validates it with different struct parameters
