@@ -164,7 +164,8 @@ contract VVVVesting is Ownable {
     function _setVestingSchedule(SetVestingScheduleParams memory _params) private {
         VestingSchedule memory newSchedule = _params.vestingSchedule;
 
-        newSchedule.tokenAmountPerInterval = newSchedule.totalTokenAmountToVest /
+        newSchedule.tokenAmountPerInterval =
+            newSchedule.totalTokenAmountToVest /
             (newSchedule.duration / newSchedule.intervalLength);
 
         if (_params.vestingScheduleIndex == userVestingSchedules[_params.vestedUser].length) {
@@ -243,7 +244,7 @@ contract VVVVesting is Ownable {
         newSchedule.duration = _vestingScheduleDuration;
         newSchedule.startTime = _vestingScheduleStartTime;
         newSchedule.intervalLength = _vestingScheduleIntervalLength;
-        
+
         SetVestingScheduleParams memory params = SetVestingScheduleParams(
             _vestedUser,
             _vestingScheduleIndex,
