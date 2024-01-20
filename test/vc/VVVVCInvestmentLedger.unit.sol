@@ -92,9 +92,9 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCInvestmentLedgerTestBase {
     }
 
     /**
-     * @notice Tests transfer of ERC20 tokens by admin
+     * @notice Tests withdraw of ERC20 tokens by admin
      */
-    function testTransferERC20PostInvestment() public {
+    function testWithdrawPostInvestment() public {
         VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature();
         investAsUser(sampleUser, params);
 
@@ -102,7 +102,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCInvestmentLedgerTestBase {
         uint256 preTransferContractBalance = PaymentTokenInstance.balanceOf(address(LedgerInstance));
 
         vm.startPrank(deployer, deployer);
-        LedgerInstance.transferERC20(
+        LedgerInstance.withdraw(
             params.paymentTokenAddress,
             deployer,
             PaymentTokenInstance.balanceOf(address(LedgerInstance))
