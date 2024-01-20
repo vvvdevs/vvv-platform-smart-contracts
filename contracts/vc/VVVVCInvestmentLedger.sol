@@ -80,9 +80,6 @@ contract VVVVCInvestmentLedger is Ownable {
     /// @notice Error thrown when the signer address is not recovered from the provided signature
     error InvalidSignature();
 
-    /// @notice Error thrown when the KYC address is the zero address
-    error KYCAddressCannotBeZeroAddress();
-
     /// @notice stores the signer address and initializes the EIP-712 domain separator
     constructor(address _signer) Ownable(msg.sender) {
         signer = _signer;
@@ -109,10 +106,6 @@ contract VVVVCInvestmentLedger is Ownable {
             revert InvalidSignature();
         }
 
-        // check kyc address is not zero address
-        if (_params.kycAddress == address(0)) {
-            revert KYCAddressCannotBeZeroAddress();
-        }
 
         // check if the investment round is active
         if (
