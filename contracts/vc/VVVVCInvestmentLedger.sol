@@ -183,8 +183,8 @@ contract VVVVCInvestmentLedger is Ownable {
         return _isSignatureValid(_params);
     }
 
-    /// @notice Allows admin to transfer ERC20 tokens from this contract
-    function transferERC20(address _tokenAddress, address _to, uint256 _amount) external onlyOwner {
+    /// @notice Allows admin to withdraw ERC20 tokens from this contract
+    function withdraw(address _tokenAddress, address _to, uint256 _amount) external onlyOwner {
         IERC20(_tokenAddress).safeTransfer(_to, _amount);
     }
 }
