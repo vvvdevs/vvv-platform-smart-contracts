@@ -174,7 +174,7 @@ contract VVVVCInvestmentLedger is Ownable {
 
         address recoveredAddress = ECDSA.recover(digest, _params.signature);
 
-        bool isSigner = recoveredAddress == signer && recoveredAddress != address(0);
+        bool isSigner = recoveredAddress == signer
         bool isExpired = block.timestamp > _params.deadline;
         return isSigner && !isExpired;
     }
