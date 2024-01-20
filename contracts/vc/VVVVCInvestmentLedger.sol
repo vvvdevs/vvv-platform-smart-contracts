@@ -106,7 +106,6 @@ contract VVVVCInvestmentLedger is Ownable {
             revert InvalidSignature();
         }
 
-
         // check if the investment round is active
         if (
             block.timestamp < _params.investmentRoundStartTimestamp ||
