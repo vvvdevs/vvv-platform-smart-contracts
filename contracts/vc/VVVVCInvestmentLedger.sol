@@ -20,7 +20,7 @@ contract VVVVCInvestmentLedger is Ownable {
         );
     bytes32 private constant INVESTMENT_TYPEHASH =
         keccak256(
-            bytes("VCInvestment(bytes32 investmentRound,address kycAddress,uint256 investmentAmount)")
+            bytes("VCInvestment(uint256 investmentRound,address kycAddress,uint256 investmentAmount)")
         );
     bytes32 private immutable DOMAIN_SEPARATOR;
 
