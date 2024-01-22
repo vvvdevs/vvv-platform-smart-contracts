@@ -2,7 +2,8 @@
   "name": "hardhat-project",
   "scripts": {
     "lint": "prettier --check --plugin=prettier-plugin-solidity ./**.sol",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "format": "prettier --write --plugin=prettier-plugin-solidity ./**.sol && git add ."
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.6",
