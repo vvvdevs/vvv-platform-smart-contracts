@@ -31,6 +31,7 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
         uint256 amountWithdrawn = 0;
         uint256 duration = 120;
         uint256 startTime = block.timestamp;
+        uint256 intervalLength = 30;
 
         setVestingScheduleFromDeployer(
             sampleUser,
@@ -38,11 +39,12 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
             totalAmount,
             amountWithdrawn,
             duration,
-            startTime
+            startTime,
+            intervalLength
         );
 
         uint256 vestedAmount = VVVVestingInstance.getVestedAmount(sampleUser, vestingScheduleIndex);
-        (, uint256 withdrawnTokens, , ) = VVVVestingInstance.userVestingSchedules(
+        (, uint256 withdrawnTokens, , , , ) = VVVVestingInstance.userVestingSchedules(
             sampleUser,
             vestingScheduleIndex
         );
@@ -59,6 +61,8 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
         uint256 duration = 120;
         uint256 startTime = block.timestamp;
         uint256 vestingScheduleIndex = 0;
+        uint256 intervalLength = 30;
+        uint256 tokenAmountPerInterval = totalAmount / (duration / intervalLength);
 
         setVestingScheduleFromDeployer(
             _vestedUser,
@@ -66,7 +70,8 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
             totalAmount,
             amountWithdrawn,
             duration,
-            startTime
+            startTime,
+            intervalLength
         );
 
         uint256 vestingTime = _vestingTime > 0 ? _vestingTime : 1;
@@ -74,10 +79,9 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
 
         uint256 vestedAmount = VVVVestingInstance.getVestedAmount(_vestedUser, vestingScheduleIndex);
 
-        uint256 referenceVestedAmount = Math.min(
-            totalAmount,
-            (totalAmount * (block.timestamp - startTime)) / duration
-        );
+        uint256 elapsedIntervals = (block.timestamp - startTime) / intervalLength;
+
+        uint256 referenceVestedAmount = Math.min(totalAmount, elapsedIntervals * tokenAmountPerInterval);
 
         assertEq(vestedAmount, referenceVestedAmount);
     }
