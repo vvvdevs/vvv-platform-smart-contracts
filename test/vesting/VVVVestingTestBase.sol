@@ -38,8 +38,8 @@ abstract contract VVVVestingTestBase is Test {
     function setVestingScheduleFromDeployer(
         address _user,
         uint256 _vestingScheduleIndex,
-        uint256 _totalAmountToBeVested,
-        uint256 _prevestedAmount,
+        uint256 _tokensToVestAfterStart,
+        uint256 _tokensToVestAtStart,
         uint256 _amountWithdrawn,
         uint256 _duration,
         uint256 _startTime,
@@ -49,8 +49,8 @@ abstract contract VVVVestingTestBase is Test {
         VVVVestingInstance.setVestingSchedule(
             _user,
             _vestingScheduleIndex,
-            _totalAmountToBeVested,
-            _prevestedAmount,
+            _tokensToVestAfterStart,
+            _tokensToVestAtStart,
             _amountWithdrawn,
             _duration,
             _startTime,
@@ -91,7 +91,7 @@ abstract contract VVVVestingTestBase is Test {
                     uint160(uint256(keccak256(abi.encodePacked(i))))
                 );
                 setVestingScheduleParams[i].vestingScheduleIndex = 0;
-                setVestingScheduleParams[i].vestingSchedule.totalTokenAmountToVest =
+                setVestingScheduleParams[i].vestingSchedule.tokensToVestAfterStart =
                     (i + 1) *
                     10_000 *
                     1e18; //10k
@@ -107,7 +107,7 @@ abstract contract VVVVestingTestBase is Test {
                     uint160(uint256(keccak256(abi.encodePacked("vestedUser"))))
                 );
                 setVestingScheduleParams[i].vestingScheduleIndex = i;
-                setVestingScheduleParams[i].vestingSchedule.totalTokenAmountToVest = 10_000 * 1e18; //10k tokens
+                setVestingScheduleParams[i].vestingSchedule.tokensToVestAfterStart = 10_000 * 1e18; //10k tokens
                 setVestingScheduleParams[i].vestingSchedule.duration = 60 * 24 * 365 * 2; //2 years
                 setVestingScheduleParams[i].vestingSchedule.startTime = block.timestamp * 60 * 24 * 2; //2 days from now
                 setVestingScheduleParams[i].vestingSchedule.intervalLength = 60 * 24 * 30; //30 days
