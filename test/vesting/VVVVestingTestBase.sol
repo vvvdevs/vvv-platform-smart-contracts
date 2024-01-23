@@ -38,7 +38,8 @@ abstract contract VVVVestingTestBase is Test {
     function setVestingScheduleFromDeployer(
         address _user,
         uint256 _vestingScheduleIndex,
-        uint256 _totalAmount,
+        uint256 _totalAmountToBeVested,
+        uint256 _prevestedAmount,
         uint256 _amountWithdrawn,
         uint256 _duration,
         uint256 _startTime,
@@ -48,7 +49,8 @@ abstract contract VVVVestingTestBase is Test {
         VVVVestingInstance.setVestingSchedule(
             _user,
             _vestingScheduleIndex,
-            _totalAmount,
+            _totalAmountToBeVested,
+            _prevestedAmount,
             _amountWithdrawn,
             _duration,
             _startTime,
