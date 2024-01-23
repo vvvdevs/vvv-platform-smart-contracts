@@ -619,10 +619,10 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 numberOfIntervalsToAdvanceTimestamp = 10; // 10 intervals = 3970 seconds
 
         //397/4159 = 0.09545563837460928, so I'll advance 10 intervals to get 95% of the way to the end of the schedule
-        //at this point, the total vested amount should be tokensToVestAfterStart - tokenAmountPerInterval - truncation error
+        //at this point, the total vested amount should be (tokensToVestAfterStart + tokensToVestAtStart) - tokenAmountPerInterval - truncation error
         //(also equal to 9*tokenAmountPerInterval)
 
-        //then advance 1 more interval to get beyond the end of the schedule, at which point total vested amount should be tokensToVestAfterStart
+        //then advance 1 more interval to get beyond the end of the schedule, at which point total vested amount should be tokensToVestAfterStart + tokensToVestAtStart
 
         setVestingScheduleFromDeployer(
             sampleUser,
