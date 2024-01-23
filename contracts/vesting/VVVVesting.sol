@@ -114,9 +114,9 @@ contract VVVVesting is Ownable {
     error InvalidTokenAddress();
 
     /**
-     * @notice constructor
-     *     @param _vvvtoken the VVV token being vested
-     *     @dev reverts if _vvvtoken is the zero address
+       @notice constructor
+           @param _vvvtoken the VVV token being vested
+           @dev reverts if _vvvtoken is the zero address
      */
     constructor(address _vvvtoken) Ownable(msg.sender) {
         if (_vvvtoken == address(0)) {
@@ -199,14 +199,14 @@ contract VVVVesting is Ownable {
     }
 
     /**
-     * @notice returns the amount of tokens that are currently vested (exlcudes amount withdrawn)
-     *     @param _vestedUser the user whose withdrawable amount is being queried
-     *     @param _vestingScheduleIndex the index of the vesting schedule being queried
-     *     @dev considers 4 cases for calculating withdrawable amount:
-     *         1. schedule has not started OR has not been set
-     *         2. schedule has started, but cliff has not ended
-     *         3. schedule has ended with tokens remaining to withdraw
-     *         4. schedule is in progress with tokens remaining to withdraw
+       @notice returns the amount of tokens that are currently vested (exlcudes amount withdrawn)
+           @param _vestedUser the user whose withdrawable amount is being queried
+           @param _vestingScheduleIndex the index of the vesting schedule being queried
+           @dev considers 4 cases for calculating withdrawable amount:
+               1. schedule has not started OR has not been set
+               2. schedule has started, but cliff has not ended
+               3. schedule has ended with tokens remaining to withdraw
+               4. schedule is in progress with tokens remaining to withdraw
      */
     function getVestedAmount(
         address _vestedUser,
