@@ -13,8 +13,8 @@ contract VVVVesting is Ownable {
 
     /**
         @notice struct representing a user's vesting schedule
-        @param tokensToVestAfterStart the total amount of tokens to be vested (excluding tokensToVestAtStart)
-        @param tokensToVestAtStart the total amount of tokens that are available to claim when the schedule starts
+        @param tokensToVestAfterStart the total amount of tokens to be vested after schedule start
+        @param tokensToVestAtStart the total amount of tokens to be vested at schedule start
         @param tokenAmountWithdrawn the amount of tokens that have been withdrawn
         @param postCliffDuration the postCliffDuration of the vesting schedule
         @param scheduleStartTime the start time of the vesting schedule
@@ -52,8 +52,8 @@ contract VVVVesting is Ownable {
         @notice emitted when a user's vesting schedule is set or updated
         @param _vestedUser the address of the user whose vesting schedule is being set
         @param _vestingScheduleIndex the index of the vesting schedule being set
-        @param _tokensToVestAfterStart the total amount of tokens to be vested for this schedule
-        @param _tokensToVestAtStart the total amount of tokens that are available to claim when the schedule starts
+        @param _tokensToVestAfterStart the total amount of tokens to be vested after schedule start
+        @param _tokensToVestAtStart the total amount of tokens to be vested at schedule start
         @param _vestingScheduleAmountWithdrawn the amount of tokens that have been withdrawn
         @param _vestingScheduleDuration the postCliffDuration of the vesting schedule
         @param _vestingScheduleStartTime the start time of the vesting schedule
@@ -238,7 +238,8 @@ contract VVVVesting is Ownable {
         @notice only callable by admin
         @param _vestedUser the address of the user whose vesting schedule is being set
         @param _vestingScheduleIndex the index of the vesting schedule being set
-        @param _tokensToVestAfterStart the total amount of tokens to be vested
+        @param _tokensToVestAfterStart the total amount of tokens to be vested after schedule start
+        @param _tokensToVestAtStart the total amount of tokens that are vested at schedule start
         @param _vestingScheduleAmountWithdrawn the amount of tokens that have been withdrawn
         @param _vestingScheduleDuration the postCliffDuration of the vesting schedule
         @param _vestingScheduleStartTime the start time of the vesting schedule
