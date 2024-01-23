@@ -17,12 +17,29 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTokenDistributorBase {
         vm.startPrank(deployer, deployer);
 
         LedgerInstance = new VVVVCInvestmentLedger(testSigner, domainTag);
-        TokenDistributorInstance = new VVVVCTokenDistributor(address(LedgerInstance), domainTag);
+
+        ProjectTokenInstance = new MockERC20(18);
+        for (uint256 i = 0; i < projectTokenProxyWallets.length; i++) {
+            ProjectTokenInstance.mint(projectTokenProxyWallets[i], projectTokenAmountToProxyWallet);
+        }
+
+        TokenDistributorInstance = new VVVVCTokenDistributor(
+            testSigner,
+            address(LedgerInstance),
+            domainTag
+        );
+        domainSeparator = TokenDistributorInstance.DOMAIN_SEPARATOR();
+        claimTypehash = TokenDistributorInstance.CLAIM_TYPEHASH();
 
         vm.stopPrank();
     }
 
     function testDeployment() public {
         assertTrue(address(TokenDistributorInstance) != address(0));
+    }
+
+    function testValidateSignature() public {
+        VVVVCTokenDistributor.ClaimParams memory params = generateClaimParamsWithSignature();
+        assertTrue(TokenDistributorInstance.isSignatureValid(params));
     }
 }

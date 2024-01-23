@@ -41,7 +41,6 @@ contract VVVVCTokenDistributor is Ownable {
         @param projectTokenAddress Address of the project token to be claimed
         @param projectTokenClaimFromWallets Array of addresses of the wallets from which the project token is to be claimed
         @param investmentRoundIds Array of investment round ids, corresponding to the project token claim from wallets
-        @param claimableTokenAmounts Array of claimable token amounts, corresponding to the project token claim from wallets
         @param tokenAmountsToClaim Array of token amounts to be claimed, corresponding to the project token claim from wallets
         @param deadline Deadline for signature validity
         @param signature Signature of the user's KYC wallet address
@@ -52,7 +51,6 @@ contract VVVVCTokenDistributor is Ownable {
         address projectTokenAddress;
         address[] projectTokenClaimFromWallets;
         uint256[] investmentRoundIds;
-        uint256[] claimableTokenAmounts;
         uint256[] tokenAmountsToClaim;
         uint256 deadline;
         bytes signature;
@@ -79,7 +77,8 @@ contract VVVVCTokenDistributor is Ownable {
     /// @notice Error thrown when the signer address is not recovered from the provided signature
     error InvalidSignature();
 
-    constructor(address _ledger, string memory _environmentTag) Ownable(msg.sender) {
+    constructor(address _signer, address _ledger, string memory _environmentTag) Ownable(msg.sender) {
+        signer = _signer;
         ledger = IVVVVCInvestmentLedger(_ledger);
 
         // EIP-712 domain separator
@@ -104,7 +103,7 @@ contract VVVVCTokenDistributor is Ownable {
         //for each wallet (corresponding to each investment round), check if desired claim amount is not more than claimable amount
         for (uint256 i = 0; i < _params.projectTokenClaimFromWallets.length; ++i) {
             //KYC address's claimable tokens for round, considering those already claimed
-            uint256 thisClaimableAmount = _calculateBaseClaimableProjectTokenAmount(
+            uint256 thisClaimableAmount = _calculateBaseClaimableProjectTokens(
                 _params.userKycAddress,
                 _params.projectTokenAddress,
                 _params.projectTokenClaimFromWallets[i],
@@ -134,7 +133,7 @@ contract VVVVCTokenDistributor is Ownable {
         @param _proxyWalletAddress Address of the wallet from which the project token is to be claimed
         @param _investmentRoundId Id of the investment round for which the claimable token amount is to be calculated
      */
-    function _calculateBaseClaimableProjectTokenAmount(
+    function _calculateBaseClaimableProjectTokens(
         address _userKycAddress,
         address _projectTokenAddress,
         address _proxyWalletAddress,
@@ -175,7 +174,6 @@ contract VVVVCTokenDistributor is Ownable {
                         _params.projectTokenAddress,
                         _params.projectTokenClaimFromWallets,
                         _params.investmentRoundIds,
-                        _params.claimableTokenAmounts,
                         _params.deadline,
                         block.chainid
                     )
