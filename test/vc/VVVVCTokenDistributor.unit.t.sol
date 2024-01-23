@@ -15,7 +15,8 @@ import { VVVVCTokenDistributorBase } from "test/vc/VVVVCTokenDistributorBase.sol
 contract VVVVCTokenDistributorUnitTests is VVVVCTokenDistributorBase {
     function setUp() public {
         vm.startPrank(deployer, deployer);
-        LedgerInstance = new VVVVCInvestmentLedger();
+
+        LedgerInstance = new VVVVCInvestmentLedger(testSigner, domainTag);
         TokenDistributorInstance = new VVVVCTokenDistributor(address(LedgerInstance), domainTag);
 
         vm.stopPrank();

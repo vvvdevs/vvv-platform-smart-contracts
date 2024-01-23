@@ -2,7 +2,7 @@
 pragma solidity ^0.8.23;
 
 import { Test } from "lib/forge-std/src/Test.sol";
-import { VVVVCInvestmentLedger } from "contracts/vc/IVVVVCInvestmentLedger.sol";
+import { VVVVCInvestmentLedger } from "contracts/vc/VVVVCInvestmentLedger.sol";
 import { VVVVCTokenDistributor } from "contracts/vc/VVVVCTokenDistributor.sol";
 
 /**
@@ -12,10 +12,13 @@ abstract contract VVVVCTokenDistributorBase is Test {
     VVVVCInvestmentLedger public LedgerInstance;
     VVVVCTokenDistributor public TokenDistributorInstance;
 
-    uint256 public deployerKey = 1;
-    uint256 public userKey = 2;
+    uint256 deployerKey = 1234;
+    uint256 testSignerKey = 12345;
+    uint256 sampleUserKey = 1234567;
+
     address deployer = vm.addr(deployerKey);
-    address sampleUser = vm.addr(userKey);
+    address testSigner = vm.addr(testSignerKey);
+    address sampleUser = vm.addr(sampleUserKey);
 
     uint256 blockNumber;
     uint256 blockTimestamp;
