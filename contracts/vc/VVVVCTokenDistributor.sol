@@ -1,17 +1,42 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "./IVVVVCInvestmentLedger.sol";
+import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IVVVVCInvestmentLedger } from "./IVVVVCInvestmentLedger.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract VVVVCTokenDistributor is Ownable {
+    using SafeERC20 for IERC20;
+
     IVVVVCInvestmentLedger public ledger;
+
+    /// @notice EIP-712 standard definitions
+    bytes32 public constant DOMAIN_TYPEHASH =
+        keccak256(
+            bytes("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")
+        );
+    bytes32 public constant CLAIM_TYPEHASH =
+        keccak256(
+            bytes(
+                "VCClaim(address userKycAddress,address projectTokenAddress, address projectTokenClaimFromWallet, uint256 investmentRoundId, uint256 claimedTokenAmount)"
+            )
+        );
+    bytes32 public immutable DOMAIN_SEPARATOR;
+
+    /// @notice The address authorized to sign investment transactions
+    address public signer;
 
     /// @notice Mapping of user's KYC address to project token address to investment round id to claimable token amount
     mapping(address => mapping(uint256 => uint256)) public userClaimedTokensForRound;
 
+    /// @notice Mapping of the round ID to the round's total claimed tokens
+    mapping(uint256 => uint256) public totalClaimedTokensForRound;
+
     /**
         @notice Parameters for claim function
+        @param callerAddress Address of the caller (in-network to KYC address)
         @param userKycAddress Address of the user's KYC wallet
         @param projectTokenAddress Address of the project token to be claimed
         @param projectTokenClaimFromWallets Array of addresses of the wallets from which the project token is to be claimed
@@ -22,6 +47,7 @@ contract VVVVCTokenDistributor is Ownable {
         @param signature Signature of the user's KYC wallet address
      */
     struct ClaimParams {
+        address callerAddress;
         address userKycAddress;
         address projectTokenAddress;
         address[] projectTokenClaimFromWallets;
@@ -43,48 +69,129 @@ contract VVVVCTokenDistributor is Ownable {
         address indexed userKycAddress,
         address indexed projectTokenAddress,
         address indexed projectTokenClaimFromWallet,
-        uint256 investmentRoundId
+        uint256 investmentRoundId,
+        uint256 claimedTokenAmount
     );
 
-    /// @notice Emitted when the claim amount exceeds the allocation
-    error ClaimExceedsAllocation();
+    /// @notice Error thrown when the caller's allocation or proxy wallet balance has been exceeded
+    error ExceedsAllocation();
 
-    constructor(address _ledger) Ownable(msg.sender) {
+    /// @notice Error thrown when the signer address is not recovered from the provided signature
+    error InvalidSignature();
+
+    constructor(address _ledger, string memory _environmentTag) Ownable(msg.sender) {
         ledger = IVVVVCInvestmentLedger(_ledger);
+
+        // EIP-712 domain separator
+        DOMAIN_SEPARATOR = keccak256(
+            abi.encode(
+                DOMAIN_TYPEHASH,
+                keccak256(abi.encodePacked("VVV_", _environmentTag)),
+                keccak256(bytes("1")),
+                block.chainid,
+                address(this)
+            )
+        );
     }
 
     function claim(ClaimParams memory _params) public {
         //check signature is valid (if this is valid, arrays should be same length)
+        // check if signature is valid
+        if (!_isSignatureValid(_params)) {
+            revert InvalidSignature();
+        }
 
-        //PRELIM NOTES:
-        //For each project token claim from wallet,
-        //-->Calculate claimable amount
-        //-->check desired claim amount is less or equal to than claimable amount
-        //-->balance of proxy wallet N enough for claimAmount N? if low balance, revert (should happen without any check)
+        //for each wallet (corresponding to each investment round), check if desired claim amount is not more than claimable amount
         for (uint256 i = 0; i < _params.projectTokenClaimFromWallets.length; ++i) {
-            if (_params.tokenAmountsToClaim[i] > _params.claimableTokenAmounts[i]) {
-                revert ClaimExceedsAllocation();
+            //KYC address's claimable tokens for round, considering those already claimed
+            uint256 thisClaimableAmount = _calculateBaseClaimableProjectTokenAmount(
+                _params.userKycAddress,
+                _params.projectTokenAddress,
+                _params.projectTokenClaimFromWallets[i],
+                _params.investmentRoundIds[i]
+            ) - userClaimedTokensForRound[_params.userKycAddress][_params.investmentRoundIds[i]];
+
+            //check desired claim amount is not more than claimable amount
+            if (_params.tokenAmountsToClaim[i] > thisClaimableAmount) {
+                revert ExceedsAllocation();
             }
 
             emit VCClaim(
                 _params.userKycAddress,
                 _params.projectTokenAddress,
                 _params.projectTokenClaimFromWallets[i],
-                _params.investmentRoundIds[i]
+                _params.investmentRoundIds[i],
+                _params.tokenAmountsToClaim[i]
             );
         }
     }
 
     /**
-        @notice Reads the VVVVCInvestmentLedger contract to calculate the claimable token amount
+        @notice Reads the VVVVCInvestmentLedger contract to calculate the base claimable token amount, which does not consider the amount already claimed by the KYC address
         @dev uses fraction of invested funds to determine fraction of claimable tokens
         @param _userKycAddress Address of the user's KYC wallet
         @param _projectTokenAddress Address of the project token to be claimed
-        @param _investmentRound Id of the investment round for which the claimable token amount is to be calculated
+        @param _proxyWalletAddress Address of the wallet from which the project token is to be claimed
+        @param _investmentRoundId Id of the investment round for which the claimable token amount is to be calculated
      */
-    function _calculateClaimableTokenAmount(
+    function _calculateBaseClaimableProjectTokenAmount(
         address _userKycAddress,
         address _projectTokenAddress,
-        uint256 _investmentRound
-    ) internal view returns (uint256) {}
+        address _proxyWalletAddress,
+        uint256 _investmentRoundId
+    ) internal view returns (uint256) {
+        uint256 totalInvestedPaymentTokens = ledger.totalInvestedPerRound(_investmentRoundId);
+        uint256 userInvestedPaymentTokens = ledger.kycAddressInvestedPerRound(
+            _userKycAddress,
+            _investmentRoundId
+        );
+
+        //total pool of claimable tokens is balance of proxy wallet + total claimed tokens from that same wallet
+        uint256 totalProjectTokensDepositedToProxyWallet = IERC20(_projectTokenAddress).balanceOf(
+            _proxyWalletAddress
+        ) + totalClaimedTokensForRound[_investmentRoundId];
+
+        //return fraction of total pool of claimable tokens, based on fraction of invested funds
+        return
+            (userInvestedPaymentTokens * totalProjectTokensDepositedToProxyWallet) /
+            totalInvestedPaymentTokens;
+    }
+
+    /**
+     * @notice Checks if the provided signature is valid
+     * @param _params A ClaimParams struct containing the investment parameters
+     * @return true if the signer address is recovered from the signature, false otherwise
+     */
+    function _isSignatureValid(ClaimParams memory _params) internal view returns (bool) {
+        bytes32 digest = keccak256(
+            abi.encodePacked(
+                "\x19\x01",
+                DOMAIN_SEPARATOR,
+                keccak256(
+                    abi.encode(
+                        CLAIM_TYPEHASH,
+                        _params.callerAddress,
+                        _params.userKycAddress,
+                        _params.projectTokenAddress,
+                        _params.projectTokenClaimFromWallets,
+                        _params.investmentRoundIds,
+                        _params.claimableTokenAmounts,
+                        _params.deadline,
+                        block.chainid
+                    )
+                )
+            )
+        );
+
+        address recoveredAddress = ECDSA.recover(digest, _params.signature);
+
+        bool isSigner = recoveredAddress == signer;
+        bool isExpired = block.timestamp > _params.deadline;
+        return isSigner && !isExpired;
+    }
+
+    /// @notice external wrapper for _isSignatureValid
+    function isSignatureValid(ClaimParams memory _params) external view returns (bool) {
+        return _isSignatureValid(_params);
+    }
 }
