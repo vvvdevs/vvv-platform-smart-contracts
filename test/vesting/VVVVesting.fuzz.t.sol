@@ -82,11 +82,11 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
             intervalLength
         );
 
-        uint256 vestingTime = _vestingTime > 0 ? _vestingTime : 1;
+        uint256 vestingTime = _vestingTime > cliffStartTime ? _vestingTime : cliffStartTime;
         advanceBlockNumberAndTimestampInSeconds(vestingTime);
 
         uint256 vestedAmount = VVVVestingInstance.getVestedAmount(_vestedUser, vestingScheduleIndex);
-        uint256 elapsedIntervals = (block.timestamp - scheduleStartTime) / intervalLength;
+        uint256 elapsedIntervals = (block.timestamp - cliffStartTime) / intervalLength;
 
         uint256 referenceVestedAmount = Math.min(
             tokensToVestAfterStart,
