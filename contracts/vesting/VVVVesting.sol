@@ -13,7 +13,8 @@ contract VVVVesting is Ownable {
 
     /**
         @notice struct representing a user's vesting schedule
-        @param totalTokenAmountToVest the total amount of tokens to be vested
+        @param tokensToVestAfterStart the total amount of tokens to be vested after schedule start
+        @param tokensToVestAtStart the total amount of tokens to be vested at schedule start
         @param tokenAmountWithdrawn the amount of tokens that have been withdrawn
         @param duration the duration of the vesting schedule
         @param startTime the start time of the vesting schedule
@@ -21,7 +22,8 @@ contract VVVVesting is Ownable {
         @param tokenAmountPerInterval the amount of tokens to be vested per interval
      */
     struct VestingSchedule {
-        uint256 totalTokenAmountToVest;
+        uint256 tokensToVestAfterStart;
+        uint256 tokensToVestAtStart;
         uint256 tokenAmountWithdrawn;
         uint256 duration;
         uint256 startTime;
@@ -48,7 +50,8 @@ contract VVVVesting is Ownable {
         @notice emitted when a user's vesting schedule is set or updated
         @param _vestedUser the address of the user whose vesting schedule is being set
         @param _vestingScheduleIndex the index of the vesting schedule being set
-        @param _vestingScheduleTotalAmount the total amount of tokens to be vested for this schedule
+        @param _tokensToVestAfterStart the total amount of tokens to be vested after schedule start
+        @param _tokensToVestAtStart the total amount of tokens to be vested at schedule start
         @param _vestingScheduleAmountWithdrawn the amount of tokens that have been withdrawn
         @param _vestingScheduleDuration the duration of the vesting schedule
         @param _vestingScheduleStartTime the start time of the vesting schedule
@@ -58,7 +61,8 @@ contract VVVVesting is Ownable {
     event SetVestingSchedule(
         address indexed _vestedUser,
         uint256 _vestingScheduleIndex,
-        uint256 _vestingScheduleTotalAmount,
+        uint256 _tokensToVestAfterStart,
+        uint256 _tokensToVestAtStart,
         uint256 _vestingScheduleAmountWithdrawn,
         uint256 _vestingScheduleDuration,
         uint256 _vestingScheduleStartTime,
@@ -165,7 +169,7 @@ contract VVVVesting is Ownable {
         VestingSchedule memory newSchedule = _params.vestingSchedule;
 
         newSchedule.tokenAmountPerInterval =
-            newSchedule.totalTokenAmountToVest /
+            newSchedule.tokensToVestAfterStart /
             (newSchedule.duration / newSchedule.intervalLength);
 
         if (_params.vestingScheduleIndex == userVestingSchedules[_params.vestedUser].length) {
@@ -179,7 +183,8 @@ contract VVVVesting is Ownable {
         emit SetVestingSchedule(
             _params.vestedUser,
             _params.vestingScheduleIndex,
-            _params.vestingSchedule.totalTokenAmountToVest,
+            _params.vestingSchedule.tokensToVestAfterStart,
+            _params.vestingSchedule.tokensToVestAtStart,
             _params.vestingSchedule.tokenAmountWithdrawn,
             _params.vestingSchedule.duration,
             _params.vestingSchedule.startTime,
@@ -210,11 +215,13 @@ contract VVVVesting is Ownable {
         ) {
             return 0;
         } else if (block.timestamp >= vestingSchedule.startTime + vestingSchedule.duration) {
-            return vestingSchedule.totalTokenAmountToVest;
+            return vestingSchedule.tokensToVestAfterStart + vestingSchedule.tokensToVestAtStart;
         } else {
             uint256 elapsedIntervals = (block.timestamp - vestingSchedule.startTime) /
                 vestingSchedule.intervalLength;
-            return elapsedIntervals * vestingSchedule.tokenAmountPerInterval;
+            return
+                (elapsedIntervals * vestingSchedule.tokenAmountPerInterval) +
+                vestingSchedule.tokensToVestAtStart;
         }
     }
 
@@ -223,7 +230,8 @@ contract VVVVesting is Ownable {
         @notice only callable by admin
         @param _vestedUser the address of the user whose vesting schedule is being set
         @param _vestingScheduleIndex the index of the vesting schedule being set
-        @param _vestingScheduleTotalAmount the total amount of tokens to be vested
+        @param _tokensToVestAfterStart the total amount of tokens to be vested after schedule start
+        @param _tokensToVestAtStart the total amount of tokens that are vested at schedule start
         @param _vestingScheduleAmountWithdrawn the amount of tokens that have been withdrawn
         @param _vestingScheduleDuration the duration of the vesting schedule
         @param _vestingScheduleStartTime the start time of the vesting schedule
@@ -232,14 +240,16 @@ contract VVVVesting is Ownable {
     function setVestingSchedule(
         address _vestedUser,
         uint256 _vestingScheduleIndex,
-        uint256 _vestingScheduleTotalAmount,
+        uint256 _tokensToVestAfterStart,
+        uint256 _tokensToVestAtStart,
         uint256 _vestingScheduleAmountWithdrawn,
         uint256 _vestingScheduleDuration,
         uint256 _vestingScheduleStartTime,
         uint256 _vestingScheduleIntervalLength
     ) external onlyOwner {
         VestingSchedule memory newSchedule;
-        newSchedule.totalTokenAmountToVest = _vestingScheduleTotalAmount;
+        newSchedule.tokensToVestAfterStart = _tokensToVestAfterStart;
+        newSchedule.tokensToVestAtStart = _tokensToVestAtStart;
         newSchedule.tokenAmountWithdrawn = _vestingScheduleAmountWithdrawn;
         newSchedule.duration = _vestingScheduleDuration;
         newSchedule.startTime = _vestingScheduleStartTime;
