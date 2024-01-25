@@ -32,7 +32,7 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
         uint256 amountWithdrawn = 0;
         uint256 postCliffDuration = 120;
         uint256 scheduleStartTime = block.timestamp;
-        uint256 cliffStartTime = scheduleStartTime + 60; //1 minute cliff
+        uint256 cliffEndTime = scheduleStartTime + 60; //1 minute cliff
         uint256 intervalLength = 30;
 
         setVestingScheduleFromDeployer(
@@ -43,7 +43,7 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
             amountWithdrawn,
             postCliffDuration,
             scheduleStartTime,
-            cliffStartTime,
+            cliffEndTime,
             intervalLength
         );
 
@@ -65,7 +65,7 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
         uint256 amountWithdrawn = 0;
         uint256 postCliffDuration = 120;
         uint256 scheduleStartTime = 1; //using block.timestamp would return different values after manipulating timestamp...strange.
-        uint256 cliffStartTime = scheduleStartTime + 60; //1 minute cliff
+        uint256 cliffEndTime = scheduleStartTime + 60; //1 minute cliff
         uint256 vestingScheduleIndex = 0;
         uint256 intervalLength = 30;
         uint256 tokenAmountPerInterval = tokensToVestAfterStart / (postCliffDuration / intervalLength);
@@ -78,15 +78,15 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
             amountWithdrawn,
             postCliffDuration,
             scheduleStartTime,
-            cliffStartTime,
+            cliffEndTime,
             intervalLength
         );
 
-        uint256 vestingTime = _vestingTime > cliffStartTime ? _vestingTime : cliffStartTime;
+        uint256 vestingTime = _vestingTime > cliffEndTime ? _vestingTime : cliffEndTime;
         advanceBlockNumberAndTimestampInSeconds(vestingTime);
 
         uint256 vestedAmount = VVVVestingInstance.getVestedAmount(_vestedUser, vestingScheduleIndex);
-        uint256 elapsedIntervals = (block.timestamp - cliffStartTime) / intervalLength;
+        uint256 elapsedIntervals = (block.timestamp - cliffEndTime) / intervalLength;
 
         uint256 referenceVestedAmount = Math.min(
             tokensToVestAfterStart,
