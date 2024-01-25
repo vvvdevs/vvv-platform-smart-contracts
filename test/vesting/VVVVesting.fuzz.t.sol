@@ -25,13 +25,13 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
 
     //test setting a vesting schedule and withdrawing tokens, assert that the correct amount of tokens are withdrawn
     //fuzzes with withdraw values between 0 and (vested-withdrawn)
-    function testFuzz_WithdrawVestedTokens(uint256 _tokenAmountToWithdraw) public {
+    function testFuzz_WithdrawVestedTokens(uint256 _tokenAmountToWithdraw, uint256 _vestingTime) public {
         uint256 vestingScheduleIndex = 0;
         uint256 tokensToVestAfterStart = 10_000 * 1e18; //10k tokens
         uint256 tokensToVestAtStart = 1_000 * 1e18; //1k tokens
         uint256 amountWithdrawn = 0;
         uint256 postCliffDuration = 120;
-        uint256 scheduleStartTime = block.timestamp;
+        uint256 scheduleStartTime = 1;
         uint256 cliffEndTime = scheduleStartTime + 60; //1 minute cliff
         uint256 intervalLength = 30;
 
@@ -46,6 +46,9 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
             cliffEndTime,
             intervalLength
         );
+
+        uint256 vestingTime = _vestingTime > cliffEndTime ? _vestingTime : cliffEndTime;
+        advanceBlockNumberAndTimestampInSeconds(vestingTime);
 
         uint256 vestedAmount = VVVVestingInstance.getVestedAmount(sampleUser, vestingScheduleIndex);
         (, , uint256 withdrawnTokens, , , , , ) = VVVVestingInstance.userVestingSchedules(
