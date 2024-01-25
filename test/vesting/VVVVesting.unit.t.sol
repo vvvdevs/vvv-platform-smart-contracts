@@ -653,7 +653,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
     }
 
     //tests that the tokensToVestAtStart are available to withdraw immediately at start of vesting schedule
-    function testPrevestedTokensAreClaimableAtVestingScheduleStart() public {
+    function testTokensToVestAtStartAreClaimableAtVestingScheduleStart() public {
         uint256 vestingScheduleIndex = 0;
         uint256 tokensToVestAfterStart = 10_000 * 1e18; //10k tokens
         uint256 tokensToVestAtStart = 1_000 * 1e18; //1k tokens
@@ -685,8 +685,8 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         assertTrue(vestedAmount == tokensToVestAtStart);
     }
 
-    //test that the tokensToVestAtStart are available until cliffEndTime + intervalLength has elapsed
-    function testVestedTokensAtCliffPlusInterval() public {
+    //test that the tokensToVestAtStart are available until cliffEndTime has elapsed
+    function testTokensToVestAtStartAreClaimableAtCliffEndTime() public {
         uint256 vestingScheduleIndex = 0;
         uint256 tokensToVestAfterStart = 10_000 * 1e18; //10k tokens
         uint256 tokensToVestAtStart = 1_000 * 1e18; //1k tokens
@@ -708,8 +708,8 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             intervalLength
         );
 
-        //advance to end of time period where getVestedTokens should yield tokensToVestAtStart
-        advanceBlockNumberAndTimestampInSeconds(cliffEndTime + intervalLength - 1);
+        //advance to end of cliff
+        advanceBlockNumberAndTimestampInSeconds(cliffEndTime);
 
         //read vested amount from contract
         uint256 vestedAmount = VVVVestingInstance.getVestedAmount(sampleUser, vestingScheduleIndex);
