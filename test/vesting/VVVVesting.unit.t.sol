@@ -717,4 +717,38 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         //assert that vested amount is equal to tokensToVestAtStart
         assertTrue(vestedAmount == tokensToVestAtStart);
     }
+
+    //test that any amount greater than tokensToVestAtStart is NOT available before cliffEndTime has elapsed
+    function testClaimMoreThanTokensToVestAtStartBeforeCliffEndTime() public {
+        uint256 vestingScheduleIndex = 0;
+        uint256 tokensToVestAfterStart = 10_000 * 1e18; //10k tokens
+        uint256 tokensToVestAtStart = 1_000 * 1e18; //1k tokens
+        uint256 amountToWithdraw = tokensToVestAtStart + 1; //1 more than tokensToVestAtStart
+        uint256 amountWithdrawn = 0;
+        uint256 postCliffDuration = 120; //120 seconds
+        uint256 scheduleStartTime = block.timestamp + 60 * 60 * 24 * 2; //2 days from now
+        uint256 cliffEndTime = scheduleStartTime + 60; //1 minute from scheduleStartTime
+        uint256 intervalLength = 12;
+
+        setVestingScheduleFromDeployer(
+            sampleUser,
+            vestingScheduleIndex,
+            tokensToVestAfterStart,
+            tokensToVestAtStart,
+            amountWithdrawn,
+            postCliffDuration,
+            scheduleStartTime,
+            cliffEndTime,
+            intervalLength
+        );
+
+        //advance to end of cliff (maybe -1 is needed since getVestedAmount has >= cliffEndTime)
+        advanceBlockNumberAndTimestampInSeconds(cliffEndTime);
+
+        //attempt to withdraw more than tokensToVestAtStart
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVVVesting.AmountIsGreaterThanWithdrawable.selector);
+        VVVVestingInstance.withdrawVestedTokens(amountToWithdraw, sampleUser, vestingScheduleIndex);
+        vm.stopPrank();
+    }
 }
