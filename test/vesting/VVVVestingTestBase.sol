@@ -43,7 +43,7 @@ abstract contract VVVVestingTestBase is Test {
         uint256 _amountWithdrawn,
         uint256 _postCliffDuration,
         uint256 _scheduleStartTime,
-        uint256 _cliffStartTime,
+        uint256 _cliffEndTime,
         uint256 _intervalLength
     ) public {
         vm.startPrank(deployer, deployer);
@@ -55,7 +55,7 @@ abstract contract VVVVestingTestBase is Test {
             _amountWithdrawn,
             _postCliffDuration,
             _scheduleStartTime,
-            _cliffStartTime,
+            _cliffEndTime,
             _intervalLength
         );
         vm.stopPrank();
@@ -109,7 +109,7 @@ abstract contract VVVVestingTestBase is Test {
                     60 *
                     24 *
                     2; //2 days from now
-                setVestingScheduleParams[i].vestingSchedule.cliffStartTime =
+                setVestingScheduleParams[i].vestingSchedule.cliffEndTime =
                     block.timestamp +
                     i *
                     60 *
@@ -132,11 +132,7 @@ abstract contract VVVVestingTestBase is Test {
                     60 *
                     24 *
                     2; //2 days from now
-                setVestingScheduleParams[i].vestingSchedule.cliffStartTime =
-                    block.timestamp *
-                    60 *
-                    24 *
-                    30; //30 days
+                setVestingScheduleParams[i].vestingSchedule.cliffEndTime = block.timestamp * 60 * 24 * 30; //30 days
                 setVestingScheduleParams[i].vestingSchedule.intervalLength = 60 * 24 * 30; //30 days
             }
         } else {
