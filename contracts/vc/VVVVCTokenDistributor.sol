@@ -36,7 +36,7 @@ contract VVVVCTokenDistributor is Ownable {
 
     /**
         @notice Parameters for claim function
-        @param callerAddress Address of the caller (in-network to KYC address)
+        @param callerAddress Address of the caller (alias for KYC address)
         @param userKycAddress Address of the user's KYC wallet
         @param projectTokenAddress Address of the project token to be claimed
         @param projectTokenClaimFromWallets Array of addresses of the wallets from which the project token is to be claimed
@@ -92,10 +92,14 @@ contract VVVVCTokenDistributor is Ownable {
             )
         );
     }
-
+    /**
+        @notice Allows any address which is an alias of a KYC address to claim tokens for an investment
+        @param _params A ClaimParams struct describing the desired claim(s)
+     */
     function claim(ClaimParams memory _params) public {
-        //check signature is valid (if this is valid, arrays should be same length)
-        // check if signature is valid
+        //ensure caller (msg.sender) is an alias of the KYC address
+        _params.callerAddress = msg.sender;
+
         if (!_isSignatureValid(_params)) {
             revert InvalidSignature();
         }
@@ -115,8 +119,20 @@ contract VVVVCTokenDistributor is Ownable {
                 revert ExceedsAllocation();
             }
 
+            //update tokens claimed, transfer project tokens from proxy wallet
+            userClaimedTokensForRound[_params.userKycAddress][_params.investmentRoundIds[i]] += _params
+                .tokenAmountsToClaim[i];
+
+            totalClaimedTokensForRound[_params.investmentRoundIds[i]] += _params.tokenAmountsToClaim[i];
+
+            IERC20(_params.projectTokenAddress).safeTransferFrom(
+                _params.projectTokenClaimFromWallets[i],
+                _params.callerAddress,
+                _params.tokenAmountsToClaim[i]
+            );
+
             emit VCClaim(
-                _params.userKycAddress,
+                _params.callerAddress,
                 _params.projectTokenAddress,
                 _params.projectTokenClaimFromWallets[i],
                 _params.investmentRoundIds[i],
