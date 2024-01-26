@@ -742,7 +742,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             intervalLength
         );
 
-        //advance to end of cliff (maybe -1 is needed since getVestedAmount has >= cliffEndTime)
+        //advance to end of cliff
         advanceBlockNumberAndTimestampInSeconds(cliffEndTime);
 
         //attempt to withdraw more than tokensToVestAtStart
