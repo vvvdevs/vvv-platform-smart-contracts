@@ -15,9 +15,7 @@ contract VVVVCInvestmentLedger is Ownable {
 
     /// @notice EIP-712 standard definitions
     bytes32 public constant DOMAIN_TYPEHASH =
-        keccak256(
-            bytes("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")
-        );
+        keccak256(bytes("EIP712Domain(string name,uint256 chainId,address verifyingContract)"));
     bytes32 public constant INVESTMENT_TYPEHASH =
         keccak256(
             bytes("VCInvestment(uint256 investmentRound,address kycAddress,uint256 investmentAmount)")
