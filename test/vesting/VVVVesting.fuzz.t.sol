@@ -27,24 +27,26 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
     //fuzzes with withdraw values between 0 and (vested-withdrawn)
     function testFuzz_WithdrawVestedTokens(uint256 _tokenAmountToWithdraw) public {
         uint256 vestingScheduleIndex = 0;
-        uint256 totalAmount = 10_000 * 1e18; //10k tokens
+        uint256 tokensToVestAfterStart = 10_000 * 1e18; //10k tokens
+        uint256 tokensToVestAtStart = 1_000 * 1e18; //1k tokens
         uint256 amountWithdrawn = 0;
-        uint256 duration = 120;
+        uint256 durationInSeconds = 120;
         uint256 startTime = block.timestamp;
         uint256 intervalLength = 30;
 
         setVestingScheduleFromDeployer(
             sampleUser,
             vestingScheduleIndex,
-            totalAmount,
+            tokensToVestAfterStart,
+            tokensToVestAtStart,
             amountWithdrawn,
-            duration,
+            durationInSeconds,
             startTime,
             intervalLength
         );
 
         uint256 vestedAmount = VVVVestingInstance.getVestedAmount(sampleUser, vestingScheduleIndex);
-        (, uint256 withdrawnTokens, , , , ) = VVVVestingInstance.userVestingSchedules(
+        (, , uint256 withdrawnTokens, , , , ) = VVVVestingInstance.userVestingSchedules(
             sampleUser,
             vestingScheduleIndex
         );
@@ -56,20 +58,22 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
 
     //tests both that the correct amount of vested and withdrawn tokens are read
     function testFuzz_GetVestedAmount(address _vestedUser, uint8 _vestingTime) public {
-        uint256 totalAmount = 10_000 * 1e18; //10k tokens
+        uint256 tokensToVestAfterStart = 10_000 * 1e18; //10k tokens
+        uint256 tokensToVestAtStart = 1_000 * 1e18; //1k tokens
         uint256 amountWithdrawn = 0;
-        uint256 duration = 120;
-        uint256 startTime = block.timestamp;
+        uint256 durationInSeconds = 120;
+        uint256 startTime = 1; //using block.timestamp would return different values after manipulating timestamp...strange.
         uint256 vestingScheduleIndex = 0;
         uint256 intervalLength = 30;
-        uint256 tokenAmountPerInterval = totalAmount / (duration / intervalLength);
+        uint256 tokenAmountPerInterval = tokensToVestAfterStart / (durationInSeconds / intervalLength);
 
         setVestingScheduleFromDeployer(
             _vestedUser,
             vestingScheduleIndex,
-            totalAmount,
+            tokensToVestAfterStart,
+            tokensToVestAtStart,
             amountWithdrawn,
-            duration,
+            durationInSeconds,
             startTime,
             intervalLength
         );
@@ -78,10 +82,12 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
         advanceBlockNumberAndTimestampInSeconds(vestingTime);
 
         uint256 vestedAmount = VVVVestingInstance.getVestedAmount(_vestedUser, vestingScheduleIndex);
-
         uint256 elapsedIntervals = (block.timestamp - startTime) / intervalLength;
 
-        uint256 referenceVestedAmount = Math.min(totalAmount, elapsedIntervals * tokenAmountPerInterval);
+        uint256 referenceVestedAmount = Math.min(
+            tokensToVestAfterStart,
+            elapsedIntervals * tokenAmountPerInterval
+        ) + tokensToVestAtStart;
 
         assertEq(vestedAmount, referenceVestedAmount);
     }
