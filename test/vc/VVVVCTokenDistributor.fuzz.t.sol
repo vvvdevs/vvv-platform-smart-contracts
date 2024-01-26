@@ -42,24 +42,14 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTokenDistributorBase {
         vm.stopPrank();
     }
 
-    function testFuzz_Claim(
-        address _callerAddress,
-        address _kycAddress,
-        address _projectTokenAddress,
-        address[] memory _projectTokenClaimFromWallets,
-        uint256[] memory _investmentRoundIds,
-        uint256[] memory _tokenAmountsToClaim,
-        uint256 _deadline,
-        bytes memory _signature
-    ) public {}
+    // function testFuzz_Claim(
+    //     address _callerAddress,
+    //     address _kycAddress,
+    //     address _projectTokenAddress,
+    //     address[] memory _projectTokenClaimFromWallets,
+    //     uint256[] memory _investmentRoundIds,
+    //     uint256[] memory _tokenAmountsToClaim,
+    //     uint256 _deadline,
+    //     bytes memory _signature
+    // ) public {}
 }
-// struct ClaimParams {
-//     address callerAddress;
-//     address userKycAddress;
-//     address projectTokenAddress;
-//     address[] projectTokenClaimFromWallets;
-//     uint256[] investmentRoundIds;
-//     uint256[] tokenAmountsToClaim;
-//     uint256 deadline;
-//     bytes signature;
-// }
