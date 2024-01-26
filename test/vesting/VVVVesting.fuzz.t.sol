@@ -66,12 +66,13 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
         uint256 tokensToVestAfterStart = 10_000 * 1e18; //10k tokens
         uint256 tokensToVestAtStart = 1_000 * 1e18; //1k tokens
         uint256 amountWithdrawn = 0;
-        uint256 postCliffDuration = 120;
+        uint256 postCliffDuration = 730 days; //2 years
         uint256 scheduleStartTime = 1; //using block.timestamp would return different values after manipulating timestamp...strange.
-        uint256 cliffEndTime = scheduleStartTime + 60; //1 minute cliff
+        uint256 cliffEndTime = scheduleStartTime + 120 days; //120 day cliff
         uint256 vestingScheduleIndex = 0;
-        uint256 intervalLength = 30;
+        uint256 intervalLength = 1 days;
         uint256 tokenAmountPerInterval = tokensToVestAfterStart / (postCliffDuration / intervalLength);
+        uint256 postScheduleDurationToCheck = postCliffDuration * 100;
 
         setVestingScheduleFromDeployer(
             _vestedUser,
@@ -85,21 +86,17 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
             intervalLength
         );
 
-        uint256 vestingTime = _vestingTime > cliffEndTime ? _vestingTime : cliffEndTime;
+        uint256 vestingTime = bound(_vestingTime, cliffEndTime, postScheduleDurationToCheck);
         advanceBlockNumberAndTimestampInSeconds(vestingTime);
 
         uint256 vestedAmount = VVVVestingInstance.getVestedAmount(_vestedUser, vestingScheduleIndex);
         uint256 elapsedIntervals = (block.timestamp - cliffEndTime) / intervalLength;
 
-        //if the elapsed intervals is less than the max uint256 value divided by the token amount per interval, then we can calculate the reference vested amount
-        //otherwise, the reference vested amount would overflow
-        if (elapsedIntervals <= (type(uint256).max - tokensToVestAtStart) / tokenAmountPerInterval) {
-            uint256 referenceVestedAmount = Math.min(
-                tokensToVestAfterStart,
-                elapsedIntervals * tokenAmountPerInterval
-            ) + tokensToVestAtStart;
+        uint256 referenceVestedAmount = Math.min(
+            tokensToVestAfterStart,
+            elapsedIntervals * tokenAmountPerInterval
+        ) + tokensToVestAtStart;
 
-            assertEq(vestedAmount, referenceVestedAmount);
-        }
+        assertEq(vestedAmount, referenceVestedAmount);
     }
 }
