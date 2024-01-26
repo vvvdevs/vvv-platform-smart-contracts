@@ -41,8 +41,9 @@ abstract contract VVVVestingTestBase is Test {
         uint256 _tokensToVestAfterStart,
         uint256 _tokensToVestAtStart,
         uint256 _amountWithdrawn,
-        uint256 _duration,
-        uint256 _startTime,
+        uint256 _postCliffDuration,
+        uint256 _scheduleStartTime,
+        uint256 _cliffEndTime,
         uint256 _intervalLength
     ) public {
         vm.startPrank(deployer, deployer);
@@ -52,8 +53,9 @@ abstract contract VVVVestingTestBase is Test {
             _tokensToVestAfterStart,
             _tokensToVestAtStart,
             _amountWithdrawn,
-            _duration,
-            _startTime,
+            _postCliffDuration,
+            _scheduleStartTime,
+            _cliffEndTime,
             _intervalLength
         );
         vm.stopPrank();
@@ -95,8 +97,24 @@ abstract contract VVVVestingTestBase is Test {
                     (i + 1) *
                     10_000 *
                     1e18; //10k
-                setVestingScheduleParams[i].vestingSchedule.duration = (i + 1) * 60 * 24 * 365 * 2; //2 years
-                setVestingScheduleParams[i].vestingSchedule.startTime = block.timestamp + i * 60 * 24 * 2; //2 days from now
+                setVestingScheduleParams[i].vestingSchedule.postCliffDuration =
+                    (i + 1) *
+                    60 *
+                    24 *
+                    365 *
+                    2; //2 years
+                setVestingScheduleParams[i].vestingSchedule.scheduleStartTime =
+                    block.timestamp +
+                    i *
+                    60 *
+                    24 *
+                    2; //2 days from now
+                setVestingScheduleParams[i].vestingSchedule.cliffEndTime =
+                    block.timestamp +
+                    i *
+                    60 *
+                    24 *
+                    30; //30 days
                 setVestingScheduleParams[i].vestingSchedule.intervalLength = 60 * 24 * 30; //30 days
             }
         } else if (
@@ -108,8 +126,13 @@ abstract contract VVVVestingTestBase is Test {
                 );
                 setVestingScheduleParams[i].vestingScheduleIndex = i;
                 setVestingScheduleParams[i].vestingSchedule.tokensToVestAfterStart = 10_000 * 1e18; //10k tokens
-                setVestingScheduleParams[i].vestingSchedule.duration = 60 * 24 * 365 * 2; //2 years
-                setVestingScheduleParams[i].vestingSchedule.startTime = block.timestamp * 60 * 24 * 2; //2 days from now
+                setVestingScheduleParams[i].vestingSchedule.postCliffDuration = 60 * 24 * 365 * 2; //2 years
+                setVestingScheduleParams[i].vestingSchedule.scheduleStartTime =
+                    block.timestamp *
+                    60 *
+                    24 *
+                    2; //2 days from now
+                setVestingScheduleParams[i].vestingSchedule.cliffEndTime = block.timestamp * 60 * 24 * 30; //30 days
                 setVestingScheduleParams[i].vestingSchedule.intervalLength = 60 * 24 * 30; //30 days
             }
         } else {
