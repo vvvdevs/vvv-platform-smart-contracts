@@ -42,8 +42,9 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 tokensToVestAfterStart = 10_000 * 1e18; //10k tokens
         uint256 tokensToVestAtStart = 1_000 * 1e18; //1k tokens
         uint256 amountWithdrawn = 0;
-        uint256 durationInSeconds = 120; //120 seconds
-        uint256 startTime = block.timestamp;
+        uint256 postCliffDuration = 120; //120 seconds
+        uint256 scheduleStartTime = block.timestamp;
+        uint256 cliffEndTime = scheduleStartTime + 60; //1 minute cliff
         uint256 intervalLength = 12;
 
         vm.startPrank(sampleUser, sampleUser);
@@ -54,8 +55,9 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             tokensToVestAfterStart,
             tokensToVestAtStart,
             amountWithdrawn,
-            durationInSeconds,
-            startTime,
+            postCliffDuration,
+            scheduleStartTime,
+            cliffEndTime,
             intervalLength
         );
         vm.stopPrank();
@@ -72,8 +74,9 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 tokensToVestAfterStart = 10_000 * 1e18; //10k tokens
         uint256 tokensToVestAtStart = 1_000 * 1e18; //1k tokens
         uint256 amountWithdrawn = 0;
-        uint256 durationInSeconds = 120; //120 seconds
-        uint256 startTime = block.timestamp;
+        uint256 postCliffDuration = 120; //120 seconds
+        uint256 scheduleStartTime = block.timestamp;
+        uint256 cliffEndTime = scheduleStartTime + 60; //1 minute cliff
         uint256 intervalLength = 12;
 
         vm.startPrank(deployer, deployer);
@@ -84,8 +87,9 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             tokensToVestAfterStart,
             tokensToVestAtStart,
             amountWithdrawn,
-            durationInSeconds,
-            startTime,
+            postCliffDuration,
+            scheduleStartTime,
+            cliffEndTime,
             intervalLength
         );
         vm.stopPrank();
@@ -97,8 +101,9 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 tokensToVestAfterStart = 10_000 * 1e18; //10k tokens
         uint256 tokensToVestAtStart = 1_000 * 1e18; //1k tokens
         uint256 amountWithdrawn = 0;
-        uint256 durationInSeconds = 60 * 60 * 24 * 365 * 2; //2 years
-        uint256 startTime = block.timestamp + 60 * 60 * 24 * 2; //2 days from now
+        uint256 postCliffDuration = 60 * 60 * 24 * 365 * 2; //2 years
+        uint256 scheduleStartTime = block.timestamp + 60 * 60 * 24 * 2; //2 days from now
+        uint256 cliffEndTime = scheduleStartTime + 60 * 60 * 24 * 365; //1 year from scheduleStartTime
         uint256 intervalLength = 60 * 60 * 6 * 365; //3 months
 
         setVestingScheduleFromDeployer(
@@ -107,8 +112,9 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             tokensToVestAfterStart,
             tokensToVestAtStart,
             amountWithdrawn,
-            durationInSeconds,
-            startTime,
+            postCliffDuration,
+            scheduleStartTime,
+            cliffEndTime,
             intervalLength
         );
 
@@ -117,7 +123,8 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             uint256 _tokensToVestAtStart,
             uint256 _amountWithdrawn,
             uint256 _durationInSeconds,
-            uint256 _startTime,
+            uint256 _scheduleStartTime,
+            uint256 _cliffEndTime,
             uint256 _intervalLength,
 
         ) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
@@ -125,8 +132,9 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         assertTrue(_tokensToVestAfterStart == tokensToVestAfterStart);
         assertTrue(_tokensToVestAtStart == tokensToVestAtStart);
         assertTrue(_amountWithdrawn == 0);
-        assertTrue(_durationInSeconds == durationInSeconds);
-        assertTrue(_startTime == startTime);
+        assertTrue(_durationInSeconds == postCliffDuration);
+        assertTrue(_scheduleStartTime == scheduleStartTime);
+        assertTrue(_cliffEndTime == cliffEndTime);
         assertTrue(_intervalLength == intervalLength);
     }
 
@@ -137,8 +145,9 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             uint256 tokensToVestAfterStart = 10_000 * 1e18; //10k tokens
             uint256 tokensToVestAtStart = 1_000 * 1e18; //1k tokens
             uint256 amountWithdrawn = 0;
-            uint256 durationInSeconds = 60 * 60 * 24 * 365 * 2; //2 years
-            uint256 startTime = block.timestamp + 60 * 60 * 24 * 2; //2 days from now
+            uint256 postCliffDuration = 60 * 60 * 24 * 365 * 2; //2 years
+            uint256 scheduleStartTime = block.timestamp + 60 * 60 * 24 * 2; //2 days from now
+            uint256 cliffEndTime = scheduleStartTime + 60 * 60 * 24 * 365; //1 year from scheduleStartTime
             uint256 intervalLength = 60 * 60 * 6 * 365; //3 months
 
             setVestingScheduleFromDeployer(
@@ -147,8 +156,9 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
                 tokensToVestAfterStart,
                 tokensToVestAtStart,
                 amountWithdrawn,
-                durationInSeconds,
-                startTime,
+                postCliffDuration,
+                scheduleStartTime,
+                cliffEndTime,
                 intervalLength
             );
 
@@ -157,7 +167,8 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
                 uint256 _tokensToVestAtStart,
                 uint256 _amountWithdrawn,
                 uint256 _durationInSeconds,
-                uint256 _startTime,
+                uint256 _scheduleStartTime,
+                uint256 _cliffEndTime,
                 uint256 _intervalLength,
 
             ) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
@@ -165,18 +176,20 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             assertTrue(_tokensToVestAfterStart == tokensToVestAfterStart);
             assertTrue(_tokensToVestAtStart == tokensToVestAtStart);
             assertTrue(_amountWithdrawn == 0);
-            assertTrue(_durationInSeconds == durationInSeconds);
-            assertTrue(_startTime == startTime);
+            assertTrue(_durationInSeconds == postCliffDuration);
+            assertTrue(_scheduleStartTime == scheduleStartTime);
+            assertTrue(_cliffEndTime == cliffEndTime);
             assertTrue(_intervalLength == intervalLength);
         }
         {
-            //update part of schedule (tokensToVestAfterStart is now 20k, duration is now 3 years)
+            //update part of schedule (tokensToVestAfterStart is now 20k, postCliffDuration is now 3 years)
             uint256 vestingScheduleIndex2 = 0;
             uint256 totalAmountToBeVested2 = 20_000 * 1e18; //20k tokens
             uint256 totalPrevestedTokens2 = 1_000 * 1e18; //1k tokens
             uint256 amountWithdrawn2 = 0;
             uint256 durationInSeconds2 = 60 * 60 * 24 * 365 * 3; //3 years
-            uint256 startTime2 = block.timestamp + 60 * 60 * 24 * 2; //2 days from now
+            uint256 scheduleStartTime2 = block.timestamp + 60 * 60 * 24 * 2; //2 days from now
+            uint256 cliffEndTime2 = scheduleStartTime2 + 60 * 60 * 24 * 365; //1 year from scheduleStartTime
             uint256 intervalLength2 = 60 * 60 * 6 * 365; //3 months
 
             setVestingScheduleFromDeployer(
@@ -186,7 +199,8 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
                 totalPrevestedTokens2,
                 amountWithdrawn2,
                 durationInSeconds2,
-                startTime2,
+                scheduleStartTime2,
+                cliffEndTime2,
                 intervalLength2
             );
 
@@ -195,7 +209,8 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
                 uint256 _prevestedAmount2,
                 uint256 _amountWithdrawn2,
                 uint256 _durationInSeconds2,
-                uint256 _startTime2,
+                uint256 _scheduleStartTime2,
+                uint256 _cliffEndTime2,
                 uint256 _intervalLength2,
 
             ) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
@@ -204,7 +219,8 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             assertTrue(_prevestedAmount2 == totalPrevestedTokens2);
             assertTrue(_amountWithdrawn2 == 0);
             assertTrue(_durationInSeconds2 == durationInSeconds2);
-            assertTrue(_startTime2 == startTime2);
+            assertTrue(_scheduleStartTime2 == scheduleStartTime2);
+            assertTrue(_cliffEndTime2 == cliffEndTime2);
             assertTrue(_intervalLength2 == intervalLength2);
         }
     }
@@ -212,60 +228,69 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
     //test that a vesting schedule can be removed (reset) and the correct values are stored/read
     function testRemoveVestingSchedule() public {
         uint256 vestingScheduleIndex = 0;
-        uint256 tokensToVestAfterStart = 10_000 * 1e18; //10k tokens
-        uint256 tokensToVestAtStart = 1_000 * 1e18; //1k tokens
-        uint256 amountWithdrawn = 0;
-        uint256 durationInSeconds = 60 * 60 * 24 * 365 * 2; //2 years
-        uint256 startTime = block.timestamp + 60 * 60 * 24 * 2; //2 days from now
-        uint256 intervalLength = 60 * 60 * 6 * 365; //3 months
+        {
+            uint256 tokensToVestAfterStart = 10_000 * 1e18; //10k tokens
+            uint256 tokensToVestAtStart = 1_000 * 1e18; //1k tokens
+            uint256 amountWithdrawn = 0;
+            uint256 postCliffDuration = 60 * 60 * 24 * 365 * 2; //2 years
+            uint256 scheduleStartTime = block.timestamp + 60 * 60 * 24 * 2; //2 days from now
+            uint256 cliffEndTime = scheduleStartTime + 60 * 60 * 24 * 365; //1 year from scheduleStartTime
+            uint256 intervalLength = 60 * 60 * 6 * 365; //3 months
 
-        setVestingScheduleFromDeployer(
-            sampleUser,
-            vestingScheduleIndex,
-            tokensToVestAfterStart,
-            tokensToVestAtStart,
-            amountWithdrawn,
-            durationInSeconds,
-            startTime,
-            intervalLength
-        );
+            setVestingScheduleFromDeployer(
+                sampleUser,
+                vestingScheduleIndex,
+                tokensToVestAfterStart,
+                tokensToVestAtStart,
+                amountWithdrawn,
+                postCliffDuration,
+                scheduleStartTime,
+                cliffEndTime,
+                intervalLength
+            );
 
-        (
-            uint256 _tokensToVestAfterStart,
-            uint256 _tokensToVestAtStart,
-            uint256 _amountWithdrawn,
-            uint256 _durationInSeconds,
-            uint256 _startTime,
-            uint256 _intervalLength,
+            (
+                uint256 _tokensToVestAfterStart,
+                uint256 _tokensToVestAtStart,
+                uint256 _amountWithdrawn,
+                uint256 _durationInSeconds,
+                uint256 _scheduleStartTime,
+                uint256 _cliffEndTime,
+                uint256 _intervalLength,
 
-        ) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
+            ) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
 
-        assertTrue(_tokensToVestAfterStart == tokensToVestAfterStart);
-        assertTrue(_tokensToVestAtStart == tokensToVestAtStart);
-        assertTrue(_amountWithdrawn == 0);
-        assertTrue(_durationInSeconds == durationInSeconds);
-        assertTrue(_startTime == startTime);
-        assertTrue(_intervalLength == intervalLength);
+            assertTrue(_tokensToVestAfterStart == tokensToVestAfterStart);
+            assertTrue(_tokensToVestAtStart == tokensToVestAtStart);
+            assertTrue(_amountWithdrawn == 0);
+            assertTrue(_durationInSeconds == postCliffDuration);
+            assertTrue(_scheduleStartTime == scheduleStartTime);
+            assertTrue(_cliffEndTime == cliffEndTime);
+            assertTrue(_intervalLength == intervalLength);
+        }
 
-        removeVestingScheduleFromDeployer(sampleUser, vestingScheduleIndex);
+        {
+            removeVestingScheduleFromDeployer(sampleUser, vestingScheduleIndex);
+            (
+                uint256 _totalAmount2,
+                uint256 _prevestedAmount2,
+                uint256 _amountWithdrawn2,
+                uint256 _duration2,
+                uint256 _scheduleStartTime2,
+                uint256 _cliffEndTime2,
+                uint256 _intervalLength2,
+                uint256 _amountPerInterval2
+            ) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
 
-        (
-            uint256 _totalAmount2,
-            uint256 _prevestedAmount2,
-            uint256 _amountWithdrawn2,
-            uint256 _duration2,
-            uint256 _startTime2,
-            uint256 _intervalLength2,
-            uint256 _amountPerInterval2
-        ) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
-
-        assertTrue(_totalAmount2 == 0);
-        assertTrue(_prevestedAmount2 == 0);
-        assertTrue(_amountWithdrawn2 == 0);
-        assertTrue(_duration2 == 0);
-        assertTrue(_startTime2 == 0);
-        assertTrue(_intervalLength2 == 0);
-        assertTrue(_amountPerInterval2 == 0);
+            assertTrue(_totalAmount2 == 0);
+            assertTrue(_prevestedAmount2 == 0);
+            assertTrue(_amountWithdrawn2 == 0);
+            assertTrue(_duration2 == 0);
+            assertTrue(_scheduleStartTime2 == 0);
+            assertTrue(_cliffEndTime2 == 0);
+            assertTrue(_intervalLength2 == 0);
+            assertTrue(_amountPerInterval2 == 0);
+        }
     }
 
     //test that a user can withdraw the correct amount of tokens from a vesting schedule and the vesting contract state matches the withdrawal
@@ -274,8 +299,9 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 tokensToVestAfterStart = 10_000 * 1e18; //10k tokens
         uint256 tokensToVestAtStart = 1_000 * 1e18; //1k tokens
         uint256 amountWithdrawn = 0;
-        uint256 durationInSeconds = 120; //120 seconds
-        uint256 startTime = block.timestamp;
+        uint256 postCliffDuration = 120; //120 seconds
+        uint256 scheduleStartTime = block.timestamp;
+        uint256 cliffEndTime = scheduleStartTime + 60; //1 minute from scheduleStartTime
         uint256 intervalLength = 12;
 
         setVestingScheduleFromDeployer(
@@ -284,11 +310,12 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             tokensToVestAfterStart,
             tokensToVestAtStart,
             amountWithdrawn,
-            durationInSeconds,
-            startTime,
+            postCliffDuration,
+            scheduleStartTime,
+            cliffEndTime,
             intervalLength
         );
-        advanceBlockNumberAndTimestampInBlocks(durationInSeconds / 12 / 2); //seconds/(seconds per block)/fraction of durationInSeconds
+        advanceBlockNumberAndTimestampInBlocks(postCliffDuration / 12 / 2); //seconds/(seconds per block)/fraction of postCliffDuration
 
         uint256 vestedAmount = VVVVestingInstance.getVestedAmount(sampleUser, vestingScheduleIndex);
         uint256 vestingContractBalanceBeforeWithdraw = VVVTokenInstance.balanceOf(
@@ -297,7 +324,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
 
         withdrawVestedTokensAsUser(sampleUser, vestedAmount, sampleUser, vestingScheduleIndex);
 
-        (, , uint256 _amountWithdrawn2, , , , ) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
+        (, , uint256 _amountWithdrawn2, , , , , ) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
         assertTrue(_amountWithdrawn2 == vestedAmount);
 
         uint256 vestingContractBalanceAfterWithdraw = VVVTokenInstance.balanceOf(
@@ -317,8 +344,9 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 tokensToVestAfterStart = contractBalance * 2;
         uint256 tokensToVestAtStart = 1_000 * 1e18; //1k tokens
         uint256 amountWithdrawn = 0;
-        uint256 durationInSeconds = 120; //120 seconds
-        uint256 startTime = block.timestamp;
+        uint256 postCliffDuration = 120; //120 seconds
+        uint256 scheduleStartTime = block.timestamp;
+        uint256 cliffEndTime = scheduleStartTime + 60; //1 minute from scheduleStartTime
         uint256 intervalLength = 12;
 
         setVestingScheduleFromDeployer(
@@ -327,11 +355,12 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             tokensToVestAfterStart,
             tokensToVestAtStart,
             amountWithdrawn,
-            durationInSeconds,
-            startTime,
+            postCliffDuration,
+            scheduleStartTime,
+            cliffEndTime,
             intervalLength
         );
-        advanceBlockNumberAndTimestampInBlocks(durationInSeconds); //seconds/(seconds per block) - be sure to be past 100% vesting
+        advanceBlockNumberAndTimestampInBlocks(postCliffDuration); //seconds/(seconds per block) - be sure to be past 100% vesting
 
         uint256 vestedAmount = VVVVestingInstance.getVestedAmount(sampleUser, vestingScheduleIndex);
 
@@ -359,8 +388,9 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 tokensToVestAfterStart = 10_000 * 1e18; //10k tokens
         uint256 tokensToVestAtStart = 1_000 * 1e18; //1k tokens
         uint256 amountWithdrawn = 0;
-        uint256 durationInSeconds = 120; //120 seconds
-        uint256 startTime = block.timestamp;
+        uint256 postCliffDuration = 120; //120 seconds
+        uint256 scheduleStartTime = block.timestamp;
+        uint256 cliffEndTime = scheduleStartTime + 60; //1 minute from scheduleStartTime
         uint256 intervalLength = 12;
 
         setVestingScheduleFromDeployer(
@@ -369,11 +399,12 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             tokensToVestAfterStart,
             tokensToVestAtStart,
             amountWithdrawn,
-            durationInSeconds,
-            startTime,
+            postCliffDuration,
+            scheduleStartTime,
+            cliffEndTime,
             intervalLength
         );
-        advanceBlockNumberAndTimestampInBlocks(durationInSeconds * 10); //seconds/(seconds per block) - be sure to be past 100% vesting
+        advanceBlockNumberAndTimestampInBlocks(postCliffDuration * 10); //seconds/(seconds per block) - be sure to be past 100% vesting
 
         //withdraw all vested tokens after schedule is finished
         uint256 vestedAmount = VVVVestingInstance.getVestedAmount(sampleUser, vestingScheduleIndex);
@@ -392,8 +423,9 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 tokensToVestAfterStart = 10_000 * 1e18; //10k tokens
         uint256 tokensToVestAtStart = 1_000 * 1e18; //1k tokens
         uint256 amountWithdrawn = 0;
-        uint256 durationInSeconds = 120; //120 seconds
-        uint256 startTime = block.timestamp + 60 * 60 * 24 * 2; //2 days from now
+        uint256 postCliffDuration = 120; //120 seconds
+        uint256 scheduleStartTime = block.timestamp + 60 * 60 * 24 * 2; //2 days from now
+        uint256 cliffEndTime = scheduleStartTime + 60; //1 minute from scheduleStartTime
         uint256 intervalLength = 12;
 
         setVestingScheduleFromDeployer(
@@ -402,8 +434,9 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             tokensToVestAfterStart,
             tokensToVestAtStart,
             amountWithdrawn,
-            durationInSeconds,
-            startTime,
+            postCliffDuration,
+            scheduleStartTime,
+            cliffEndTime,
             intervalLength
         );
 
@@ -471,8 +504,9 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
                 uint256 _tokensToVestAfterStart,
                 uint256 _tokensToVestAtStart,
                 uint256 _amountWithdrawn,
-                uint256 _duration,
-                uint256 _startTime,
+                uint256 _postCliffDuration,
+                uint256 _scheduleStartTime,
+                uint256 _cliffEndTime,
                 uint256 _intervalLength,
                 uint256 _tokenAmountPerInterval
             ) = VVVVestingInstance.userVestingSchedules(setVestingScheduleParams[i].vestedUser, 0);
@@ -484,11 +518,17 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
                 _tokensToVestAtStart == setVestingScheduleParams[i].vestingSchedule.tokensToVestAtStart
             );
             assertTrue(_amountWithdrawn == 0);
-            assertTrue(_duration == setVestingScheduleParams[i].vestingSchedule.duration);
-            assertTrue(_startTime == setVestingScheduleParams[i].vestingSchedule.startTime);
+            assertTrue(
+                _postCliffDuration == setVestingScheduleParams[i].vestingSchedule.postCliffDuration
+            );
+            assertTrue(
+                _scheduleStartTime == setVestingScheduleParams[i].vestingSchedule.scheduleStartTime
+            );
+            assertTrue(_cliffEndTime == setVestingScheduleParams[i].vestingSchedule.cliffEndTime);
             assertTrue(_intervalLength == setVestingScheduleParams[i].vestingSchedule.intervalLength);
             assertTrue(
-                _tokenAmountPerInterval == (_tokensToVestAfterStart / (_duration / _intervalLength))
+                _tokenAmountPerInterval ==
+                    (_tokensToVestAfterStart / (_postCliffDuration / _intervalLength))
             );
         }
     }
@@ -516,7 +556,8 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
                 uint256 _tokensToVestAtStart,
                 uint256 _amountWithdrawn,
                 uint256 _durationInSeconds,
-                uint256 _startTime,
+                uint256 _scheduleStartTime,
+                uint256 _cliffEndTime,
                 uint256 _intervalLength,
                 uint256 _tokenAmountPerInterval
             ) = VVVVestingInstance.userVestingSchedules(
@@ -531,8 +572,13 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
                 _tokensToVestAtStart == setVestingScheduleParams[i].vestingSchedule.tokensToVestAtStart
             );
             assertTrue(_amountWithdrawn == 0);
-            assertTrue(_durationInSeconds == setVestingScheduleParams[i].vestingSchedule.duration);
-            assertTrue(_startTime == setVestingScheduleParams[i].vestingSchedule.startTime);
+            assertTrue(
+                _durationInSeconds == setVestingScheduleParams[i].vestingSchedule.postCliffDuration
+            );
+            assertTrue(
+                _scheduleStartTime == setVestingScheduleParams[i].vestingSchedule.scheduleStartTime
+            );
+            assertTrue(_cliffEndTime == setVestingScheduleParams[i].vestingSchedule.cliffEndTime);
             assertTrue(_intervalLength == setVestingScheduleParams[i].vestingSchedule.intervalLength);
             assertTrue(
                 _tokenAmountPerInterval ==
@@ -565,10 +611,11 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 tokensToVestAfterStart = 3888888886666664444227;
         uint256 tokensToVestAtStart = 1_000 * 1e18; //1k tokens
         uint256 amountWithdrawn = 0;
-        uint256 durationInSeconds = 4159;
-        uint256 startTime = block.timestamp;
+        uint256 postCliffDuration = 4159;
+        uint256 scheduleStartTime = block.timestamp;
+        uint256 cliffEndTime = scheduleStartTime + 60; //1 minute from scheduleStartTime
         uint256 intervalLength = 397;
-        uint256 tokenAmountPerInterval = tokensToVestAfterStart / (durationInSeconds / intervalLength);
+        uint256 tokenAmountPerInterval = tokensToVestAfterStart / (postCliffDuration / intervalLength);
         uint256 numberOfIntervalsToAdvanceTimestamp = 10; // 10 intervals = 3970 seconds
 
         //397/4159 = 0.09545563837460928, so I'll advance 10 intervals to get 95% of the way to the end of the schedule
@@ -583,8 +630,9 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             tokensToVestAfterStart,
             tokensToVestAtStart,
             amountWithdrawn,
-            durationInSeconds,
-            startTime,
+            postCliffDuration,
+            scheduleStartTime,
+            cliffEndTime,
             intervalLength
         );
 
@@ -605,13 +653,14 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
     }
 
     //tests that the tokensToVestAtStart are available to withdraw immediately at start of vesting schedule
-    function testPrevestedTokensAreClaimableAtVestingScheduleStart() public {
+    function testTokensToVestAtStartAreClaimableAtVestingScheduleStart() public {
         uint256 vestingScheduleIndex = 0;
         uint256 tokensToVestAfterStart = 10_000 * 1e18; //10k tokens
         uint256 tokensToVestAtStart = 1_000 * 1e18; //1k tokens
         uint256 amountWithdrawn = 0;
-        uint256 durationInSeconds = 120; //120 seconds
-        uint256 startTime = block.timestamp + 60 * 60 * 24 * 2; //2 days from now
+        uint256 postCliffDuration = 120; //120 seconds
+        uint256 scheduleStartTime = block.timestamp + 60 * 60 * 24 * 2; //2 days from now
+        uint256 cliffEndTime = scheduleStartTime + 60; //1 minute from scheduleStartTime
         uint256 intervalLength = 12;
 
         setVestingScheduleFromDeployer(
@@ -620,18 +669,86 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             tokensToVestAfterStart,
             tokensToVestAtStart,
             amountWithdrawn,
-            durationInSeconds,
-            startTime,
+            postCliffDuration,
+            scheduleStartTime,
+            cliffEndTime,
             intervalLength
         );
 
         //advance to start of vesting schedule
-        advanceBlockNumberAndTimestampInSeconds(startTime);
+        advanceBlockNumberAndTimestampInSeconds(scheduleStartTime);
 
         //read vested amount from contract
         uint256 vestedAmount = VVVVestingInstance.getVestedAmount(sampleUser, vestingScheduleIndex);
 
         //assert that vested amount is equal to tokensToVestAtStart
         assertTrue(vestedAmount == tokensToVestAtStart);
+    }
+
+    //test that the tokensToVestAtStart are available until cliffEndTime has elapsed
+    function testTokensToVestAtStartAreClaimableAtCliffEndTime() public {
+        uint256 vestingScheduleIndex = 0;
+        uint256 tokensToVestAfterStart = 10_000 * 1e18; //10k tokens
+        uint256 tokensToVestAtStart = 1_000 * 1e18; //1k tokens
+        uint256 amountWithdrawn = 0;
+        uint256 postCliffDuration = 120; //120 seconds
+        uint256 scheduleStartTime = block.timestamp + 60 * 60 * 24 * 2; //2 days from now
+        uint256 cliffEndTime = scheduleStartTime + 60; //1 minute from scheduleStartTime
+        uint256 intervalLength = 12;
+
+        setVestingScheduleFromDeployer(
+            sampleUser,
+            vestingScheduleIndex,
+            tokensToVestAfterStart,
+            tokensToVestAtStart,
+            amountWithdrawn,
+            postCliffDuration,
+            scheduleStartTime,
+            cliffEndTime,
+            intervalLength
+        );
+
+        //advance to end of cliff
+        advanceBlockNumberAndTimestampInSeconds(cliffEndTime);
+
+        //read vested amount from contract
+        uint256 vestedAmount = VVVVestingInstance.getVestedAmount(sampleUser, vestingScheduleIndex);
+
+        //assert that vested amount is equal to tokensToVestAtStart
+        assertTrue(vestedAmount == tokensToVestAtStart);
+    }
+
+    //test that any amount greater than tokensToVestAtStart is NOT available before cliffEndTime has elapsed
+    function testClaimMoreThanTokensToVestAtStartBeforeCliffEndTime() public {
+        uint256 vestingScheduleIndex = 0;
+        uint256 tokensToVestAfterStart = 10_000 * 1e18; //10k tokens
+        uint256 tokensToVestAtStart = 1_000 * 1e18; //1k tokens
+        uint256 amountToWithdraw = tokensToVestAtStart + 1; //1 more than tokensToVestAtStart
+        uint256 amountWithdrawn = 0;
+        uint256 postCliffDuration = 120; //120 seconds
+        uint256 scheduleStartTime = block.timestamp + 60 * 60 * 24 * 2; //2 days from now
+        uint256 cliffEndTime = scheduleStartTime + 60; //1 minute from scheduleStartTime
+        uint256 intervalLength = 12;
+
+        setVestingScheduleFromDeployer(
+            sampleUser,
+            vestingScheduleIndex,
+            tokensToVestAfterStart,
+            tokensToVestAtStart,
+            amountWithdrawn,
+            postCliffDuration,
+            scheduleStartTime,
+            cliffEndTime,
+            intervalLength
+        );
+
+        //advance to end of cliff
+        advanceBlockNumberAndTimestampInSeconds(cliffEndTime);
+
+        //attempt to withdraw more than tokensToVestAtStart
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVVVesting.AmountIsGreaterThanWithdrawable.selector);
+        VVVVestingInstance.withdrawVestedTokens(amountToWithdraw, sampleUser, vestingScheduleIndex);
+        vm.stopPrank();
     }
 }

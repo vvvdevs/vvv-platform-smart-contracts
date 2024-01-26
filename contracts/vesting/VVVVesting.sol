@@ -16,8 +16,9 @@ contract VVVVesting is Ownable {
         @param tokensToVestAfterStart the total amount of tokens to be vested after schedule start
         @param tokensToVestAtStart the total amount of tokens to be vested at schedule start
         @param tokenAmountWithdrawn the amount of tokens that have been withdrawn
-        @param duration the duration of the vesting schedule
-        @param startTime the start time of the vesting schedule
+        @param postCliffDuration the postCliffDuration of the vesting schedule
+        @param scheduleStartTime the start time of the vesting schedule
+        @param cliffEndTime the end time of the cliff
         @param intervalLength the length of each interval in seconds
         @param tokenAmountPerInterval the amount of tokens to be vested per interval
      */
@@ -25,8 +26,9 @@ contract VVVVesting is Ownable {
         uint256 tokensToVestAfterStart;
         uint256 tokensToVestAtStart;
         uint256 tokenAmountWithdrawn;
-        uint256 duration;
-        uint256 startTime;
+        uint256 postCliffDuration;
+        uint256 scheduleStartTime;
+        uint256 cliffEndTime;
         uint256 intervalLength;
         uint256 tokenAmountPerInterval;
     }
@@ -53,8 +55,9 @@ contract VVVVesting is Ownable {
         @param _tokensToVestAfterStart the total amount of tokens to be vested after schedule start
         @param _tokensToVestAtStart the total amount of tokens to be vested at schedule start
         @param _vestingScheduleAmountWithdrawn the amount of tokens that have been withdrawn
-        @param _vestingScheduleDuration the duration of the vesting schedule
+        @param _vestingScheduleDuration the postCliffDuration of the vesting schedule
         @param _vestingScheduleStartTime the start time of the vesting schedule
+        @param _vestingScheduleCliffEndTime the end time of the cliff
         @param _vestingScheduleIntervalLength the length of each interval in seconds
         @param _vestingScheduleTokenAmountPerInterval the amount of tokens to be vested per interval
     */
@@ -66,6 +69,7 @@ contract VVVVesting is Ownable {
         uint256 _vestingScheduleAmountWithdrawn,
         uint256 _vestingScheduleDuration,
         uint256 _vestingScheduleStartTime,
+        uint256 _vestingScheduleCliffEndTime,
         uint256 _vestingScheduleIntervalLength,
         uint256 _vestingScheduleTokenAmountPerInterval
     );
@@ -110,9 +114,9 @@ contract VVVVesting is Ownable {
     error InvalidTokenAddress();
 
     /**
-     * @notice constructor
-     *     @param _vvvtoken the VVV token being vested
-     *     @dev reverts if _vvvtoken is the zero address
+       @notice constructor
+           @param _vvvtoken the VVV token being vested
+           @dev reverts if _vvvtoken is the zero address
      */
     constructor(address _vvvtoken) Ownable(msg.sender) {
         if (_vvvtoken == address(0)) {
@@ -170,7 +174,7 @@ contract VVVVesting is Ownable {
 
         newSchedule.tokenAmountPerInterval =
             newSchedule.tokensToVestAfterStart /
-            (newSchedule.duration / newSchedule.intervalLength);
+            (newSchedule.postCliffDuration / newSchedule.intervalLength);
 
         if (_params.vestingScheduleIndex == userVestingSchedules[_params.vestedUser].length) {
             userVestingSchedules[_params.vestedUser].push(newSchedule);
@@ -186,21 +190,23 @@ contract VVVVesting is Ownable {
             _params.vestingSchedule.tokensToVestAfterStart,
             _params.vestingSchedule.tokensToVestAtStart,
             _params.vestingSchedule.tokenAmountWithdrawn,
-            _params.vestingSchedule.duration,
-            _params.vestingSchedule.startTime,
+            _params.vestingSchedule.postCliffDuration,
+            _params.vestingSchedule.scheduleStartTime,
+            _params.vestingSchedule.cliffEndTime,
             _params.vestingSchedule.intervalLength,
             _params.vestingSchedule.tokenAmountPerInterval
         );
     }
 
     /**
-     * @notice returns the amount of tokens that are currently vested (exlcudes amount withdrawn)
-     *     @param _vestedUser the user whose withdrawable amount is being queried
-     *     @param _vestingScheduleIndex the index of the vesting schedule being queried
-     *     @dev considers 3 cases for calculating withdrawable amount:
-     *         1. schedule has not started OR has not been set
-     *         2. schedule has ended with tokens remaining to withdraw
-     *         3. schedule is in progress with tokens remaining to withdraw
+       @notice returns the amount of tokens that are currently vested (exlcudes amount withdrawn)
+           @param _vestedUser the user whose withdrawable amount is being queried
+           @param _vestingScheduleIndex the index of the vesting schedule being queried
+           @dev considers 4 cases for calculating withdrawable amount:
+               1. schedule has not started OR has not been set
+               2. schedule has started, but cliff has not ended
+               3. schedule has ended with tokens remaining to withdraw
+               4. schedule is in progress with tokens remaining to withdraw
      */
     function getVestedAmount(
         address _vestedUser,
@@ -209,15 +215,17 @@ contract VVVVesting is Ownable {
         VestingSchedule storage vestingSchedule = userVestingSchedules[_vestedUser][_vestingScheduleIndex];
 
         if (
-            block.timestamp < vestingSchedule.startTime ||
-            vestingSchedule.startTime == 0 ||
+            block.timestamp < vestingSchedule.scheduleStartTime ||
+            vestingSchedule.scheduleStartTime == 0 ||
             userVestingSchedules[_vestedUser].length == 0
         ) {
             return 0;
-        } else if (block.timestamp >= vestingSchedule.startTime + vestingSchedule.duration) {
+        } else if (block.timestamp < vestingSchedule.cliffEndTime) {
+            return vestingSchedule.tokensToVestAtStart;
+        } else if (block.timestamp >= vestingSchedule.cliffEndTime + vestingSchedule.postCliffDuration) {
             return vestingSchedule.tokensToVestAfterStart + vestingSchedule.tokensToVestAtStart;
         } else {
-            uint256 elapsedIntervals = (block.timestamp - vestingSchedule.startTime) /
+            uint256 elapsedIntervals = (block.timestamp - vestingSchedule.cliffEndTime) /
                 vestingSchedule.intervalLength;
             return
                 (elapsedIntervals * vestingSchedule.tokenAmountPerInterval) +
@@ -233,8 +241,9 @@ contract VVVVesting is Ownable {
         @param _tokensToVestAfterStart the total amount of tokens to be vested after schedule start
         @param _tokensToVestAtStart the total amount of tokens that are vested at schedule start
         @param _vestingScheduleAmountWithdrawn the amount of tokens that have been withdrawn
-        @param _vestingScheduleDuration the duration of the vesting schedule
+        @param _vestingScheduleDuration the postCliffDuration of the vesting schedule
         @param _vestingScheduleStartTime the start time of the vesting schedule
+        @param _vestingScheduleCliffEndTime the end time of the vesting schedule
         @param _vestingScheduleIntervalLength the length of each interval in seconds
      */
     function setVestingSchedule(
@@ -245,14 +254,16 @@ contract VVVVesting is Ownable {
         uint256 _vestingScheduleAmountWithdrawn,
         uint256 _vestingScheduleDuration,
         uint256 _vestingScheduleStartTime,
+        uint256 _vestingScheduleCliffEndTime,
         uint256 _vestingScheduleIntervalLength
     ) external onlyOwner {
         VestingSchedule memory newSchedule;
         newSchedule.tokensToVestAfterStart = _tokensToVestAfterStart;
         newSchedule.tokensToVestAtStart = _tokensToVestAtStart;
         newSchedule.tokenAmountWithdrawn = _vestingScheduleAmountWithdrawn;
-        newSchedule.duration = _vestingScheduleDuration;
-        newSchedule.startTime = _vestingScheduleStartTime;
+        newSchedule.postCliffDuration = _vestingScheduleDuration;
+        newSchedule.scheduleStartTime = _vestingScheduleStartTime;
+        newSchedule.cliffEndTime = _vestingScheduleCliffEndTime;
         newSchedule.intervalLength = _vestingScheduleIntervalLength;
 
         SetVestingScheduleParams memory params = SetVestingScheduleParams(
