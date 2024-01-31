@@ -5,18 +5,18 @@ import { MockERC20 } from "contracts/mock/MockERC20.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { VVVVCInvestmentLedger } from "contracts/vc/VVVVCInvestmentLedger.sol";
 import { VVVVCTokenDistributor } from "contracts/vc/VVVVCTokenDistributor.sol";
-import { VVVVCTokenDistributorBase } from "test/vc/VVVVCTokenDistributorBase.sol";
+import { VVVVCTestBase } from "test/vc/VVVVCTestBase.sol";
 
 /**
  * @title VVVVCTokenDistributor Fuzz Tests
  * @dev use "forge test --match-contract VVVVCTokenDistributorFuzzTests" to run tests
  * @dev use "forge coverage --match-contract VVVVCTokenDistributor" to run coverage
  */
-contract VVVVCTokenDistributorUnitTests is VVVVCTokenDistributorBase {
+contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
     function setUp() public {
         vm.startPrank(deployer, deployer);
 
-        LedgerInstance = new VVVVCInvestmentLedger(testSigner, domainTag);
+        LedgerInstance = new VVVVCInvestmentLedger(testSigner, environmentTag);
         ledgerDomainSeparator = LedgerInstance.DOMAIN_SEPARATOR();
         investmentTypehash = LedgerInstance.INVESTMENT_TYPEHASH();
 
@@ -34,7 +34,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTokenDistributorBase {
         TokenDistributorInstance = new VVVVCTokenDistributor(
             testSigner,
             address(LedgerInstance),
-            domainTag
+            environmentTag
         );
         distributorDomainSeparator = TokenDistributorInstance.DOMAIN_SEPARATOR();
         claimTypehash = TokenDistributorInstance.CLAIM_TYPEHASH();
