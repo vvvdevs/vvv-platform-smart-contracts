@@ -56,6 +56,7 @@ abstract contract VVVVCTokenDistributorBase is Test {
     //investment payment tokens
     uint256 paymentTokenMintAmount = 10_000 * 1e6;
     uint256 userPaymentTokenDefaultAllocation = 10_000 * 1e6;
+    uint256 investmentRoundSampleLimit = 1_000_000 * 1e6;
 
     function advanceBlockNumberAndTimestampInBlocks(uint256 blocks) public {
         blockNumber += blocks;
@@ -129,7 +130,7 @@ abstract contract VVVVCTokenDistributorBase is Test {
     ) public view returns (VVVVCInvestmentLedger.InvestParams memory) {
         VVVVCInvestmentLedger.InvestParams memory params = VVVVCInvestmentLedger.InvestParams({
             investmentRound: _investmentRound,
-            investmentRoundLimit: 100_000 * 10 ** PaymentTokenInstance.decimals(),
+            investmentRoundLimit: investmentRoundSampleLimit,
             investmentRoundStartTimestamp: block.timestamp,
             investmentRoundEndTimestamp: block.timestamp + 1 days,
             paymentTokenAddress: address(PaymentTokenInstance),
@@ -201,15 +202,18 @@ abstract contract VVVVCTokenDistributorBase is Test {
     }
 
     function generateClaimParamsWithSignature(
-        address _callerAddress
+        address _callerAddress,
+        address[] memory _projectTokenClaimFromWallets,
+        uint256[] memory _investmentRoundIds,
+        uint256[] memory _tokenAmountsToClaim
     ) public view returns (VVVVCTokenDistributor.ClaimParams memory) {
         VVVVCTokenDistributor.ClaimParams memory params = VVVVCTokenDistributor.ClaimParams({
             callerAddress: _callerAddress,
             userKycAddress: sampleKycAddress,
             projectTokenAddress: address(ProjectTokenInstance),
-            projectTokenClaimFromWallets: projectTokenProxyWallets,
-            investmentRoundIds: sampleInvestmentRoundIds,
-            tokenAmountsToClaim: sampleTokenAmountsToClaim,
+            projectTokenClaimFromWallets: _projectTokenClaimFromWallets,
+            investmentRoundIds: _investmentRoundIds,
+            tokenAmountsToClaim: _tokenAmountsToClaim,
             deadline: block.timestamp + 1 hours,
             signature: bytes("placeholder")
         });
