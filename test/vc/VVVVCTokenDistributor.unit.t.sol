@@ -55,57 +55,261 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTokenDistributorBase {
     }
 
     function testValidateSignature() public {
+        address[] memory thisProjectTokenProxyWallets = new address[](1);
+        uint256[] memory thisInvestmentRoundids = new uint256[](1);
+        uint256[] memory thisClaimAmounts = new uint256[](1);
+
+        thisProjectTokenProxyWallets[0] = projectTokenProxyWallets[0];
+        thisInvestmentRoundids[0] = sampleInvestmentRoundIds[0];
+        thisClaimAmounts[0] = sampleTokenAmountsToClaim[0];
+
         VVVVCTokenDistributor.ClaimParams memory params = generateClaimParamsWithSignature(
-            sampleKycAddress
+            sampleKycAddress,
+            thisProjectTokenProxyWallets,
+            thisInvestmentRoundids,
+            thisClaimAmounts
         );
+
         assertTrue(TokenDistributorInstance.isSignatureValid(params));
     }
 
     function testInvalidateSignature() public {
-        VVVVCTokenDistributor.ClaimParams memory params = generateClaimParamsWithSignature(
-            sampleKycAddress
+        address[] memory thisProjectTokenProxyWallets = new address[](1);
+        uint256[] memory thisInvestmentRoundids = new uint256[](1);
+        uint256[] memory thisClaimAmounts = new uint256[](1);
+
+        thisProjectTokenProxyWallets[0] = projectTokenProxyWallets[0];
+        thisInvestmentRoundids[0] = sampleInvestmentRoundIds[0];
+        thisClaimAmounts[0] = sampleTokenAmountsToClaim[0];
+
+        VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
+            sampleKycAddress,
+            thisProjectTokenProxyWallets,
+            thisInvestmentRoundids,
+            thisClaimAmounts
         );
-        params.projectTokenClaimFromWallets[0] = address(0);
-        assertFalse(TokenDistributorInstance.isSignatureValid(params));
+
+        claimParams.projectTokenClaimFromWallets[0] = address(0);
+        assertFalse(TokenDistributorInstance.isSignatureValid(claimParams));
     }
 
     //test that the kyc address can claim tokens on its own behalf
     function testClaimWithKycAddress() public {
-        //invest in rounds 1, 2, and 3 (sampleInvestmentRoundIds)
-        batchInvestAsUser(sampleKycAddress, sampleInvestmentRoundIds, sampleAmountsToInvest);
+        address[] memory thisProjectTokenProxyWallets = new address[](1);
+        uint256[] memory thisInvestmentRoundids = new uint256[](1);
+        uint256[] memory thisClaimAmounts = new uint256[](1);
 
-        //claim for the same rounds
+        thisProjectTokenProxyWallets[0] = projectTokenProxyWallets[0];
+        thisInvestmentRoundids[0] = sampleInvestmentRoundIds[0];
+        thisClaimAmounts[0] = sampleTokenAmountsToClaim[0];
+
+        investAsUser(
+            sampleKycAddress,
+            generateInvestParamsWithSignature(
+                sampleInvestmentRoundIds[0],
+                sampleAmountsToInvest[0],
+                sampleKycAddress
+            )
+        );
+
+        //claim for the same singlen round
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
-            sampleKycAddress
+            sampleKycAddress,
+            thisProjectTokenProxyWallets,
+            thisInvestmentRoundids,
+            thisClaimAmounts
         );
         claimAsUser(sampleKycAddress, claimParams);
-        assertTrue(ProjectTokenInstance.balanceOf(sampleKycAddress) == sum(sampleTokenAmountsToClaim));
+        assertTrue(ProjectTokenInstance.balanceOf(sampleKycAddress) == sampleTokenAmountsToClaim[0]);
     }
 
     //test that an alias of the kyc address can claim tokens on behalf of the kyc address
     function testClaimWithAlias() public {
+        address[] memory thisProjectTokenProxyWallets = new address[](1);
+        uint256[] memory thisInvestmentRoundids = new uint256[](1);
+        uint256[] memory thisClaimAmounts = new uint256[](1);
+
+        thisProjectTokenProxyWallets[0] = projectTokenProxyWallets[0];
+        thisInvestmentRoundids[0] = sampleInvestmentRoundIds[0];
+        thisClaimAmounts[0] = sampleTokenAmountsToClaim[0];
+
+        //invest in round 1 (sampleInvestmentRoundIds[0])
+        investAsUser(
+            sampleKycAddress,
+            generateInvestParamsWithSignature(
+                sampleInvestmentRoundIds[0],
+                sampleAmountsToInvest[0],
+                sampleKycAddress
+            )
+        );
+
+        //claim for the same round
+        VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
+            sampleUser,
+            thisProjectTokenProxyWallets,
+            thisInvestmentRoundids,
+            thisClaimAmounts
+        );
+
+        claimAsUser(sampleUser, claimParams);
+
+        assertTrue(ProjectTokenInstance.balanceOf(sampleUser) == sampleTokenAmountsToClaim[0]);
+    }
+
+    // test claiming in multiple rounds with the same transaction
+    function testClaimMultipleRounds() public {
         //invest in rounds 1, 2, and 3 (sampleInvestmentRoundIds)
         batchInvestAsUser(sampleUser, sampleInvestmentRoundIds, sampleAmountsToInvest);
 
         //claim for the same rounds
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
-            sampleUser
+            sampleUser,
+            projectTokenProxyWallets,
+            sampleInvestmentRoundIds,
+            sampleTokenAmountsToClaim
         );
+
         claimAsUser(sampleUser, claimParams);
-
-        emit log_named_uint("balance of sample user", ProjectTokenInstance.balanceOf(sampleUser));
-        emit log_named_uint("sum of token amounts to claim", sum(sampleTokenAmountsToClaim));
-
         assertTrue(ProjectTokenInstance.balanceOf(sampleUser) == sum(sampleTokenAmountsToClaim));
     }
 
-    // function testClaimMultipleRounds() public {}
-    // function testClaimFullAllocation() public {}
-    // function testClaimPartialAllocation() public {}
-    // function testClaimMultipleTokens() public {}
+    // test claiming the exact full allocation in a single round
+    function testClaimFullAllocation() public {
+        address[] memory thisProjectTokenProxyWallets = new address[](1);
+        uint256[] memory thisInvestmentRoundids = new uint256[](1);
+        uint256[] memory thisClaimAmounts = new uint256[](1);
 
-    // function testClaimWithInvalidSignature() public {}
-    // function testClaimMoreThanAllocation() public {}
-    // function testClaimMoreThanProxyWalletBalance() public {}
-    // function testClaimAfterClaimingFullAllocation() public {}
+        thisProjectTokenProxyWallets[0] = projectTokenProxyWallets[0];
+        thisInvestmentRoundids[0] = sampleInvestmentRoundIds[0];
+
+        //invest in round 1 (sampleInvestmentRoundIds[0])
+        investAsUser(
+            sampleUser,
+            generateInvestParamsWithSignature(
+                sampleInvestmentRoundIds[0],
+                sampleAmountsToInvest[0],
+                sampleKycAddress
+            )
+        );
+
+        thisClaimAmounts[0] = TokenDistributorInstance.calculateBaseClaimableProjectTokens(
+            sampleKycAddress,
+            address(ProjectTokenInstance),
+            thisProjectTokenProxyWallets[0],
+            thisInvestmentRoundids[0]
+        );
+
+        //claim for the same round
+        VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
+            sampleUser,
+            thisProjectTokenProxyWallets,
+            thisInvestmentRoundids,
+            thisClaimAmounts
+        );
+
+        claimAsUser(sampleUser, claimParams);
+        assertTrue(ProjectTokenInstance.balanceOf(sampleUser) == thisClaimAmounts[0]);
+    }
+
+    // tests any claim that includes a parameter value that invalidates the signature
+    function testClaimWithInvalidSignature() public {
+        //invest in rounds 1, 2, and 3 (sampleInvestmentRoundIds)
+        batchInvestAsUser(sampleUser, sampleInvestmentRoundIds, sampleAmountsToInvest);
+
+        //claim for the same rounds
+        VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
+            sampleUser,
+            projectTokenProxyWallets,
+            sampleInvestmentRoundIds,
+            sampleTokenAmountsToClaim
+        );
+
+        //alter investment round ids to invalidate signature
+        claimParams.investmentRoundIds[0] = 2;
+        vm.expectRevert(VVVVCTokenDistributor.InvalidSignature.selector);
+        claimAsUser(sampleUser, claimParams);
+    }
+
+    // tests that user cannot claim more than the allocation for a round based on their investment
+    function testClaimMoreThanAllocation() public {
+        address[] memory thisProjectTokenProxyWallets = new address[](1);
+        uint256[] memory thisInvestmentRoundids = new uint256[](1);
+        uint256[] memory thisClaimAmounts = new uint256[](1);
+
+        thisProjectTokenProxyWallets[0] = projectTokenProxyWallets[0];
+        thisInvestmentRoundids[0] = sampleInvestmentRoundIds[0];
+
+        //invest in round 1 (sampleInvestmentRoundIds[0])
+        investAsUser(
+            sampleUser,
+            generateInvestParamsWithSignature(
+                sampleInvestmentRoundIds[0],
+                sampleAmountsToInvest[0],
+                sampleKycAddress
+            )
+        );
+
+        //claim one more unit than claimable amount
+        thisClaimAmounts[0] =
+            TokenDistributorInstance.calculateBaseClaimableProjectTokens(
+                sampleKycAddress,
+                address(ProjectTokenInstance),
+                thisProjectTokenProxyWallets[0],
+                thisInvestmentRoundids[0]
+            ) +
+            1;
+
+        //claim for the same round
+        VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
+            sampleUser,
+            thisProjectTokenProxyWallets,
+            thisInvestmentRoundids,
+            thisClaimAmounts
+        );
+
+        vm.expectRevert(VVVVCTokenDistributor.ExceedsAllocation.selector);
+        claimAsUser(sampleUser, claimParams);
+    }
+
+    //test that user cannot claim again after claiming their full allocation
+    function testClaimAfterClaimingFullAllocation() public {
+        address[] memory thisProjectTokenProxyWallets = new address[](1);
+        uint256[] memory thisInvestmentRoundids = new uint256[](1);
+        uint256[] memory thisClaimAmounts = new uint256[](1);
+
+        thisProjectTokenProxyWallets[0] = projectTokenProxyWallets[0];
+        thisInvestmentRoundids[0] = sampleInvestmentRoundIds[0];
+
+        //invest in round 1 (sampleInvestmentRoundIds[0])
+        investAsUser(
+            sampleUser,
+            generateInvestParamsWithSignature(
+                sampleInvestmentRoundIds[0],
+                sampleAmountsToInvest[0],
+                sampleKycAddress
+            )
+        );
+
+        thisClaimAmounts[0] = TokenDistributorInstance.calculateBaseClaimableProjectTokens(
+            sampleKycAddress,
+            address(ProjectTokenInstance),
+            thisProjectTokenProxyWallets[0],
+            thisInvestmentRoundids[0]
+        );
+
+        //claim for the same round
+        VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
+            sampleUser,
+            thisProjectTokenProxyWallets,
+            thisInvestmentRoundids,
+            thisClaimAmounts
+        );
+
+        claimAsUser(sampleUser, claimParams);
+        assertTrue(ProjectTokenInstance.balanceOf(sampleUser) == thisClaimAmounts[0]);
+
+        //claim for the same round again
+        vm.expectRevert(VVVVCTokenDistributor.ExceedsAllocation.selector);
+        claimAsUser(sampleUser, claimParams);
+    }
 }

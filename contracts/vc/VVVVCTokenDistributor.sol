@@ -92,6 +92,7 @@ contract VVVVCTokenDistributor is Ownable {
             )
         );
     }
+
     /**
         @notice Allows any address which is an alias of a KYC address to claim tokens for an investment
         @param _params A ClaimParams struct describing the desired claim(s)
@@ -202,6 +203,22 @@ contract VVVVCTokenDistributor is Ownable {
         bool isSigner = recoveredAddress == signer;
         bool isExpired = block.timestamp > _params.deadline;
         return isSigner && !isExpired;
+    }
+
+    /// @notice external wrapper for _calculateBaseClaimableProjectTokens
+    function calculateBaseClaimableProjectTokens(
+        address _userKycAddress,
+        address _projectTokenAddress,
+        address _proxyWalletAddress,
+        uint256 _investmentRoundId
+    ) external view returns (uint256) {
+        return
+            _calculateBaseClaimableProjectTokens(
+                _userKycAddress,
+                _projectTokenAddress,
+                _proxyWalletAddress,
+                _investmentRoundId
+            );
     }
 
     /// @notice external wrapper for _isSignatureValid
