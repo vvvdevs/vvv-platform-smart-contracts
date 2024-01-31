@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import { VVVVCInvestmentLedgerTestBase } from "test/vc/VVVVCInvestmentLedgerTestBase.sol";
+import { VVVVCTestBase } from "test/vc/VVVVCTestBase.sol";
 import { MockERC20 } from "contracts/mock/MockERC20.sol";
 import { VVVVCInvestmentLedger } from "contracts/vc/VVVVCInvestmentLedger.sol";
 
@@ -10,7 +10,7 @@ import { VVVVCInvestmentLedger } from "contracts/vc/VVVVCInvestmentLedger.sol";
  * @dev use "forge test --match-contract VVVVCInvestmentLedgerFuzzTests" to run tests
  * @dev use "forge coverage --match-contract VVVVCInvestmentLedger" to run coverage
  */
-contract VVVVCInvestmentLedgerFuzzTests is VVVVCInvestmentLedgerTestBase {
+contract VVVVCInvestmentLedgerFuzzTests is VVVVCTestBase {
     /// @notice sets up project and payment tokens, and an instance of the investment ledger
     function setUp() public {
         vm.startPrank(deployer, deployer);
@@ -19,7 +19,7 @@ contract VVVVCInvestmentLedgerFuzzTests is VVVVCInvestmentLedgerTestBase {
         PaymentTokenInstance = new MockERC20(6); //usdc has 6 decimals
 
         LedgerInstance = new VVVVCInvestmentLedger(testSigner, environmentTag);
-        domainSeparator = LedgerInstance.DOMAIN_SEPARATOR();
+        ledgerDomainSeparator = LedgerInstance.DOMAIN_SEPARATOR();
         investmentTypehash = LedgerInstance.INVESTMENT_TYPEHASH();
 
         PaymentTokenInstance.mint(sampleUser, paymentTokenMintAmount); //10k tokens
@@ -54,7 +54,7 @@ contract VVVVCInvestmentLedgerFuzzTests is VVVVCInvestmentLedgerTestBase {
             signature: bytes("placeholder")
         });
 
-        params.signature = getEIP712SignatureForInvest(domainSeparator, investmentTypehash, params);
+        params.signature = getEIP712SignatureForInvest(ledgerDomainSeparator, investmentTypehash, params);
 
         //check that the investment ledger state is updated correctly given these conditions,
         //which should yield successful investments

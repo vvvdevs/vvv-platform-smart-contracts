@@ -7,9 +7,9 @@ import { VVVVCInvestmentLedger } from "contracts/vc/VVVVCInvestmentLedger.sol";
 import { VVVVCTokenDistributor } from "contracts/vc/VVVVCTokenDistributor.sol";
 
 /**
-    @title VVVVCTokenDistributor Test Base
+    @title VVVVC Test Base
  */
-abstract contract VVVVCTokenDistributorBase is Test {
+abstract contract VVVVCTestBase is Test {
     VVVVCInvestmentLedger LedgerInstance;
     MockERC20 PaymentTokenInstance;
     MockERC20 ProjectTokenInstance;
@@ -38,12 +38,13 @@ abstract contract VVVVCTokenDistributorBase is Test {
         vm.addr(projectTokenProxyWalletKey + 1),
         vm.addr(projectTokenProxyWalletKey + 2)
     ];
+    address[] users = new address[](100); // 100 users
 
     uint256 blockNumber;
     uint256 blockTimestamp;
     uint256 chainId = 31337; //test chain id - leave this alone
 
-    string domainTag = "development";
+    string environmentTag = "development";
 
     //claim contract-specific values
     uint256 projectTokenAmountToProxyWallet = 1_000_000 * 1e18; //1 million tokens
@@ -57,6 +58,18 @@ abstract contract VVVVCTokenDistributorBase is Test {
     uint256 paymentTokenMintAmount = 10_000 * 1e6;
     uint256 userPaymentTokenDefaultAllocation = 10_000 * 1e6;
     uint256 investmentRoundSampleLimit = 1_000_000 * 1e6;
+
+    // generate list of random addresses and deal them payment tokens and ETH
+    function generateUserAddressListAndDealEtherAndToken(MockERC20 _token) public {
+        for (uint256 i = 0; i < users.length; i++) {
+            users[i] = address(uint160(uint256(keccak256(abi.encodePacked(block.timestamp, i)))));
+            vm.deal(users[i], 1 ether); // and YOU get an ETH
+            _token.mint(users[i], paymentTokenMintAmount);
+        }
+
+        vm.deal(sampleUser, 10 ether);
+        vm.deal(sampleKycAddress, 10 ether);
+    }
 
     function advanceBlockNumberAndTimestampInBlocks(uint256 blocks) public {
         blockNumber += blocks;
