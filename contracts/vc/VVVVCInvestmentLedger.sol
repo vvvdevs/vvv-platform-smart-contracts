@@ -15,9 +15,7 @@ contract VVVVCInvestmentLedger is Ownable {
 
     /// @notice EIP-712 standard definitions
     bytes32 public constant DOMAIN_TYPEHASH =
-        keccak256(
-            bytes("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")
-        );
+        keccak256(bytes("EIP712Domain(string name,uint256 chainId,address verifyingContract)"));
     bytes32 public constant INVESTMENT_TYPEHASH =
         keccak256(
             bytes("VCInvestment(uint256 investmentRound,address kycAddress,uint256 investmentAmount)")
@@ -80,7 +78,11 @@ contract VVVVCInvestmentLedger is Ownable {
     /// @notice Error thrown when the signer address is not recovered from the provided signature
     error InvalidSignature();
 
-    /// @notice stores the signer address and initializes the EIP-712 domain separator
+    /**
+        @notice stores the signer address and initializes the EIP-712 domain separator
+        @param _signer The address authorized to sign investment transactions
+        @param _environmentTag The environment tag for the EIP-712 domain separator
+     */
     constructor(address _signer, string memory _environmentTag) Ownable(msg.sender) {
         signer = _signer;
 
@@ -88,8 +90,7 @@ contract VVVVCInvestmentLedger is Ownable {
         DOMAIN_SEPARATOR = keccak256(
             abi.encode(
                 DOMAIN_TYPEHASH,
-                keccak256(abi.encodePacked("VVV_", _environmentTag)),
-                keccak256(bytes("1")),
+                keccak256(abi.encodePacked("VVV", _environmentTag)),
                 block.chainid,
                 address(this)
             )
