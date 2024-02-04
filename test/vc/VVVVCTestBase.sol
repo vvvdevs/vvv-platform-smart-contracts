@@ -216,13 +216,14 @@ abstract contract VVVVCTestBase is Test {
 
     function generateClaimParamsWithSignature(
         address _callerAddress,
+        address _kycAddress,
         address[] memory _projectTokenClaimFromWallets,
         uint256[] memory _investmentRoundIds,
         uint256[] memory _tokenAmountsToClaim
     ) public view returns (VVVVCTokenDistributor.ClaimParams memory) {
         VVVVCTokenDistributor.ClaimParams memory params = VVVVCTokenDistributor.ClaimParams({
             callerAddress: _callerAddress,
-            userKycAddress: sampleKycAddress,
+            userKycAddress: _kycAddress,
             projectTokenAddress: address(ProjectTokenInstance),
             projectTokenClaimFromWallets: _projectTokenClaimFromWallets,
             investmentRoundIds: _investmentRoundIds,

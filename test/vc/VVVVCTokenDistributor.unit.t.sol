@@ -65,6 +65,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
 
         VVVVCTokenDistributor.ClaimParams memory params = generateClaimParamsWithSignature(
             sampleKycAddress,
+            sampleKycAddress,
             thisProjectTokenProxyWallets,
             thisInvestmentRoundids,
             thisClaimAmounts
@@ -83,6 +84,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
         thisClaimAmounts[0] = sampleTokenAmountsToClaim[0];
 
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
+            sampleKycAddress,
             sampleKycAddress,
             thisProjectTokenProxyWallets,
             thisInvestmentRoundids,
@@ -115,6 +117,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
         //claim for the same singlen round
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
             sampleKycAddress,
+            sampleKycAddress,
             thisProjectTokenProxyWallets,
             thisInvestmentRoundids,
             thisClaimAmounts
@@ -146,6 +149,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
         //claim for the same round
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
             sampleUser,
+            sampleKycAddress,
             thisProjectTokenProxyWallets,
             thisInvestmentRoundids,
             thisClaimAmounts
@@ -164,6 +168,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
         //claim for the same rounds
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
             sampleUser,
+            sampleKycAddress,
             projectTokenProxyWallets,
             sampleInvestmentRoundIds,
             sampleTokenAmountsToClaim
@@ -202,6 +207,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
         //claim for the same round
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
             sampleUser,
+            sampleKycAddress,
             thisProjectTokenProxyWallets,
             thisInvestmentRoundids,
             thisClaimAmounts
@@ -219,6 +225,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
         //claim for the same rounds
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
             sampleUser,
+            sampleKycAddress,
             projectTokenProxyWallets,
             sampleInvestmentRoundIds,
             sampleTokenAmountsToClaim
@@ -262,6 +269,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
         //claim for the same round
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
             sampleUser,
+            sampleKycAddress,
             thisProjectTokenProxyWallets,
             thisInvestmentRoundids,
             thisClaimAmounts
@@ -300,6 +308,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
         //claim for the same round
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
             sampleUser,
+            sampleKycAddress,
             thisProjectTokenProxyWallets,
             thisInvestmentRoundids,
             thisClaimAmounts
