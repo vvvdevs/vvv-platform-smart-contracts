@@ -85,7 +85,7 @@ contract VVVVCTokenDistributor is Ownable {
         DOMAIN_SEPARATOR = keccak256(
             abi.encode(
                 DOMAIN_TYPEHASH,
-                keccak256(abi.encodePacked("VVV_", _environmentTag)),
+                keccak256(abi.encodePacked("VVV", _environmentTag)),
                 keccak256(bytes("1")),
                 block.chainid,
                 address(this)
