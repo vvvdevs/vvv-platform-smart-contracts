@@ -113,7 +113,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             )
         );
 
-        //claim for the same singlen round
+        //claim for the same single round
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
             sampleKycAddress,
             sampleKycAddress,
@@ -239,7 +239,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
         claimAsUser(sampleUser, claimParams);
     }
 
-    // tests that user cannot claim more than the allocation for a round based on their investment
+    // tests that user cannot claim more than their total allocation based on their investment
     function testClaimMoreThanAllocation() public {
         address[] memory thisProjectTokenProxyWallets = new address[](1);
         uint256[] memory thisInvestmentRoundids = new uint256[](1);

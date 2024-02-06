@@ -85,7 +85,7 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
         // ensure proxy wallets have approved the distributor to withdraw tokens
         approveProjectTokenForDistributor(testParams.projectTokenClaimFromWallets, type(uint256).max);
 
-        // Dynamically use fuzzed addresses and amounts for investment
+        // invest using generated addresses
         for (uint256 i = 0; i < arrayLength; i++) {
             investAsUser(
                 _callerAddress,
@@ -100,7 +100,7 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
         }
 
         uint256 balanceTotalBefore = ProjectTokenInstance.balanceOf(_callerAddress);
-        // Calculate claimable tokens for each wallet
+
         testParams.claimAmount = TokenDistributorInstance.calculateBaseClaimableProjectTokens(
             _kycAddress,
             address(ProjectTokenInstance),
@@ -108,7 +108,6 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
             testParams.investmentRoundIds
         );
 
-        // Generate claim params for each wallet
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
             _callerAddress,
             _kycAddress,
@@ -117,7 +116,7 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
             testParams.claimAmount
         );
 
-        // Attempt to claim for each wallet
+        // Attempt to claim across all wallets for the calling address
         claimAsUser(_callerAddress, claimParams);
 
         // Check if the total claimed amount matches expected
@@ -156,7 +155,6 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
             _investmentRoundIds[i] = bound(_seed, 0, arrayLength);
         }
 
-        // Generate claim params for each wallet
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
             _callerAddress,
             _kycAddress,
