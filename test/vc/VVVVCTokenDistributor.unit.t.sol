@@ -109,7 +109,9 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             sampleKycAddress,
             generateInvestParamsWithSignature(
                 sampleInvestmentRoundIds[0],
+                investmentRoundSampleLimit,
                 sampleAmountsToInvest[0],
+                userPaymentTokenDefaultAllocation,
                 sampleKycAddress
             )
         );
@@ -141,7 +143,9 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             sampleKycAddress,
             generateInvestParamsWithSignature(
                 sampleInvestmentRoundIds[0],
+                investmentRoundSampleLimit,
                 sampleAmountsToInvest[0],
+                userPaymentTokenDefaultAllocation,
                 sampleKycAddress
             )
         );
@@ -192,7 +196,9 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             sampleUser,
             generateInvestParamsWithSignature(
                 sampleInvestmentRoundIds[0],
+                investmentRoundSampleLimit,
                 sampleAmountsToInvest[0],
+                userPaymentTokenDefaultAllocation,
                 sampleKycAddress
             )
         );
@@ -251,7 +257,9 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             sampleUser,
             generateInvestParamsWithSignature(
                 sampleInvestmentRoundIds[0],
+                investmentRoundSampleLimit,
                 sampleAmountsToInvest[0],
+                userPaymentTokenDefaultAllocation,
                 sampleKycAddress
             )
         );
@@ -293,7 +301,9 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             sampleUser,
             generateInvestParamsWithSignature(
                 sampleInvestmentRoundIds[0],
+                investmentRoundSampleLimit,
                 sampleAmountsToInvest[0],
+                userPaymentTokenDefaultAllocation,
                 sampleKycAddress
             )
         );

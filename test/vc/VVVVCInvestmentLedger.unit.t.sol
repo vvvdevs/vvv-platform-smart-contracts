@@ -41,7 +41,9 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
     function testValidateSignature() public {
         VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
             sampleInvestmentRoundIds[0],
+            investmentRoundSampleLimit,
             sampleAmountsToInvest[0],
+            userPaymentTokenDefaultAllocation,
             sampleKycAddress
         );
         assertTrue(LedgerInstance.isSignatureValid(params));
@@ -54,7 +56,9 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
     function testInvalidateFalseSignature() public {
         VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
             sampleInvestmentRoundIds[0],
+            investmentRoundSampleLimit,
             sampleAmountsToInvest[0],
+            userPaymentTokenDefaultAllocation,
             sampleKycAddress
         );
 
@@ -71,7 +75,9 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
     function testInvest() public {
         VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
             sampleInvestmentRoundIds[0],
+            investmentRoundSampleLimit,
             sampleAmountsToInvest[0],
+            userPaymentTokenDefaultAllocation,
             sampleKycAddress
         );
 
@@ -92,7 +98,9 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
     function testMultipleInvestmentsInSingleRound() public {
         VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
             sampleInvestmentRoundIds[0],
+            investmentRoundSampleLimit,
             sampleAmountsToInvest[0],
+            userPaymentTokenDefaultAllocation,
             sampleKycAddress
         );
 
@@ -116,7 +124,9 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
     function testTooManyInvestmentsInSingleRound() public {
         VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
             sampleInvestmentRoundIds[0],
+            investmentRoundSampleLimit,
             sampleAmountsToInvest[0],
+            userPaymentTokenDefaultAllocation,
             sampleKycAddress
         );
 
@@ -144,7 +154,9 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
     function testFailInvestWithInvalidSignature() public {
         VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
             sampleInvestmentRoundIds[0],
+            investmentRoundSampleLimit,
             sampleAmountsToInvest[0],
+            userPaymentTokenDefaultAllocation,
             sampleKycAddress
         );
 
@@ -163,7 +175,9 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
     function testWithdrawPostInvestment() public {
         VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
             sampleInvestmentRoundIds[0],
+            investmentRoundSampleLimit,
             sampleAmountsToInvest[0],
+            userPaymentTokenDefaultAllocation,
             sampleKycAddress
         );
 
