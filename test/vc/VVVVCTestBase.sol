@@ -59,6 +59,14 @@ abstract contract VVVVCTestBase is Test {
     uint256 userPaymentTokenDefaultAllocation = 10_000 * 1e6;
     uint256 investmentRoundSampleLimit = 1_000_000 * 1e6;
 
+    struct TestParams {
+        uint256[] investmentRoundIds;
+        uint256[] tokenAmountsToInvest;
+        address[] projectTokenClaimFromWallets;
+        uint256[] claimAmounts;
+        uint256 totalClaimAmount;
+    }
+
     // generate list of random addresses and deal them payment tokens and ETH
     function generateUserAddressListAndDealEtherAndToken(MockERC20 _token) public {
         for (uint256 i = 0; i < users.length; i++) {
@@ -138,17 +146,19 @@ abstract contract VVVVCTestBase is Test {
 
     function generateInvestParamsWithSignature(
         uint256 _investmentRound,
+        uint256 _investmentRoundLimit,
         uint256 _investmentAmount,
+        uint256 _investmentAllocation,
         address _kycAddress
     ) public view returns (VVVVCInvestmentLedger.InvestParams memory) {
         VVVVCInvestmentLedger.InvestParams memory params = VVVVCInvestmentLedger.InvestParams({
             investmentRound: _investmentRound,
-            investmentRoundLimit: investmentRoundSampleLimit,
+            investmentRoundLimit: _investmentRoundLimit,
             investmentRoundStartTimestamp: block.timestamp,
             investmentRoundEndTimestamp: block.timestamp + 1 days,
             paymentTokenAddress: address(PaymentTokenInstance),
             kycAddress: _kycAddress,
-            kycAddressAllocation: userPaymentTokenDefaultAllocation,
+            kycAddressAllocation: _investmentAllocation,
             amountToInvest: _investmentAmount,
             deadline: block.timestamp + 1 hours,
             signature: bytes("placeholder")
@@ -177,7 +187,9 @@ abstract contract VVVVCTestBase is Test {
         for (uint256 i = 0; i < sampleInvestmentRoundIds.length; i++) {
             investParams = generateInvestParamsWithSignature(
                 _investmentRoundIds[i],
+                investmentRoundSampleLimit,
                 _amountsToInvest[i],
+                userPaymentTokenDefaultAllocation,
                 sampleKycAddress
             );
             investAsUser(_investor, investParams);
@@ -243,5 +255,14 @@ abstract contract VVVVCTestBase is Test {
         vm.startPrank(_claimant, _claimant);
         TokenDistributorInstance.claim(_params);
         vm.stopPrank();
+    }
+
+    function approveProjectTokenForDistributor(address[] memory proxyWallets, uint256 amount) public {
+        for (uint256 i = 0; i < proxyWallets.length; i++) {
+            require(proxyWallets[i] != address(0), "Cannot use the zero address");
+            vm.startPrank(proxyWallets[i]);
+            ProjectTokenInstance.approve(address(TokenDistributorInstance), amount);
+            vm.stopPrank();
+        }
     }
 }

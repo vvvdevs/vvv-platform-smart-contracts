@@ -168,6 +168,8 @@ contract VVVVCTokenDistributor is Ownable {
             _investmentRoundId
         );
 
+        if(userInvestedPaymentTokens == 0) return 0;
+
         //total pool of claimable tokens is balance of proxy wallet + total claimed tokens from that same wallet
         uint256 totalProjectTokensDepositedToProxyWallet = IERC20(_projectTokenAddress).balanceOf(
             _proxyWalletAddress
