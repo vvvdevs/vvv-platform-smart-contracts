@@ -127,7 +127,9 @@ contract VVVVCTokenDistributor is Ownable {
             }
 
             //update tokens claimed, transfer project tokens from proxy wallet
-            userClaimedTokensForRound[_params.userKycAddress][thisInvestmentRoundId] += thisTokenAmountToClaim;
+            userClaimedTokensForRound[_params.userKycAddress][
+                thisInvestmentRoundId
+            ] += thisTokenAmountToClaim;
             totalClaimedTokensForRound[thisInvestmentRoundId] += thisTokenAmountToClaim;
 
             projectToken.safeTransferFrom(
