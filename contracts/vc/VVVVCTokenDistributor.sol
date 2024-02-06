@@ -86,7 +86,6 @@ contract VVVVCTokenDistributor is Ownable {
             abi.encode(
                 DOMAIN_TYPEHASH,
                 keccak256(abi.encodePacked("VVV", _environmentTag)),
-                keccak256(bytes("1")),
                 block.chainid,
                 address(this)
             )
@@ -105,39 +104,44 @@ contract VVVVCTokenDistributor is Ownable {
             revert InvalidSignature();
         }
 
+        IERC20 projectToken = IERC20(_params.projectTokenAddress);
+
         //for each wallet (corresponding to each investment round), check if desired claim amount is not more than claimable amount
         for (uint256 i = 0; i < _params.projectTokenClaimFromWallets.length; ++i) {
+            //cache variables read multiple times
+            address thisClaimFromWallet = _params.projectTokenClaimFromWallets[i];
+            uint256 thisInvestmentRoundId = _params.investmentRoundIds[i];
+            uint256 thisTokenAmountToClaim = _params.tokenAmountsToClaim[i];
+
             //KYC address's claimable tokens for round, considering those already claimed
             uint256 thisClaimableAmount = _calculateBaseClaimableProjectTokens(
                 _params.userKycAddress,
                 _params.projectTokenAddress,
-                _params.projectTokenClaimFromWallets[i],
-                _params.investmentRoundIds[i]
-            ) - userClaimedTokensForRound[_params.userKycAddress][_params.investmentRoundIds[i]];
+                thisClaimFromWallet,
+                thisInvestmentRoundId
+            ) - userClaimedTokensForRound[_params.userKycAddress][thisInvestmentRoundId];
 
             //check desired claim amount is not more than claimable amount
-            if (_params.tokenAmountsToClaim[i] > thisClaimableAmount) {
+            if (thisTokenAmountToClaim > thisClaimableAmount) {
                 revert ExceedsAllocation();
             }
 
             //update tokens claimed, transfer project tokens from proxy wallet
-            userClaimedTokensForRound[_params.userKycAddress][_params.investmentRoundIds[i]] += _params
-                .tokenAmountsToClaim[i];
+            userClaimedTokensForRound[_params.userKycAddress][thisInvestmentRoundId] += thisTokenAmountToClaim;
+            totalClaimedTokensForRound[thisInvestmentRoundId] += thisTokenAmountToClaim;
 
-            totalClaimedTokensForRound[_params.investmentRoundIds[i]] += _params.tokenAmountsToClaim[i];
-
-            IERC20(_params.projectTokenAddress).safeTransferFrom(
-                _params.projectTokenClaimFromWallets[i],
+            projectToken.safeTransferFrom(
+                thisClaimFromWallet,
                 _params.callerAddress,
-                _params.tokenAmountsToClaim[i]
+                thisTokenAmountToClaim
             );
 
             emit VCClaim(
                 _params.callerAddress,
                 _params.projectTokenAddress,
-                _params.projectTokenClaimFromWallets[i],
-                _params.investmentRoundIds[i],
-                _params.tokenAmountsToClaim[i]
+                thisClaimFromWallet,
+                thisInvestmentRoundId,
+                thisTokenAmountToClaim
             );
         }
     }
