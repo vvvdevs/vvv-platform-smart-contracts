@@ -53,6 +53,7 @@ abstract contract VVVVCTestBase is Test {
     // sample invest/claim amounts, keeping relative proportions equal for both
     uint256[] sampleAmountsToInvest = [1000 * 1e6, 2000 * 1e6, 3000 * 1e6];
     uint256[] sampleTokenAmountsToClaim = [1111 * 1e18, 2222 * 1e18, 3333 * 1e18];
+    uint256 sampleTokenAmountToClaim = 6666 * 1e18;
 
     //investment payment tokens
     uint256 paymentTokenMintAmount = 10_000 * 1e6;
@@ -63,8 +64,7 @@ abstract contract VVVVCTestBase is Test {
         uint256[] investmentRoundIds;
         uint256[] tokenAmountsToInvest;
         address[] projectTokenClaimFromWallets;
-        uint256[] claimAmounts;
-        uint256 totalClaimAmount;
+        uint256 claimAmount;
     }
 
     // generate list of random addresses and deal them payment tokens and ETH
@@ -226,12 +226,23 @@ abstract contract VVVVCTestBase is Test {
         return signature;
     }
 
+    // struct ClaimParams {
+    //     address callerAddress;
+    //     address userKycAddress;
+    //     address projectTokenAddress;
+    //     address[] projectTokenClaimFromWallets;
+    //     uint256[] investmentRoundIds;
+    //     uint256 tokenAmountToClaim;
+    //     uint256 deadline;
+    //     bytes signature;
+    // }
+
     function generateClaimParamsWithSignature(
         address _callerAddress,
         address _kycAddress,
         address[] memory _projectTokenClaimFromWallets,
         uint256[] memory _investmentRoundIds,
-        uint256[] memory _tokenAmountsToClaim
+        uint256 _tokenAmountToClaim
     ) public view returns (VVVVCTokenDistributor.ClaimParams memory) {
         VVVVCTokenDistributor.ClaimParams memory params = VVVVCTokenDistributor.ClaimParams({
             callerAddress: _callerAddress,
@@ -239,7 +250,7 @@ abstract contract VVVVCTestBase is Test {
             projectTokenAddress: address(ProjectTokenInstance),
             projectTokenClaimFromWallets: _projectTokenClaimFromWallets,
             investmentRoundIds: _investmentRoundIds,
-            tokenAmountsToClaim: _tokenAmountsToClaim,
+            tokenAmountToClaim: _tokenAmountToClaim,
             deadline: block.timestamp + 1 hours,
             signature: bytes("placeholder")
         });

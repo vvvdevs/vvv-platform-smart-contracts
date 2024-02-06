@@ -57,18 +57,17 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
     function testValidateSignature() public {
         address[] memory thisProjectTokenProxyWallets = new address[](1);
         uint256[] memory thisInvestmentRoundids = new uint256[](1);
-        uint256[] memory thisClaimAmounts = new uint256[](1);
+        uint256 thisClaimAmount = sampleTokenAmountToClaim;
 
         thisProjectTokenProxyWallets[0] = projectTokenProxyWallets[0];
         thisInvestmentRoundids[0] = sampleInvestmentRoundIds[0];
-        thisClaimAmounts[0] = sampleTokenAmountsToClaim[0];
 
         VVVVCTokenDistributor.ClaimParams memory params = generateClaimParamsWithSignature(
             sampleKycAddress,
             sampleKycAddress,
             thisProjectTokenProxyWallets,
             thisInvestmentRoundids,
-            thisClaimAmounts
+            thisClaimAmount
         );
 
         assertTrue(TokenDistributorInstance.isSignatureValid(params));
@@ -77,18 +76,17 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
     function testInvalidateSignature() public {
         address[] memory thisProjectTokenProxyWallets = new address[](1);
         uint256[] memory thisInvestmentRoundids = new uint256[](1);
-        uint256[] memory thisClaimAmounts = new uint256[](1);
+        uint256 thisClaimAmount = sampleTokenAmountToClaim;
 
         thisProjectTokenProxyWallets[0] = projectTokenProxyWallets[0];
         thisInvestmentRoundids[0] = sampleInvestmentRoundIds[0];
-        thisClaimAmounts[0] = sampleTokenAmountsToClaim[0];
 
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
             sampleKycAddress,
             sampleKycAddress,
             thisProjectTokenProxyWallets,
             thisInvestmentRoundids,
-            thisClaimAmounts
+            thisClaimAmount
         );
 
         claimParams.projectTokenClaimFromWallets[0] = address(0);
@@ -99,11 +97,10 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
     function testClaimWithKycAddress() public {
         address[] memory thisProjectTokenProxyWallets = new address[](1);
         uint256[] memory thisInvestmentRoundids = new uint256[](1);
-        uint256[] memory thisClaimAmounts = new uint256[](1);
+        uint256 thisClaimAmount = sampleTokenAmountToClaim;
 
         thisProjectTokenProxyWallets[0] = projectTokenProxyWallets[0];
         thisInvestmentRoundids[0] = sampleInvestmentRoundIds[0];
-        thisClaimAmounts[0] = sampleTokenAmountsToClaim[0];
 
         investAsUser(
             sampleKycAddress,
@@ -122,21 +119,20 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             sampleKycAddress,
             thisProjectTokenProxyWallets,
             thisInvestmentRoundids,
-            thisClaimAmounts
+            thisClaimAmount
         );
         claimAsUser(sampleKycAddress, claimParams);
-        assertTrue(ProjectTokenInstance.balanceOf(sampleKycAddress) == sampleTokenAmountsToClaim[0]);
+        assertTrue(ProjectTokenInstance.balanceOf(sampleKycAddress) == sampleTokenAmountToClaim);
     }
 
     //test that an alias of the kyc address can claim tokens on behalf of the kyc address
     function testClaimWithAlias() public {
         address[] memory thisProjectTokenProxyWallets = new address[](1);
         uint256[] memory thisInvestmentRoundids = new uint256[](1);
-        uint256[] memory thisClaimAmounts = new uint256[](1);
+        uint256 thisClaimAmount = sampleTokenAmountToClaim;
 
         thisProjectTokenProxyWallets[0] = projectTokenProxyWallets[0];
         thisInvestmentRoundids[0] = sampleInvestmentRoundIds[0];
-        thisClaimAmounts[0] = sampleTokenAmountsToClaim[0];
 
         //invest in round 1 (sampleInvestmentRoundIds[0])
         investAsUser(
@@ -156,12 +152,12 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             sampleKycAddress,
             thisProjectTokenProxyWallets,
             thisInvestmentRoundids,
-            thisClaimAmounts
+            thisClaimAmount
         );
 
         claimAsUser(sampleUser, claimParams);
 
-        assertTrue(ProjectTokenInstance.balanceOf(sampleUser) == sampleTokenAmountsToClaim[0]);
+        assertTrue(ProjectTokenInstance.balanceOf(sampleUser) == sampleTokenAmountToClaim);
     }
 
     // test claiming in multiple rounds with the same transaction
@@ -175,18 +171,18 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             sampleKycAddress,
             projectTokenProxyWallets,
             sampleInvestmentRoundIds,
-            sampleTokenAmountsToClaim
+            sampleTokenAmountToClaim
         );
 
         claimAsUser(sampleUser, claimParams);
-        assertTrue(ProjectTokenInstance.balanceOf(sampleUser) == sum(sampleTokenAmountsToClaim));
+        assertTrue(ProjectTokenInstance.balanceOf(sampleUser) == sampleTokenAmountToClaim);
     }
 
     // test claiming the exact full allocation in a single round
     function testClaimFullAllocation() public {
         address[] memory thisProjectTokenProxyWallets = new address[](1);
         uint256[] memory thisInvestmentRoundids = new uint256[](1);
-        uint256[] memory thisClaimAmounts = new uint256[](1);
+        uint256 thisClaimAmount = sampleTokenAmountToClaim;
 
         thisProjectTokenProxyWallets[0] = projectTokenProxyWallets[0];
         thisInvestmentRoundids[0] = sampleInvestmentRoundIds[0];
@@ -203,11 +199,11 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             )
         );
 
-        thisClaimAmounts[0] = TokenDistributorInstance.calculateBaseClaimableProjectTokens(
+        thisClaimAmount = TokenDistributorInstance.calculateBaseClaimableProjectTokens(
             sampleKycAddress,
             address(ProjectTokenInstance),
-            thisProjectTokenProxyWallets[0],
-            thisInvestmentRoundids[0]
+            thisProjectTokenProxyWallets,
+            thisInvestmentRoundids
         );
 
         //claim for the same round
@@ -216,11 +212,11 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             sampleKycAddress,
             thisProjectTokenProxyWallets,
             thisInvestmentRoundids,
-            thisClaimAmounts
+            thisClaimAmount
         );
 
         claimAsUser(sampleUser, claimParams);
-        assertTrue(ProjectTokenInstance.balanceOf(sampleUser) == thisClaimAmounts[0]);
+        assertTrue(ProjectTokenInstance.balanceOf(sampleUser) == thisClaimAmount);
     }
 
     // tests any claim that includes a parameter value that invalidates the signature
@@ -234,7 +230,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             sampleKycAddress,
             projectTokenProxyWallets,
             sampleInvestmentRoundIds,
-            sampleTokenAmountsToClaim
+            sampleTokenAmountToClaim
         );
 
         //alter investment round ids to invalidate signature
@@ -247,7 +243,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
     function testClaimMoreThanAllocation() public {
         address[] memory thisProjectTokenProxyWallets = new address[](1);
         uint256[] memory thisInvestmentRoundids = new uint256[](1);
-        uint256[] memory thisClaimAmounts = new uint256[](1);
+        uint256 thisClaimAmount = sampleTokenAmountToClaim;
 
         thisProjectTokenProxyWallets[0] = projectTokenProxyWallets[0];
         thisInvestmentRoundids[0] = sampleInvestmentRoundIds[0];
@@ -265,12 +261,12 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
         );
 
         //claim one more unit than claimable amount
-        thisClaimAmounts[0] =
+        thisClaimAmount =
             TokenDistributorInstance.calculateBaseClaimableProjectTokens(
                 sampleKycAddress,
                 address(ProjectTokenInstance),
-                thisProjectTokenProxyWallets[0],
-                thisInvestmentRoundids[0]
+                thisProjectTokenProxyWallets,
+                thisInvestmentRoundids
             ) +
             1;
 
@@ -280,7 +276,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             sampleKycAddress,
             thisProjectTokenProxyWallets,
             thisInvestmentRoundids,
-            thisClaimAmounts
+            thisClaimAmount
         );
 
         vm.expectRevert(VVVVCTokenDistributor.ExceedsAllocation.selector);
@@ -291,7 +287,6 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
     function testClaimAfterClaimingFullAllocation() public {
         address[] memory thisProjectTokenProxyWallets = new address[](1);
         uint256[] memory thisInvestmentRoundids = new uint256[](1);
-        uint256[] memory thisClaimAmounts = new uint256[](1);
 
         thisProjectTokenProxyWallets[0] = projectTokenProxyWallets[0];
         thisInvestmentRoundids[0] = sampleInvestmentRoundIds[0];
@@ -308,11 +303,11 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             )
         );
 
-        thisClaimAmounts[0] = TokenDistributorInstance.calculateBaseClaimableProjectTokens(
+        uint256 thisClaimAmount = TokenDistributorInstance.calculateBaseClaimableProjectTokens(
             sampleKycAddress,
             address(ProjectTokenInstance),
-            thisProjectTokenProxyWallets[0],
-            thisInvestmentRoundids[0]
+            thisProjectTokenProxyWallets,
+            thisInvestmentRoundids
         );
 
         //claim for the same round
@@ -321,11 +316,11 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             sampleKycAddress,
             thisProjectTokenProxyWallets,
             thisInvestmentRoundids,
-            thisClaimAmounts
+            thisClaimAmount
         );
 
         claimAsUser(sampleUser, claimParams);
-        assertTrue(ProjectTokenInstance.balanceOf(sampleUser) == thisClaimAmounts[0]);
+        assertTrue(ProjectTokenInstance.balanceOf(sampleUser) == thisClaimAmount);
 
         //claim for the same round again
         vm.expectRevert(VVVVCTokenDistributor.ExceedsAllocation.selector);

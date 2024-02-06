@@ -51,21 +51,20 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
         uint256 _seed,
         uint256 _length
     ) public {
-        TestParams memory testParams;
-
-        uint256 maxLength = 100;
-        uint256 arrayLength = bound(_length, 1, maxLength);
-
         vm.assume(_callerAddress != address(0));
         vm.assume(_kycAddress != address(0));
         vm.assume(_seed != 0);
+        vm.assume(_length != 0);
+
+        TestParams memory testParams;
+        uint256 maxLength = 100;
+        uint256 arrayLength = bound(_length, 1, maxLength);
 
         PaymentTokenInstance.mint(_callerAddress, paymentTokenMintAmount);
 
         testParams.investmentRoundIds = new uint256[](arrayLength);
         testParams.tokenAmountsToInvest = new uint256[](arrayLength);
         testParams.projectTokenClaimFromWallets = new address[](arrayLength);
-        testParams.claimAmounts = new uint256[](arrayLength);
 
         for (uint256 i = 0; i < arrayLength; i++) {
             testParams.projectTokenClaimFromWallets[i] = address(
@@ -101,16 +100,13 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
         }
 
         uint256 balanceTotalBefore = ProjectTokenInstance.balanceOf(_callerAddress);
-        for (uint256 i = 0; i < arrayLength; i++) {
-            // Calculate claimable tokens for each wallet
-            testParams.claimAmounts[i] = TokenDistributorInstance.calculateBaseClaimableProjectTokens(
-                _kycAddress,
-                address(ProjectTokenInstance),
-                testParams.projectTokenClaimFromWallets[i],
-                testParams.investmentRoundIds[i]
-            );
-            testParams.totalClaimAmount += testParams.claimAmounts[i];
-        }
+        // Calculate claimable tokens for each wallet
+        testParams.claimAmount = TokenDistributorInstance.calculateBaseClaimableProjectTokens(
+            _kycAddress,
+            address(ProjectTokenInstance),
+            testParams.projectTokenClaimFromWallets,
+            testParams.investmentRoundIds
+        );
 
         // Generate claim params for each wallet
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
@@ -118,7 +114,7 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
             _kycAddress,
             testParams.projectTokenClaimFromWallets,
             testParams.investmentRoundIds,
-            testParams.claimAmounts
+            testParams.claimAmount
         );
 
         // Attempt to claim for each wallet
@@ -126,8 +122,7 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
 
         // Check if the total claimed amount matches expected
         assertTrue(
-            ProjectTokenInstance.balanceOf(_callerAddress) ==
-                balanceTotalBefore + testParams.totalClaimAmount
+            ProjectTokenInstance.balanceOf(_callerAddress) == balanceTotalBefore + testParams.claimAmount
         );
     }
 
@@ -151,15 +146,14 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
         vm.assume(_seed != 0);
 
         uint256[] memory _investmentRoundIds = new uint256[](arrayLength);
-        uint256[] memory _tokenAmountsToClaim = new uint256[](arrayLength);
         address[] memory _projectTokenClaimFromWallets = new address[](arrayLength);
+        uint256 _tokenAmountToClaim = bound(_seed, 0, type(uint256).max);
 
         for (uint256 i = 0; i < arrayLength; i++) {
             _projectTokenClaimFromWallets[i] = address(
                 uint160(uint256(keccak256(abi.encodePacked(_callerAddress, i))))
             );
             _investmentRoundIds[i] = bound(_seed, 0, arrayLength);
-            _tokenAmountsToClaim[i] = bound(_seed, 0, type(uint256).max);
         }
 
         // Generate claim params for each wallet
@@ -168,7 +162,7 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
             _kycAddress,
             _projectTokenClaimFromWallets,
             _investmentRoundIds,
-            _tokenAmountsToClaim
+            _tokenAmountToClaim
         );
 
         // Attempt to claim for each wallet
