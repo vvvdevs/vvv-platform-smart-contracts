@@ -20,7 +20,7 @@ contract VVVVCTokenDistributor is Ownable {
     bytes32 public constant CLAIM_TYPEHASH =
         keccak256(
             bytes(
-                "VCClaim(address userKycAddress,address projectTokenAddress, address projectTokenClaimFromWallet, uint256 investmentRoundId, uint256 claimedTokenAmount)"
+                "VCClaim(address userKycAddress, address callerAddress, address projectTokenAddress, address[] projectTokenClaimFromWallets, uint256 claimedTokenAmount)"
             )
         );
     bytes32 public immutable DOMAIN_SEPARATOR;
@@ -62,6 +62,7 @@ contract VVVVCTokenDistributor is Ownable {
         @param callerAddress Address of the caller (alias for KYC address)
         @param projectTokenAddress Address of the project token to be claimed
         @param projectTokenClaimFromWallets Addresses of the wallets from which the project token is to be claimed
+        @param claimedTokenAmount Total amount of project tokens claimed
      */
     event VCClaim(
         address indexed userKycAddress,
@@ -96,7 +97,7 @@ contract VVVVCTokenDistributor is Ownable {
     }
 
     /**
-        @notice Allows any address which is an alias of a KYC address to claim tokens for an investment
+        @notice Allows any address which is an alias of a KYC address to claim tokens across multiple rounds which provide that token
         @param _params A ClaimParams struct describing the desired claim(s)
      */
     function claim(ClaimParams memory _params) public {
@@ -109,7 +110,7 @@ contract VVVVCTokenDistributor is Ownable {
 
         IERC20 projectToken = IERC20(_params.projectTokenAddress);
 
-        //claim from pool of wallets that contain the project token
+        //check claimable amount for pool of wallets that all hold project token
         uint256 userClaimableBase = _calculateBaseClaimableProjectTokens(
             _params.userKycAddress,
             _params.projectTokenAddress,
