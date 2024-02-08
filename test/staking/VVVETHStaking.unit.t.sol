@@ -53,7 +53,7 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         //index latest stakeId (length - 1)
         uint256 userStakeIdIndex = stakeIds.length - 1;
 
-        //it's known I can use userStakeIds[0] because the user has only staked once
+        //it's known I can use stakeIds[userStakeIdIndex] because the user has only staked once
         (
             uint256 stakedEthAmount,
             uint256 stakedTimestamp,
