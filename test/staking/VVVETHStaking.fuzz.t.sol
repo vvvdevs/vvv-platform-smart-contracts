@@ -14,10 +14,57 @@ contract VVVETHStakingUnitFuzzTests is VVVETHStakingTestBase {
     function setUp() public {
         vm.startPrank(deployer, deployer);
         EthStakingInstance = new VVVETHStaking();
-        generateUserAddressListAndDealEther();
+        vm.deal(sampleUser, 10 ether);
         vm.stopPrank();
     }
 
-    // function testFuzz_stakeEth() public {}
-    // function testFuzz_withdraw() public {}
+    // Test that contract correctly stores the StakeData and stakeIds for any valid input combination
+    function testFuzz_stakeEth(address _caller, uint256 _stakeAmount, uint256 _duration) public {
+        uint8 duration = uint8(bound(_duration, 0, 2));
+        vm.assume(_caller != address(0));
+        vm.assume(_stakeAmount != 0);
+
+        vm.deal(_caller, _stakeAmount);
+        vm.startPrank(_caller, _caller);
+
+        VVVETHStaking.StakingDuration stakeDuration = VVVETHStaking.StakingDuration(duration);
+        uint256 stakeId = EthStakingInstance.stakeEth{ value: _stakeAmount }(stakeDuration);
+
+        (
+            uint256 stakedEthAmount,
+            uint256 stakedTimestamp,
+            bool stakeIsWithdrawn,
+            VVVETHStaking.StakingDuration stakedDuration
+        ) = EthStakingInstance.userStakes(_caller, stakeId);
+
+        assert(stakedEthAmount == _stakeAmount);
+        assert(stakedTimestamp == block.timestamp);
+        assert(stakeIsWithdrawn == false);
+        assert(stakedDuration == stakeDuration);
+
+        vm.stopPrank();
+    }
+
+    // Test that any valid stake is withdrawable
+    function testFuzz_withdrawStake(address _caller, uint256 _stakeAmount, uint256 _duration) public {
+        address payable caller = payable(_caller);
+        uint8 duration = uint8(bound(_duration, 0, 2));
+        vm.assume(caller != address(0));
+        vm.assume(_stakeAmount != 0);
+        vm.deal(caller, _stakeAmount);
+        vm.startPrank(caller, caller);
+
+        VVVETHStaking.StakingDuration stakeDuration = VVVETHStaking.StakingDuration(duration);
+        uint256 stakeId = EthStakingInstance.stakeEth{ value: _stakeAmount }(stakeDuration);
+
+        advanceBlockNumberAndTimestampInSeconds(EthStakingInstance.durationToSeconds(stakeDuration) + 1);
+
+        EthStakingInstance.withdrawStake(stakeId);
+
+        (, , bool stakeIsWithdrawn, ) = EthStakingInstance.userStakes(caller, stakeId);
+
+        assert(stakeIsWithdrawn == true);
+
+        vm.stopPrank();
+    }
 }
