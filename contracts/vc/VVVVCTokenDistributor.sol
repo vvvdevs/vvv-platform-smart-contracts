@@ -73,9 +73,6 @@ contract VVVVCTokenDistributor is Ownable {
     /// @notice Error thrown when the caller's allocation or proxy wallet balance has been exceeded
     error ExceedsAllocation();
 
-    /// @notice Error thrown when pool of wallets that holds project token does not have balance to fulfill claim
-    error InsufficientPoolBalance();
-
     /// @notice Error thrown when the signer address is not recovered from the provided signature
     error InvalidSignature();
 
