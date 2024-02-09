@@ -226,17 +226,6 @@ abstract contract VVVVCTestBase is Test {
         return signature;
     }
 
-    // struct ClaimParams {
-    //     address callerAddress;
-    //     address userKycAddress;
-    //     address projectTokenAddress;
-    //     address[] projectTokenClaimFromWallets;
-    //     uint256[] investmentRoundIds;
-    //     uint256 tokenAmountToClaim;
-    //     uint256 deadline;
-    //     bytes signature;
-    // }
-
     function generateClaimParamsWithSignature(
         address _callerAddress,
         address _kycAddress,
