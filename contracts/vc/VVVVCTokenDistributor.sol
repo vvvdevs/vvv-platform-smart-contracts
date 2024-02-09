@@ -108,10 +108,10 @@ contract VVVVCTokenDistributor is Ownable {
 
         IERC20 projectToken = IERC20(_params.projectTokenAddress);
 
-        //transfer to caller starting with attempting full amount with the first
-        //wallet, carrying remainder to the next wallets if needed
+        //transfer the full claimable amount per round to the caller, unless
+        //the remainder of the target claim amount is less than the claimable amount
         uint256 remainingAmountToClaim = _params.tokenAmountToClaim;
-        for (uint256 i = 0; i < _params.projectTokenClaimFromWallets.length; i++) {
+        for (uint256 i = 0; i < _params.investmentRoundIds.length; i++) {
             address thisClaimFromWallet = _params.projectTokenClaimFromWallets[i];
             uint256 thisInvestmentRoundId = _params.investmentRoundIds[i];
 
