@@ -63,7 +63,7 @@ abstract contract VVVVCTestBase is Test {
     struct TestParams {
         uint256[] investmentRoundIds;
         uint256[] tokenAmountsToInvest;
-        address[] projectTokenClaimFromWallets;
+        address[] projectTokenProxyWallets;
         uint256 claimAmount;
     }
 
@@ -211,7 +211,7 @@ abstract contract VVVVCTestBase is Test {
                         _params.callerAddress,
                         _params.userKycAddress,
                         _params.projectTokenAddress,
-                        _params.projectTokenClaimFromWallets,
+                        _params.projectTokenProxyWallets,
                         _params.investmentRoundIds,
                         _params.deadline,
                         chainId
@@ -229,7 +229,7 @@ abstract contract VVVVCTestBase is Test {
     function generateClaimParamsWithSignature(
         address _callerAddress,
         address _kycAddress,
-        address[] memory _projectTokenClaimFromWallets,
+        address[] memory _projectTokenProxyWallets,
         uint256[] memory _investmentRoundIds,
         uint256 _tokenAmountToClaim
     ) public view returns (VVVVCTokenDistributor.ClaimParams memory) {
@@ -237,7 +237,7 @@ abstract contract VVVVCTestBase is Test {
             callerAddress: _callerAddress,
             userKycAddress: _kycAddress,
             projectTokenAddress: address(ProjectTokenInstance),
-            projectTokenClaimFromWallets: _projectTokenClaimFromWallets,
+            projectTokenProxyWallets: _projectTokenProxyWallets,
             investmentRoundIds: _investmentRoundIds,
             tokenAmountToClaim: _tokenAmountToClaim,
             deadline: block.timestamp + 1 hours,

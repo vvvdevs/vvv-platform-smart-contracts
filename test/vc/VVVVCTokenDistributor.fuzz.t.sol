@@ -64,15 +64,15 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
 
         testParams.investmentRoundIds = new uint256[](arrayLength);
         testParams.tokenAmountsToInvest = new uint256[](arrayLength);
-        testParams.projectTokenClaimFromWallets = new address[](arrayLength);
+        testParams.projectTokenProxyWallets = new address[](arrayLength);
 
         for (uint256 i = 0; i < arrayLength; i++) {
-            testParams.projectTokenClaimFromWallets[i] = address(
+            testParams.projectTokenProxyWallets[i] = address(
                 uint160(uint256(keccak256(abi.encodePacked(_callerAddress, i))))
             );
 
             //mint a ton to the proxy wallets so there's no issue with not enough to claim
-            ProjectTokenInstance.mint(testParams.projectTokenClaimFromWallets[i], 10000 * 1e18);
+            ProjectTokenInstance.mint(testParams.projectTokenProxyWallets[i], 10000 * 1e18);
 
             testParams.investmentRoundIds[i] = bound(_seed, 0, arrayLength);
             testParams.tokenAmountsToInvest[i] = bound(
@@ -83,7 +83,7 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
         }
 
         // ensure proxy wallets have approved the distributor to withdraw tokens
-        approveProjectTokenForDistributor(testParams.projectTokenClaimFromWallets, type(uint256).max);
+        approveProjectTokenForDistributor(testParams.projectTokenProxyWallets, type(uint256).max);
 
         // invest using generated addresses
         for (uint256 i = 0; i < arrayLength; i++) {
@@ -101,7 +101,7 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
             testParams.claimAmount += TokenDistributorInstance.calculateBaseClaimableProjectTokens(
                 _kycAddress,
                 address(ProjectTokenInstance),
-                testParams.projectTokenClaimFromWallets[i],
+                testParams.projectTokenProxyWallets[i],
                 testParams.investmentRoundIds[i]
             );
         }
@@ -111,7 +111,7 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
             _callerAddress,
             _kycAddress,
-            testParams.projectTokenClaimFromWallets,
+            testParams.projectTokenProxyWallets,
             testParams.investmentRoundIds,
             testParams.claimAmount
         );
@@ -145,11 +145,11 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
         vm.assume(_seed != 0);
 
         uint256[] memory _investmentRoundIds = new uint256[](arrayLength);
-        address[] memory _projectTokenClaimFromWallets = new address[](arrayLength);
+        address[] memory _projectTokenProxyWallets = new address[](arrayLength);
         uint256 _tokenAmountToClaim = bound(_seed, 0, type(uint256).max);
 
         for (uint256 i = 0; i < arrayLength; i++) {
-            _projectTokenClaimFromWallets[i] = address(
+            _projectTokenProxyWallets[i] = address(
                 uint160(uint256(keccak256(abi.encodePacked(_callerAddress, i))))
             );
             _investmentRoundIds[i] = bound(_seed, 0, arrayLength);
@@ -158,7 +158,7 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
             _callerAddress,
             _kycAddress,
-            _projectTokenClaimFromWallets,
+            _projectTokenProxyWallets,
             _investmentRoundIds,
             _tokenAmountToClaim
         );
@@ -167,5 +167,65 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
         // Expect any revert
         vm.expectRevert();
         claimAsUser(_callerAddress, claimParams);
+    }
+
+    // Tests that the distributor always returns zero when there is not an investment made + project token balance in "claim from" or proxy wallet
+    function testFuzz_CalculateBaseClaimableProjectTokensAlwaysZero(
+        address _caller,
+        uint256 _seed
+    ) public {
+        vm.assume(_caller != address(0));
+        vm.assume(_seed != 0);
+        uint256 investmentRoundId = bound(_seed, 0, type(uint256).max);
+
+        uint256 claimableAmount = TokenDistributorInstance.calculateBaseClaimableProjectTokens(
+            _caller,
+            address(ProjectTokenInstance),
+            _caller,
+            investmentRoundId
+        );
+
+        assertTrue(claimableAmount == 0);
+    }
+
+    // Tests that distributor returns correct amount in proportion to invested amount in all cases
+    function testFuzz_CalculateBaseClaimableProjectTokens(address _caller, uint256 _seed) public {
+        vm.assume(_caller != address(0));
+        // should avoid overflow and still be a reasonable upper bound
+        // must be > 0 to make assertion true
+        uint256 investedAmount = bound(_seed, 1, type(uint128).max);
+
+        uint256 thisInvestmentRoundId = sampleInvestmentRoundIds[0];
+        address thisProjectTokenProxyWallet = projectTokenProxyWallets[0];
+        uint256 projectTokenWalletBalance = ProjectTokenInstance.balanceOf(thisProjectTokenProxyWallet);
+
+        PaymentTokenInstance.mint(_caller, investedAmount);
+
+        investAsUser(
+            _caller,
+            generateInvestParamsWithSignature(
+                thisInvestmentRoundId,
+                type(uint256).max, //sample very high round limit to avoid this error
+                investedAmount, // invested amounts
+                type(uint256).max, //sample very high allocation
+                _caller
+            )
+        );
+
+        uint256 claimableAmount = TokenDistributorInstance.calculateBaseClaimableProjectTokens(
+            _caller,
+            address(ProjectTokenInstance),
+            thisProjectTokenProxyWallet,
+            thisInvestmentRoundId
+        );
+
+        emit log_named_uint(
+            "User invested: ",
+            LedgerInstance.kycAddressInvestedPerRound(_caller, thisInvestmentRoundId)
+        );
+        emit log_named_uint("claimableAmount", claimableAmount);
+        emit log_named_uint("projectTokenWalletBalance", projectTokenWalletBalance);
+
+        assertTrue(claimableAmount == projectTokenWalletBalance);
     }
 }
