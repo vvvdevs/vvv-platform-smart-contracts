@@ -16,7 +16,6 @@ abstract contract VVVETHStakingTestBase is Test {
 
     address deployer = vm.addr(deployerKey);
     address sampleUser = vm.addr(sampleUserKey);
-    address[] users = new address[](100); // 100 users
 
     uint256 blockNumber;
     uint256 blockTimestamp;
@@ -34,15 +33,5 @@ abstract contract VVVETHStakingTestBase is Test {
         blockTimestamp += secondsToAdvance;
         vm.warp(blockTimestamp);
         vm.roll(blockNumber);
-    }
-
-    // generate list of random addresses and deal them ETH
-    function generateUserAddressListAndDealEther() public {
-        for (uint256 i = 0; i < users.length; i++) {
-            users[i] = address(uint160(uint256(keccak256(abi.encodePacked(block.timestamp, i)))));
-            vm.deal(users[i], 10 ether); // and YOU get an ETH
-        }
-
-        vm.deal(sampleUser, 10 ether);
     }
 }
