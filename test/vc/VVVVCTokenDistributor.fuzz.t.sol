@@ -97,16 +97,16 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
                     _kycAddress
                 )
             );
+
+            testParams.claimAmount += TokenDistributorInstance.calculateBaseClaimableProjectTokens(
+                _kycAddress,
+                address(ProjectTokenInstance),
+                testParams.projectTokenClaimFromWallets[i],
+                testParams.investmentRoundIds[i]
+            );
         }
 
         uint256 balanceTotalBefore = ProjectTokenInstance.balanceOf(_callerAddress);
-
-        testParams.claimAmount = TokenDistributorInstance.calculateBaseClaimableProjectTokens(
-            _kycAddress,
-            address(ProjectTokenInstance),
-            testParams.projectTokenClaimFromWallets,
-            testParams.investmentRoundIds
-        );
 
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
             _callerAddress,

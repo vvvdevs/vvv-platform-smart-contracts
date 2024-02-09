@@ -14,9 +14,7 @@ contract VVVVCTokenDistributor is Ownable {
 
     /// @notice EIP-712 standard definitions
     bytes32 public constant DOMAIN_TYPEHASH =
-        keccak256(
-            bytes("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")
-        );
+        keccak256(bytes("EIP712Domain(string name,uint256 chainId,address verifyingContract)"));
     bytes32 public constant CLAIM_TYPEHASH =
         keccak256(
             bytes(
@@ -28,11 +26,11 @@ contract VVVVCTokenDistributor is Ownable {
     /// @notice The address authorized to sign investment transactions
     address public signer;
 
-    /// @notice Mapping of user's KYC address to project token address to user's claimed amount
-    mapping(address => mapping(address => uint256)) public userClaimedTokensForToken;
+    /// @notice Mapping of user's KYC address to investment round to claimed amount
+    mapping(address => mapping(uint256 => uint256)) public userClaimedTokensForRound;
 
     /// @notice Mapping of the round ID to the token's total claimed amount
-    mapping(address => uint256) public totalClaimedTokensForToken;
+    mapping(uint256 => uint256) public totalClaimedTokensForRound;
 
     /**
         @notice Parameters for claim function
@@ -110,46 +108,40 @@ contract VVVVCTokenDistributor is Ownable {
 
         IERC20 projectToken = IERC20(_params.projectTokenAddress);
 
-        //check claimable amount for pool of wallets that all hold project token
-        uint256 userClaimableBase = _calculateBaseClaimableProjectTokens(
-            _params.userKycAddress,
-            _params.projectTokenAddress,
-            _params.projectTokenClaimFromWallets,
-            _params.investmentRoundIds
-        );
-        uint256 userClaimable = userClaimableBase -
-            userClaimedTokensForToken[_params.userKycAddress][_params.projectTokenAddress];
-
-        if (_params.tokenAmountToClaim > userClaimable) {
-            revert ExceedsAllocation();
-        }
-
-        userClaimedTokensForToken[_params.userKycAddress][_params.projectTokenAddress] += _params
-            .tokenAmountToClaim;
-        totalClaimedTokensForToken[_params.projectTokenAddress] += _params.tokenAmountToClaim;
-
         //transfer to caller starting with attempting full amount with the first
         //wallet, carrying remainder to the next wallets if needed
         uint256 remainingAmountToClaim = _params.tokenAmountToClaim;
         for (uint256 i = 0; i < _params.projectTokenClaimFromWallets.length; i++) {
-            uint256 amountToClaim = remainingAmountToClaim;
-            if (amountToClaim > projectToken.balanceOf(_params.projectTokenClaimFromWallets[i])) {
-                amountToClaim = projectToken.balanceOf(_params.projectTokenClaimFromWallets[i]);
-            }
-            remainingAmountToClaim -= amountToClaim;
-            projectToken.safeTransferFrom(
-                _params.projectTokenClaimFromWallets[i],
-                _params.callerAddress,
-                amountToClaim
+            address thisClaimFromWallet = _params.projectTokenClaimFromWallets[i];
+            uint256 thisInvestmentRoundId = _params.investmentRoundIds[i];
+
+            uint256 baseClaimableFromWallet = _calculateBaseClaimableProjectTokens(
+                _params.userKycAddress,
+                _params.projectTokenAddress,
+                thisClaimFromWallet,
+                thisInvestmentRoundId
             );
+            uint256 claimableFromWallet = baseClaimableFromWallet -
+                userClaimedTokensForRound[_params.userKycAddress][thisInvestmentRoundId];
+
+            uint256 amountToClaim = claimableFromWallet > remainingAmountToClaim
+                ? remainingAmountToClaim
+                : claimableFromWallet;
+
+            userClaimedTokensForRound[_params.userKycAddress][thisInvestmentRoundId] += amountToClaim;
+            totalClaimedTokensForRound[thisInvestmentRoundId] += amountToClaim;
+            remainingAmountToClaim -= amountToClaim;
+
+            projectToken.safeTransferFrom(thisClaimFromWallet, _params.callerAddress, amountToClaim);
+
             if (remainingAmountToClaim == 0) {
                 break;
             }
         }
 
-        //if full amount isn't available from the wallets, revert
+        //if an amount is remaining, the caller is attempting to exceed their allocation
         if (remainingAmountToClaim != 0) {
-            revert InsufficientPoolBalance();
+            revert ExceedsAllocation();
         }
 
         emit VCClaim(
@@ -164,38 +156,32 @@ contract VVVVCTokenDistributor is Ownable {
     /**
         @notice Reads the VVVVCInvestmentLedger contract to calculate the base claimable token amount, which does not consider the amount already claimed by the KYC address
         @dev uses fraction of invested funds to determine fraction of claimable tokens
-        @dev applies to all wallets/rounds containing the project token
+        @dev ensure _claimFromWalletAddress corresponds to the _investmentRoundId
         @param _userKycAddress Address of the user's KYC wallet
         @param _projectTokenAddress Address of the project token to be claimed
-        @param _proxyWalletAddresses Address array of the wallets from which the project token is to be claimed
-        @param _investmentRoundIds Array of investment round IDs for which to calculate claimable tokens
+        @param _claimFromWalletAddress Address of the wallet from which the project token is to be claimed
+        @param _investmentRoundId Investment round ID for which to calculate claimable tokens
      */
     function _calculateBaseClaimableProjectTokens(
         address _userKycAddress,
         address _projectTokenAddress,
-        address[] memory _proxyWalletAddresses,
-        uint256[] memory _investmentRoundIds
+        address _claimFromWalletAddress,
+        uint256 _investmentRoundId
     ) internal view returns (uint256) {
-        uint256 totalInvestedPaymentTokens;
-        uint256 userInvestedPaymentTokens;
-        uint256 totalProjectTokenBalanceAllWallets;
-
-        for (uint256 i = 0; i < _investmentRoundIds.length; i++) {
-            totalInvestedPaymentTokens += ledger.totalInvestedPerRound(_investmentRoundIds[i]);
-            userInvestedPaymentTokens += ledger.kycAddressInvestedPerRound(
-                _userKycAddress,
-                _investmentRoundIds[i]
-            );
-            totalProjectTokenBalanceAllWallets += IERC20(_projectTokenAddress).balanceOf(
-                _proxyWalletAddresses[i]
-            );
-        }
+        uint256 totalInvestedPaymentTokens = ledger.totalInvestedPerRound(_investmentRoundId);
+        uint256 userInvestedPaymentTokens = ledger.kycAddressInvestedPerRound(
+            _userKycAddress,
+            _investmentRoundId
+        );
+        uint256 claimFromWalletProjectTokenBalance = IERC20(_projectTokenAddress).balanceOf(
+            _claimFromWalletAddress
+        );
 
         if (userInvestedPaymentTokens == 0) return 0;
 
         //total pool of claimable tokens is balance of proxy wallets + total claimed for this token address
-        uint256 totalProjectTokensDepositedToProxyWallet = totalProjectTokenBalanceAllWallets +
-            totalClaimedTokensForToken[_projectTokenAddress];
+        uint256 totalProjectTokensDepositedToProxyWallet = claimFromWalletProjectTokenBalance +
+            totalClaimedTokensForRound[_investmentRoundId];
 
         //return fraction of total pool of claimable tokens, based on fraction of invested funds
         return
@@ -239,15 +225,15 @@ contract VVVVCTokenDistributor is Ownable {
     function calculateBaseClaimableProjectTokens(
         address _userKycAddress,
         address _projectTokenAddress,
-        address[] memory _proxyWalletAddresses,
-        uint256[] memory _investmentRoundIds
+        address _claimFromWalletAddress,
+        uint256 _investmentRoundId
     ) external view returns (uint256) {
         return
             _calculateBaseClaimableProjectTokens(
                 _userKycAddress,
                 _projectTokenAddress,
-                _proxyWalletAddresses,
-                _investmentRoundIds
+                _claimFromWalletAddress,
+                _investmentRoundId
             );
     }
 
