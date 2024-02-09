@@ -168,20 +168,18 @@ contract VVVVCTokenDistributor is Ownable {
         address _claimFromWalletAddress,
         uint256 _investmentRoundId
     ) internal view returns (uint256) {
-        uint256 totalInvestedPaymentTokens = ledger.totalInvestedPerRound(_investmentRoundId);
         uint256 userInvestedPaymentTokens = ledger.kycAddressInvestedPerRound(
             _userKycAddress,
             _investmentRoundId
         );
-        uint256 claimFromWalletProjectTokenBalance = IERC20(_projectTokenAddress).balanceOf(
-            _claimFromWalletAddress
-        );
-
         if (userInvestedPaymentTokens == 0) return 0;
 
-        //total pool of claimable tokens is balance of proxy wallets + total claimed for this token address
-        uint256 totalProjectTokensDepositedToProxyWallet = claimFromWalletProjectTokenBalance +
-            totalClaimedTokensForRound[_investmentRoundId];
+        uint256 totalInvestedPaymentTokens = ledger.totalInvestedPerRound(_investmentRoundId);
+
+        //total pool of claimable tokens is balance of claim-from (proxy) wallets + total claimed for this token address
+        uint256 totalProjectTokensDepositedToProxyWallet = IERC20(_projectTokenAddress).balanceOf(
+            _claimFromWalletAddress
+        ) + totalClaimedTokensForRound[_investmentRoundId];
 
         //return fraction of total pool of claimable tokens, based on fraction of invested funds
         return
