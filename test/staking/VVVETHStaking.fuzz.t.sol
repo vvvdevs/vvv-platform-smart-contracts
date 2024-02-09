@@ -19,13 +19,15 @@ contract VVVETHStakingUnitFuzzTests is VVVETHStakingTestBase {
     }
 
     // Test that contract correctly stores the StakeData and stakeIds for any valid input combination
-    function testFuzz_stakeEth(address _caller, uint256 _stakeAmount, uint256 _duration) public {
+    function testFuzz_stakeEth(uint256 _callerKey, uint256 _stakeAmount, uint256 _duration) public {
+        uint256 callerKey = bound(_callerKey, 1, 100000);
+        address caller = vm.addr(callerKey);
         uint8 duration = uint8(bound(_duration, 0, 2));
-        vm.assume(_caller != address(0));
+        vm.assume(caller != address(0));
         vm.assume(_stakeAmount != 0);
 
-        vm.deal(_caller, _stakeAmount);
-        vm.startPrank(_caller, _caller);
+        vm.deal(caller, _stakeAmount);
+        vm.startPrank(caller, caller);
 
         VVVETHStaking.StakingDuration stakeDuration = VVVETHStaking.StakingDuration(duration);
         uint256 stakeId = EthStakingInstance.stakeEth{ value: _stakeAmount }(stakeDuration);
@@ -35,7 +37,7 @@ contract VVVETHStakingUnitFuzzTests is VVVETHStakingTestBase {
             uint256 stakedTimestamp,
             bool stakeIsWithdrawn,
             VVVETHStaking.StakingDuration stakedDuration
-        ) = EthStakingInstance.userStakes(_caller, stakeId);
+        ) = EthStakingInstance.userStakes(caller, stakeId);
 
         assert(stakedEthAmount == _stakeAmount);
         assert(stakedTimestamp == block.timestamp);
@@ -46,8 +48,9 @@ contract VVVETHStakingUnitFuzzTests is VVVETHStakingTestBase {
     }
 
     // Test that any valid stake is withdrawable
-    function testFuzz_withdrawStake(address _caller, uint256 _stakeAmount, uint256 _duration) public {
-        address payable caller = payable(_caller);
+    function testFuzz_withdrawStake(uint256 _callerKey, uint256 _stakeAmount, uint256 _duration) public {
+        uint256 callerKey = bound(_callerKey, 1, 100000);
+        address payable caller = payable(vm.addr(callerKey));
         uint8 duration = uint8(bound(_duration, 0, 2));
         vm.assume(caller != address(0));
         vm.assume(_stakeAmount != 0);
