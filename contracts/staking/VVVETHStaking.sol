@@ -41,7 +41,7 @@ contract VVVETHStaking {
         uint256 indexed stakeId,
         uint256 stakedEthAmount,
         uint256 stakeStartTimestamp,
-        StakingDuration duration
+        StakingDuration stakeDuration
     );
 
     ///@notice emitted when a user withdraws
