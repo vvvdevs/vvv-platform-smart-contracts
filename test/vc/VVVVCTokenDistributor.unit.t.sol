@@ -89,7 +89,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             thisClaimAmount
         );
 
-        claimParams.projectTokenClaimFromWallets[0] = address(0);
+        claimParams.projectTokenProxyWallets[0] = address(0);
         assertFalse(TokenDistributorInstance.isSignatureValid(claimParams));
     }
 
@@ -324,5 +324,59 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
         //claim for the same round again
         vm.expectRevert(VVVVCTokenDistributor.ExceedsAllocation.selector);
         claimAsUser(sampleUser, claimParams);
+    }
+
+    // Test that calculateBaseClaimableProjectTokens returns the correct amount
+    // with two addresses of unequal invested amounts
+    function testCalculateBaseClaimableProjectTokens() public {
+        uint256 proxyWalletBalance = ProjectTokenInstance.balanceOf(projectTokenProxyWallets[0]);
+
+        address thisProjectTokenProxyWallet = projectTokenProxyWallets[0];
+        uint256 thisInvestmentRoundId = sampleInvestmentRoundIds[0];
+
+        //invest in round 1 as sapmleUser (not considered an alias in this case)
+        investAsUser(
+            sampleUser,
+            generateInvestParamsWithSignature(
+                thisInvestmentRoundId,
+                investmentRoundSampleLimit,
+                sampleAmountsToInvest[0],
+                userPaymentTokenDefaultAllocation,
+                sampleUser
+            )
+        );
+
+        //invest in round 1 as kyc address
+        investAsUser(
+            sampleKycAddress,
+            generateInvestParamsWithSignature(
+                thisInvestmentRoundId,
+                investmentRoundSampleLimit,
+                sampleAmountsToInvest[1],
+                userPaymentTokenDefaultAllocation,
+                sampleKycAddress
+            )
+        );
+
+        // sample user should be able to claim 1/3 of the total claimable amount
+        // sample kyc address should be able to claim 2/3 of the total claimable amount
+        // of projectTokenAmountToProxyWallet in thisProjectTokenProxyWallets[0]
+        uint256 thisClaimAmountSampleUser = TokenDistributorInstance.calculateBaseClaimableProjectTokens(
+            sampleUser,
+            address(ProjectTokenInstance),
+            thisProjectTokenProxyWallet,
+            thisInvestmentRoundId
+        );
+
+        uint256 thisClaimAmountSampleKycAddress = TokenDistributorInstance
+            .calculateBaseClaimableProjectTokens(
+                sampleKycAddress,
+                address(ProjectTokenInstance),
+                thisProjectTokenProxyWallet,
+                thisInvestmentRoundId
+            );
+
+        assertTrue(thisClaimAmountSampleUser == proxyWalletBalance / 3);
+        assertTrue(thisClaimAmountSampleKycAddress == (proxyWalletBalance / 3) * 2);
     }
 }
