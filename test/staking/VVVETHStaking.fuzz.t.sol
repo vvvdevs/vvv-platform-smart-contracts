@@ -1,6 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
+import { VVVToken } from "contracts/tokens/VvvToken.sol";
 import { VVVETHStakingTestBase } from "test/staking/VVVETHStakingTestBase.sol";
 import { VVVETHStaking } from "contracts/staking/VVVETHStaking.sol";
 
@@ -13,7 +14,12 @@ contract VVVETHStakingUnitFuzzTests is VVVETHStakingTestBase {
     // Sets up project and payment tokens, and an instance of the ETH staking contract
     function setUp() public {
         vm.startPrank(deployer, deployer);
-        EthStakingInstance = new VVVETHStaking();
+        VvvTokenInstance = new VVVToken(type(uint256).max, 0);
+        EthStakingInstance = new VVVETHStaking(address(VvvTokenInstance), deployer);
+
+        //mint 1,000,000 $VVV tokens to the staking contract
+        VvvTokenInstance.mint(address(EthStakingInstance), 1_000_000 * 1e18);
+
         vm.deal(sampleUser, 10 ether);
         vm.stopPrank();
     }
@@ -70,4 +76,9 @@ contract VVVETHStakingUnitFuzzTests is VVVETHStakingTestBase {
 
         vm.stopPrank();
     }
+
+    // Incoming Test Cases
+    // function testFuzz_claimVvv() public {}
+    // function testFuzz_calculateAccruedVvvAmount() public {}
+    // function testFuzz_calculateClaimableVvvAmount() public {}
 }
