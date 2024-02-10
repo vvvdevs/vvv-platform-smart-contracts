@@ -1,6 +1,8 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
+import { VVVToken } from "contracts/tokens/VvvToken.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { VVVETHStakingTestBase } from "test/staking/VVVETHStakingTestBase.sol";
 import { VVVETHStaking } from "contracts/staking/VVVETHStaking.sol";
 
@@ -13,7 +15,12 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
     // Sets up project and payment tokens, and an instance of the ETH staking contract
     function setUp() public {
         vm.startPrank(deployer, deployer);
-        EthStakingInstance = new VVVETHStaking();
+        VvvTokenInstance = new VVVToken(type(uint256).max, 0);
+        EthStakingInstance = new VVVETHStaking(address(VvvTokenInstance), deployer);
+
+        //mint 1,000,000 $VVV tokens to the staking contract
+        VvvTokenInstance.mint(address(EthStakingInstance), 1_000_000 * 1e18);
+
         vm.deal(sampleUser, 10 ether);
         vm.stopPrank();
     }
@@ -236,4 +243,40 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         EthStakingInstance.withdrawStake(0);
         vm.stopPrank();
     }
+
+    // Tests that a user can stake ETH, withdraw the stake, then claim $VVV tokens
+    // Claimed $VVV toknens should be equal to staked ETH * duration multiplier * exchange rate
+    function testClaimVvv() public {
+        vm.startPrank(sampleUser, sampleUser);
+        uint256 stakeEthAmount = 1 ether;
+        EthStakingInstance.stakeEth{ value: stakeEthAmount }(VVVETHStaking.StakingDuration.ThreeMonths);
+        advanceBlockNumberAndTimestampInSeconds(
+            EthStakingInstance.durationToSeconds(VVVETHStaking.StakingDuration.ThreeMonths) + 1
+        );
+
+        uint256 claimableVvv = EthStakingInstance.calculateClaimableVvvAmount();
+
+        uint256 vvvBalanceBefore = VvvTokenInstance.balanceOf(sampleUser);
+
+        EthStakingInstance.claimVvv(claimableVvv);
+        uint256 vvvBalanceAfter = VvvTokenInstance.balanceOf(sampleUser);
+
+        uint256 expectedClaimedVvv = (stakeEthAmount *
+            EthStakingInstance.ethToVvvExchangeRate() *
+            EthStakingInstance.durationToMultiplier(VVVETHStaking.StakingDuration.ThreeMonths)) /
+            EthStakingInstance.DENOMINATOR();
+
+        assertTrue(vvvBalanceAfter == vvvBalanceBefore + expectedClaimedVvv);
+        vm.stopPrank();
+    }
+
+    // Incoming Test Cases
+    // function testClaimVvvAfterWithdrawStake() public {}
+    // function testClaimVvvBeforeAndAfterWithdrawStakeMultipleClaims() public {}
+    // function testClaimVvvZero() public {}
+    // function testClaimVvvInsufficient() public {}
+    // function testCalculateAccruedVvvAmount() public {}
+    // function testCalculateAccruedVvvAmountSingleStake() public {}
+    // function testCalculateAccruedVvvAmountNoStakes() public {}
+    // function testCalculateClaimableVvvAmount() public {}
 }
