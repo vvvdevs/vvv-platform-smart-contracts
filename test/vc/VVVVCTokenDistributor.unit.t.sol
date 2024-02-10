@@ -329,54 +329,64 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
     // Test that calculateBaseClaimableProjectTokens returns the correct amount
     // with two addresses of unequal invested amounts
     function testCalculateBaseClaimableProjectTokens() public {
-        uint256 proxyWalletBalance = ProjectTokenInstance.balanceOf(projectTokenProxyWallets[0]);
+        //some large number indicative of a realistic number of investors
+        uint256 numInvestors = 3333;
 
+        uint256 proxyWalletBalance = ProjectTokenInstance.balanceOf(projectTokenProxyWallets[0]);
         address thisProjectTokenProxyWallet = projectTokenProxyWallets[0];
         uint256 thisInvestmentRoundId = sampleInvestmentRoundIds[0];
 
-        //invest in round 1 as sapmleUser (not considered an alias in this case)
-        investAsUser(
-            sampleUser,
-            generateInvestParamsWithSignature(
-                thisInvestmentRoundId,
-                investmentRoundSampleLimit,
-                sampleAmountsToInvest[0],
-                userPaymentTokenDefaultAllocation,
-                sampleUser
-            )
-        );
+        address[] memory investors = new address[](numInvestors);
 
-        //invest in round 1 as kyc address
-        investAsUser(
-            sampleKycAddress,
-            generateInvestParamsWithSignature(
-                thisInvestmentRoundId,
-                investmentRoundSampleLimit,
-                sampleAmountsToInvest[1],
-                userPaymentTokenDefaultAllocation,
-                sampleKycAddress
-            )
-        );
+        for (uint256 i = 0; i < numInvestors; i++) {
+            address thisInvestor = address(uint160(uint256(keccak256(abi.encodePacked("investor", i)))));
+            investors[i] = thisInvestor;
 
-        // sample user should be able to claim 1/3 of the total claimable amount
-        // sample kyc address should be able to claim 2/3 of the total claimable amount
-        // of projectTokenAmountToProxyWallet in thisProjectTokenProxyWallets[0]
-        uint256 thisClaimAmountSampleUser = TokenDistributorInstance.calculateBaseClaimableProjectTokens(
-            sampleUser,
-            address(ProjectTokenInstance),
-            thisProjectTokenProxyWallet,
-            thisInvestmentRoundId
-        );
+            uint256 paymentTokenAmountIndex = i % (sampleAmountsToInvest.length - 1);
 
-        uint256 thisClaimAmountSampleKycAddress = TokenDistributorInstance
-            .calculateBaseClaimableProjectTokens(
-                sampleKycAddress,
+            PaymentTokenInstance.mint(thisInvestor, sampleAmountsToInvest[paymentTokenAmountIndex]);
+            investAsUser(
+                thisInvestor,
+                generateInvestParamsWithSignature(
+                    thisInvestmentRoundId,
+                    type(uint256).max, //ensuring no ExceedsAllocation error for this test
+                    sampleAmountsToInvest[paymentTokenAmountIndex],
+                    userPaymentTokenDefaultAllocation,
+                    thisInvestor
+                )
+            );
+        }
+
+        uint256 sumOfClaimAmounts;
+        for (uint256 i = 0; i < numInvestors; i++) {
+            uint256 thisClaimAmount = TokenDistributorInstance.calculateBaseClaimableProjectTokens(
+                investors[i],
                 address(ProjectTokenInstance),
                 thisProjectTokenProxyWallet,
                 thisInvestmentRoundId
             );
 
-        assertTrue(thisClaimAmountSampleUser == proxyWalletBalance / 3);
-        assertTrue(thisClaimAmountSampleKycAddress == (proxyWalletBalance / 3) * 2);
+            //same logic as the function - proportion of invested amount should be claimable
+            uint256 referenceClaimableAmount = (LedgerInstance.kycAddressInvestedPerRound(
+                investors[i],
+                thisInvestmentRoundId
+            ) * proxyWalletBalance) / LedgerInstance.totalInvestedPerRound(thisInvestmentRoundId);
+
+            assertTrue(thisClaimAmount == referenceClaimableAmount);
+
+            sumOfClaimAmounts += thisClaimAmount;
+        }
+
+        /**
+            assumes that truncation errors are less than 1/1e18 of the proxy wallet balance.
+            this is arbitrary based on observing the truncation that happens, and assumed negligible
+            One example with 3333 investors:
+            sumOfClaimAmounts: 999999999999999999999936
+            proxyWalletBalance: 1000000000000000000000000
+            so truncation accounts for 6.4e-23 18-decimal token loss across all investors,
+            if 1 Million 18-decimal tokens are claimable as part of the round
+         */
+        assertTrue(sumOfClaimAmounts > proxyWalletBalance - (proxyWalletBalance / 1e18));
+        assertTrue(sumOfClaimAmounts < proxyWalletBalance + (proxyWalletBalance / 1e18));
     }
 }
