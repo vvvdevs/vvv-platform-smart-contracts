@@ -8,6 +8,7 @@ import { ABDKMath64x64 } from "./ABDKMath64x64.sol";
 
 contract VVVVesting is Ownable {
     using SafeERC20 for IERC20;
+    using ABDKMath64x64 for int128;
 
     ///@notice for ABDKMath64x64 calculations, scaling to maximize precision without overflow for expected token quantity ranges
     uint256 public constant SCALE_DECIMALS = 6;
@@ -241,7 +242,7 @@ contract VVVVesting is Ownable {
     }
 
     /**
-        @notice handles accrual calculations for getVestedAmount
+        @notice handles accrual calculations for getVestedAmount using ABDKMath64x64
         @dev handles linear case (r=0) and exponential case (r>0)
         @dev uses sum of geometric series where each element of series is y_n = y_0 * (1 + r)^(n - 1)
         @dev so sum of series is Sn = y_0 * (r^n - 1) / (r - 1)
@@ -260,15 +261,11 @@ contract VVVVesting is Ownable {
         } else {
             int128 firstIntervalAccrual = ABDKMath64x64.divu(_firstIntervalAccrual, 10 ** SCALE_DECIMALS);
             int128 growthRate = ABDKMath64x64.divu(_growthRatePercentage + DENOMINATOR, DENOMINATOR);
-            int128 growthRateToElapsedIntervals = ABDKMath64x64.pow(growthRate, _elapsedIntervals);
-            int128 seriesSum = ABDKMath64x64.div(
-                ABDKMath64x64.mul(
-                    firstIntervalAccrual,
-                    ABDKMath64x64.sub(growthRateToElapsedIntervals, ABDKMath64x64.fromInt(1))
-                ),
-                ABDKMath64x64.sub(growthRate, ABDKMath64x64.fromInt(1))
-            );
-            return uint256(ABDKMath64x64.toUInt(seriesSum)) * 10 ** SCALE_DECIMALS;
+            int128 growthRateToElapsedIntervals = growthRate.pow(_elapsedIntervals);
+            int128 seriesSum = firstIntervalAccrual
+                .mul(growthRateToElapsedIntervals.sub(ABDKMath64x64.fromInt(1)))
+                .div(growthRate.sub(ABDKMath64x64.fromInt(1)));
+            return uint256(seriesSum.toUInt()) * 10 ** SCALE_DECIMALS;
         }
     }
 
