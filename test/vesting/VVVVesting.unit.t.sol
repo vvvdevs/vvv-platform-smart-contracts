@@ -697,7 +697,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         emit log_named_uint("vestedAmount", vestedAmount);
 
         uint256 calcVestedAmount = tokensToVestAtStart +
-            VVVVestingInstance._calculateVestedAmountAtInterval(
+            VVVVestingInstance.calculateVestedAmountAtInterval(
                 tokensToVestAfterFirstInterval,
                 numberOfIntervalsToAdvanceTimestamp,
                 growthRatePercentage
@@ -708,7 +708,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         assertTrue(
             vestedAmount ==
                 tokensToVestAtStart +
-                    VVVVestingInstance._calculateVestedAmountAtInterval(
+                    VVVVestingInstance.calculateVestedAmountAtInterval(
                         tokensToVestAfterFirstInterval,
                         (95 * maxIntervals) / 100,
                         growthRatePercentage
@@ -722,7 +722,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 vestedAmount2 = VVVVestingInstance.getVestedAmount(sampleUser, vestingScheduleIndex);
         assertTrue(
             vestedAmount2 ==
-                VVVVestingInstance._calculateVestedAmountAtInterval(
+                VVVVestingInstance.calculateVestedAmountAtInterval(
                     tokensToVestAfterFirstInterval,
                     maxIntervals,
                     growthRatePercentage
@@ -835,5 +835,57 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         vm.expectRevert(VVVVesting.AmountIsGreaterThanWithdrawable.selector);
         VVVVestingInstance.withdrawVestedTokens(amountToWithdraw, sampleUser, vestingScheduleIndex);
         vm.stopPrank();
+    }
+
+    //tests expoential vesting does not lose precision with large numbers
+    function testExponentialVestingPrecisionIntegerLimits() public {
+        uint256 tokensToVestAfterFirstInterval = 1_000_000_000 * 1e18; //1 billion tokens
+        uint256 numIntervals = 250;
+        uint256 growthRatePercentage = 5800; //58%
+
+        // for 1B, 250, 5800 ==> 79587295150251613031275354740710165573553129976227557061834411350789655172413
+        uint256 vestedTokens = VVVVestingInstance.calculateVestedAmountAtInterval(
+            tokensToVestAfterFirstInterval,
+            numIntervals,
+            growthRatePercentage
+        );
+
+        /**
+            Matlab symbolic equation yields giant fraction, so 
+            based on https://www.calculator.net/big-number-calculator.html, answer is:
+            79587295150251613031637969154688648553684948992737317191113982553943583309412.13058552804694391706,
+            so nearest integer is 79587295150251613031637969154688648553684948992737317191113982553943583309412
+         */
+        uint256 decimalTruncAmount = 79587295150251613031637969154688648553684948992737317191113982553943583309412;
+
+        //arbitrary 0.000000000000000001% tolerance
+        uint256 tolerance = decimalTruncAmount / 1e18;
+
+        assertTrue(decimalTruncAmount - vestedTokens <= tolerance);
+    }
+
+    //tests expoential vesting does not lose precision with a guess of what an initial interval's value might be (lower values)
+    function testExponentialVestingPrecisionExpectedInitialVesting() public {
+        uint256 tokensToVestAfterFirstInterval = 1000 * 1e18; //1000 tokens
+        uint256 numIntervals = 17;
+        uint256 growthRatePercentage = 1300; //13%
+
+        // for 1000 tokens, 13%, 17 intervals, solidity output is 53739060348320478607692
+        uint256 vestedTokens = VVVVestingInstance.calculateVestedAmountAtInterval(
+            tokensToVestAfterFirstInterval,
+            numIntervals,
+            growthRatePercentage
+        );
+
+        /**
+            Matlab symbolic equation yields 53739060348320478615860.542105067
+            nearest integer is 53739060348320478615860
+         */
+        uint256 decimalTruncAmount = 53739060348320478615860;
+
+        //arbitrary 0.000000000000000001% tolerance
+        uint256 tolerance = decimalTruncAmount / 1e18;
+
+        assertTrue(decimalTruncAmount - vestedTokens <= tolerance);
     }
 }
