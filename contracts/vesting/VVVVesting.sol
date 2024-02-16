@@ -9,8 +9,8 @@ import { UD60x18, wrap, unwrap, div, powu, mul, add, sub } from "@prb/math/src/U
 contract VVVVesting is Ownable {
     using SafeERC20 for IERC20;
 
-    ///@notice 100% represented as 10000, for divisions
-    uint256 public constant DENOMINATOR = 10000;
+    ///@notice ex: 58% represented as 58e16, for divisions
+    uint256 public constant DENOMINATOR = 1e18;
 
     ///@notice the number 1, considering in PRBMath, 1 == wrap(1e18)
     uint256 public constant ONE = 1e18;
@@ -27,7 +27,7 @@ contract VVVVesting is Ownable {
         @param cliffEndTime the end time of the cliff
         @param intervalLength the length of each interval in seconds
         @param maxIntervals number of post-cliff intervals
-        @param growthRatePercentage the % increase in tokens to be vested per interval
+        @param growthRateProportion the % increase in tokens to be vested per interval
      */
     struct VestingSchedule {
         uint256 tokensToVestAtStart;
@@ -37,7 +37,7 @@ contract VVVVesting is Ownable {
         uint256 cliffEndTime;
         uint256 intervalLength;
         uint256 maxIntervals;
-        uint256 growthRatePercentage;
+        uint256 growthRateProportion;
     }
 
     /**
@@ -66,7 +66,7 @@ contract VVVVesting is Ownable {
         @param _vestingScheduleCliffEndTime the end time of the cliff
         @param _vestingScheduleIntervalLength the length of each interval in seconds
         @param _vestingScheduleMaxIntervals number of post-cliff intervals
-        @param _vestingScheduleGrowthRatePercentage the % increase in tokens to be vested per interval
+        @param _vestingScheduleGrowthRateProportion the % increase in tokens to be vested per interval
     */
     event SetVestingSchedule(
         address indexed _vestedUser,
@@ -78,7 +78,7 @@ contract VVVVesting is Ownable {
         uint256 _vestingScheduleCliffEndTime,
         uint256 _vestingScheduleIntervalLength,
         uint256 _vestingScheduleMaxIntervals,
-        uint256 _vestingScheduleGrowthRatePercentage
+        uint256 _vestingScheduleGrowthRateProportion
     );
 
     /**
@@ -197,7 +197,7 @@ contract VVVVesting is Ownable {
             _params.vestingSchedule.cliffEndTime,
             _params.vestingSchedule.intervalLength,
             _params.vestingSchedule.maxIntervals,
-            _params.vestingSchedule.growthRatePercentage
+            _params.vestingSchedule.growthRateProportion
         );
     }
 
@@ -231,11 +231,12 @@ contract VVVVesting is Ownable {
             elapsedIntervals = elapsedIntervals > vestingSchedule.maxIntervals
                 ? vestingSchedule.maxIntervals
                 : elapsedIntervals;
+
             return (vestingSchedule.tokensToVestAtStart +
                 calculateVestedAmountAtInterval(
                     vestingSchedule.tokensToVestAfterFirstInterval,
                     elapsedIntervals,
-                    vestingSchedule.growthRatePercentage
+                    vestingSchedule.growthRateProportion
                 ));
         }
     }
@@ -248,20 +249,20 @@ contract VVVVesting is Ownable {
         @dev scales input amount (in token-wei) to that/10^SCALE_DECIMALS for ABDKMath64x64 calculations, then scales back for return
         @param _firstIntervalAccrual the amount of tokens to be vested after the first interval
         @param _elapsedIntervals the number of intervals over which to calculate the vested amount
-        @param _growthRatePercentage the proportion of DENOMINATOR to increase token vesting per interval (500 = 5%)
+        @param _growthRateProportion the proportion of DENOMINATOR to increase token vesting per interval (500 = 5%)
      */
     function calculateVestedAmountAtInterval(
         uint256 _firstIntervalAccrual,
         uint256 _elapsedIntervals,
-        uint256 _growthRatePercentage
+        uint256 _growthRateProportion
     ) public pure returns (uint256) {
-        if (_growthRatePercentage == 0 || _elapsedIntervals == 0) {
+        if (_growthRateProportion == 0 || _elapsedIntervals == 0) {
             return _firstIntervalAccrual * _elapsedIntervals;
         } else {
             UD60x18 a = wrap(_firstIntervalAccrual);
 
             // Calculate the growth rate as a UD60x18 fixed-point number
-            UD60x18 r = div(wrap(_growthRatePercentage + DENOMINATOR), wrap(DENOMINATOR));
+            UD60x18 r = div(wrap(_growthRateProportion + DENOMINATOR), wrap(DENOMINATOR));
 
             // Calculate r^n
             UD60x18 rToN = powu(r, _elapsedIntervals);
@@ -285,7 +286,7 @@ contract VVVVesting is Ownable {
         @param _vestingScheduleCliffEndTime the end time of the cliff
         @param _vestingScheduleIntervalLength the length of each interval in seconds
         @param _vestingScheduleMaxIntervals number of post-cliff intervals
-        @param _vestingScheduleGrowthRatePercentage the % increase in tokens to be vested per interval
+        @param _vestingScheduleGrowthRateProportion the % increase in tokens to be vested per interval
     */
     function setVestingSchedule(
         address _vestedUser,
@@ -297,7 +298,7 @@ contract VVVVesting is Ownable {
         uint256 _vestingScheduleCliffEndTime,
         uint256 _vestingScheduleIntervalLength,
         uint256 _vestingScheduleMaxIntervals,
-        uint256 _vestingScheduleGrowthRatePercentage
+        uint256 _vestingScheduleGrowthRateProportion
     ) external onlyOwner {
         VestingSchedule memory newSchedule;
         newSchedule.tokensToVestAtStart = _tokensToVestAtStart;
@@ -307,7 +308,7 @@ contract VVVVesting is Ownable {
         newSchedule.cliffEndTime = _vestingScheduleCliffEndTime;
         newSchedule.intervalLength = _vestingScheduleIntervalLength;
         newSchedule.maxIntervals = _vestingScheduleMaxIntervals;
-        newSchedule.growthRatePercentage = _vestingScheduleGrowthRatePercentage;
+        newSchedule.growthRateProportion = _vestingScheduleGrowthRateProportion;
 
         SetVestingScheduleParams memory params = SetVestingScheduleParams(
             _vestedUser,

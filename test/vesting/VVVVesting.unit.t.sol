@@ -47,7 +47,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             cliffEndTime: block.timestamp + 60, //1 minute cliff
             intervalLength: 12,
             maxIntervals: 100,
-            growthRatePercentage: 0
+            growthRateProportion: 0
         });
 
         setVestingScheduleFromDeployer(
@@ -60,7 +60,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             params.cliffEndTime,
             params.intervalLength,
             params.maxIntervals,
-            params.growthRatePercentage
+            params.growthRateProportion
         );
 
         vm.startPrank(sampleUser, sampleUser);
@@ -75,7 +75,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             params.cliffEndTime,
             params.intervalLength,
             params.maxIntervals,
-            params.growthRatePercentage
+            params.growthRateProportion
         );
         vm.stopPrank();
 
@@ -96,7 +96,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             cliffEndTime: block.timestamp + 60, //1 minute cliff
             intervalLength: 12,
             maxIntervals: 100,
-            growthRatePercentage: 0
+            growthRateProportion: 0
         });
 
         vm.startPrank(deployer, deployer);
@@ -111,7 +111,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             params.cliffEndTime,
             params.intervalLength,
             params.maxIntervals,
-            params.growthRatePercentage
+            params.growthRateProportion
         );
         vm.stopPrank();
     }
@@ -127,7 +127,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             cliffEndTime: block.timestamp + 60 * 60 * 24 * 365,
             intervalLength: 12,
             maxIntervals: 100,
-            growthRatePercentage: 0
+            growthRateProportion: 0
         });
 
         setVestingScheduleFromDeployer(
@@ -140,7 +140,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             params.cliffEndTime,
             params.intervalLength,
             params.maxIntervals,
-            params.growthRatePercentage
+            params.growthRateProportion
         );
 
         (
@@ -151,7 +151,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             uint256 _cliffEndTime,
             uint256 _intervalLength,
             uint256 _maxIntervals,
-            uint256 _growthRatePercentage
+            uint256 _growthRateProportion
         ) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
 
         assertTrue(_tokensToVestAtStart == params.tokensToVestAtStart);
@@ -161,7 +161,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         assertTrue(_cliffEndTime == params.cliffEndTime);
         assertTrue(_intervalLength == params.intervalLength);
         assertTrue(_maxIntervals == params.maxIntervals);
-        assertTrue(_growthRatePercentage == params.growthRatePercentage);
+        assertTrue(_growthRateProportion == params.growthRateProportion);
     }
 
     // START HERE!
@@ -177,7 +177,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
                 cliffEndTime: block.timestamp + 60 * 60 * 24 * 365,
                 intervalLength: 12,
                 maxIntervals: 100,
-                growthRatePercentage: 0
+                growthRateProportion: 0
             });
 
             setVestingScheduleFromDeployer(
@@ -190,7 +190,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
                 params.cliffEndTime,
                 params.intervalLength,
                 params.maxIntervals,
-                params.growthRatePercentage
+                params.growthRateProportion
             );
 
             (
@@ -201,7 +201,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
                 uint256 _cliffEndTime,
                 uint256 _intervalLength,
                 uint256 _maxIntervals,
-                uint256 _growthRatePercentage
+                uint256 _growthRateProportion
             ) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
 
             assertTrue(_tokensToVestAtStart == params.tokensToVestAtStart);
@@ -211,7 +211,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             assertTrue(_cliffEndTime == params.cliffEndTime);
             assertTrue(_intervalLength == params.intervalLength);
             assertTrue(_maxIntervals == params.maxIntervals);
-            assertTrue(_growthRatePercentage == params.growthRatePercentage);
+            assertTrue(_growthRateProportion == params.growthRateProportion);
         }
         {
             //update part of schedule (tokensToVestAfterStart is now 20k, postCliffDuration is now 3 years)
@@ -224,7 +224,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
                 cliffEndTime: block.timestamp + 60 * 60 * 24 * 180, //180 days from scheduleStartTime
                 intervalLength: 12,
                 maxIntervals: 200,
-                growthRatePercentage: 0
+                growthRateProportion: 0
             });
 
             setVestingScheduleFromDeployer(
@@ -237,7 +237,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
                 params.cliffEndTime,
                 params.intervalLength,
                 params.maxIntervals,
-                params.growthRatePercentage
+                params.growthRateProportion
             );
 
             (
@@ -248,7 +248,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
                 uint256 _cliffEndTime,
                 uint256 _intervalLength,
                 uint256 _maxIntervals,
-                uint256 _growthRatePercentage
+                uint256 _growthRateProportion
             ) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
 
             assertTrue(_tokensToVestAtStart == params.tokensToVestAtStart);
@@ -258,7 +258,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             assertTrue(_cliffEndTime == params.cliffEndTime);
             assertTrue(_intervalLength == params.intervalLength);
             assertTrue(_maxIntervals == params.maxIntervals);
-            assertTrue(_growthRatePercentage == params.growthRatePercentage);
+            assertTrue(_growthRateProportion == params.growthRateProportion);
         }
     }
 
@@ -275,7 +275,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
                 cliffEndTime: block.timestamp + 60 * 60 * 24 * 365,
                 intervalLength: 12,
                 maxIntervals: 100,
-                growthRatePercentage: 0
+                growthRateProportion: 0
             });
 
             setVestingScheduleFromDeployer(
@@ -288,7 +288,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
                 params.cliffEndTime,
                 params.intervalLength,
                 params.maxIntervals,
-                params.growthRatePercentage
+                params.growthRateProportion
             );
 
             (
@@ -299,7 +299,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
                 uint256 _cliffEndTime,
                 uint256 _intervalLength,
                 uint256 _maxIntervals,
-                uint256 _growthRatePercentage
+                uint256 _growthRateProportion
             ) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
 
             assertTrue(_tokensToVestAtStart == params.tokensToVestAtStart);
@@ -309,7 +309,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             assertTrue(_cliffEndTime == params.cliffEndTime);
             assertTrue(_intervalLength == params.intervalLength);
             assertTrue(_maxIntervals == params.maxIntervals);
-            assertTrue(_growthRatePercentage == params.growthRatePercentage);
+            assertTrue(_growthRateProportion == params.growthRateProportion);
         }
 
         {
@@ -322,7 +322,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
                 uint256 _cliffEndTime2,
                 uint256 _intervalLength2,
                 uint256 _maxIntervals2,
-                uint256 _growthRatePercentage2
+                uint256 _growthRateProportion2
             ) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
 
             assertTrue(_tokensToVestAtStart2 == 0);
@@ -332,7 +332,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             assertTrue(_cliffEndTime2 == 0);
             assertTrue(_intervalLength2 == 0);
             assertTrue(_maxIntervals2 == 0);
-            assertTrue(_growthRatePercentage2 == 0);
+            assertTrue(_growthRateProportion2 == 0);
         }
     }
 
@@ -346,7 +346,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 cliffEndTime = scheduleStartTime + 60 * 60 * 24 * 365; //1 year from scheduleStartTime
         uint256 intervalLength = 60 * 60 * 6 * 365; //3 months
         uint256 maxIntervals = 100;
-        uint256 growthRatePercentage = 0;
+        uint256 growthRateProportion = 0;
 
         setVestingScheduleFromDeployer(
             sampleUser,
@@ -358,7 +358,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             cliffEndTime,
             intervalLength,
             maxIntervals,
-            growthRatePercentage
+            growthRateProportion
         );
 
         //advance partially through the vesting schedule
@@ -395,7 +395,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 cliffEndTime = scheduleStartTime + 60 * 60 * 24 * 365; //1 year from scheduleStartTime
         uint256 intervalLength = 60 * 60 * 6 * 365; //3 months
         uint256 maxIntervals = 100;
-        uint256 growthRatePercentage = 0;
+        uint256 growthRateProportion = 0;
 
         setVestingScheduleFromDeployer(
             sampleUser,
@@ -407,7 +407,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             cliffEndTime,
             intervalLength,
             maxIntervals,
-            growthRatePercentage
+            growthRateProportion
         );
         advanceBlockNumberAndTimestampInBlocks(maxIntervals * intervalLength); //seconds/(seconds per block) - be sure to be past 100% vesting
 
@@ -441,7 +441,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 cliffEndTime = scheduleStartTime + 60 * 60 * 24 * 365; //1 year from scheduleStartTime
         uint256 intervalLength = 60 * 60 * 6 * 365; //3 months
         uint256 maxIntervals = 100;
-        uint256 growthRatePercentage = 0;
+        uint256 growthRateProportion = 0;
 
         setVestingScheduleFromDeployer(
             sampleUser,
@@ -453,7 +453,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             cliffEndTime,
             intervalLength,
             maxIntervals,
-            growthRatePercentage
+            growthRateProportion
         );
         advanceBlockNumberAndTimestampInBlocks(maxIntervals * intervalLength * 10); //seconds/(seconds per block) - be sure to be past 100% vesting
 
@@ -478,7 +478,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 cliffEndTime = scheduleStartTime + 60 * 60 * 24 * 365; //1 year from scheduleStartTime
         uint256 intervalLength = 60 * 60 * 6 * 365; //3 months
         uint256 maxIntervals = 100;
-        uint256 growthRatePercentage = 0;
+        uint256 growthRateProportion = 0;
 
         setVestingScheduleFromDeployer(
             sampleUser,
@@ -490,7 +490,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             cliffEndTime,
             intervalLength,
             maxIntervals,
-            growthRatePercentage
+            growthRateProportion
         );
 
         vm.startPrank(sampleUser, sampleUser);
@@ -563,7 +563,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
                 uint256 _cliffEndTime,
                 uint256 _intervalLength,
                 uint256 _maxIntervals,
-                uint256 _growthRatePercentage
+                uint256 _growthRateProportion
             ) = VVVVestingInstance.userVestingSchedules(setVestingScheduleParams[i].vestedUser, 0);
 
             assertTrue(
@@ -582,7 +582,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             assertTrue(_intervalLength == setVestingScheduleParams[i].vestingSchedule.intervalLength);
             assertTrue(_maxIntervals == setVestingScheduleParams[i].vestingSchedule.maxIntervals);
             assertTrue(
-                _growthRatePercentage == setVestingScheduleParams[i].vestingSchedule.growthRatePercentage
+                _growthRateProportion == setVestingScheduleParams[i].vestingSchedule.growthRateProportion
             );
         }
     }
@@ -615,7 +615,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
                 uint256 _cliffEndTime,
                 uint256 _intervalLength,
                 uint256 _maxIntervals,
-                uint256 _growthRatePercentage
+                uint256 _growthRateProportion
             ) = VVVVestingInstance.userVestingSchedules(
                     setVestingScheduleParams[i].vestedUser,
                     setVestingScheduleParams[i].vestingScheduleIndex
@@ -636,7 +636,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             assertTrue(_intervalLength == setVestingScheduleParams[i].vestingSchedule.intervalLength);
             assertTrue(_maxIntervals == setVestingScheduleParams[i].vestingSchedule.maxIntervals);
             assertTrue(
-                _growthRatePercentage == setVestingScheduleParams[i].vestingSchedule.growthRatePercentage
+                _growthRateProportion == setVestingScheduleParams[i].vestingSchedule.growthRateProportion
             );
         }
     }
@@ -671,7 +671,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 cliffEndTime = scheduleStartTime + 60; //1 minute from scheduleStartTime
         uint256 intervalLength = 397; //397 seconds
         uint256 maxIntervals = 100;
-        uint256 growthRatePercentage = 0;
+        uint256 growthRateProportion = 0;
 
         uint256 numberOfIntervalsToAdvanceTimestamp = 95;
 
@@ -685,7 +685,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             cliffEndTime,
             intervalLength,
             maxIntervals,
-            growthRatePercentage
+            growthRateProportion
         );
 
         advanceBlockNumberAndTimestampInSeconds(
@@ -700,7 +700,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             VVVVestingInstance.calculateVestedAmountAtInterval(
                 tokensToVestAfterFirstInterval,
                 numberOfIntervalsToAdvanceTimestamp,
-                growthRatePercentage
+                growthRateProportion
             );
 
         emit log_named_uint("calcVestedAmount", calcVestedAmount);
@@ -711,7 +711,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
                     VVVVestingInstance.calculateVestedAmountAtInterval(
                         tokensToVestAfterFirstInterval,
                         (95 * maxIntervals) / 100,
-                        growthRatePercentage
+                        growthRateProportion
                     )
         );
 
@@ -725,7 +725,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
                 VVVVestingInstance.calculateVestedAmountAtInterval(
                     tokensToVestAfterFirstInterval,
                     maxIntervals,
-                    growthRatePercentage
+                    growthRateProportion
                 ) +
                     tokensToVestAtStart
         );
@@ -741,7 +741,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 cliffEndTime = scheduleStartTime + 60 * 60 * 24 * 365; //1 year from scheduleStartTime
         uint256 intervalLength = 60 * 60 * 6 * 365; //3 months
         uint256 maxIntervals = 100;
-        uint256 growthRatePercentage = 0;
+        uint256 growthRateProportion = 0;
 
         setVestingScheduleFromDeployer(
             sampleUser,
@@ -753,7 +753,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             cliffEndTime,
             intervalLength,
             maxIntervals,
-            growthRatePercentage
+            growthRateProportion
         );
 
         //advance to start of vesting schedule
@@ -776,7 +776,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 cliffEndTime = scheduleStartTime + 60 * 60 * 24 * 365; //1 year from scheduleStartTime
         uint256 intervalLength = 60 * 60 * 6 * 365; //3 months
         uint256 maxIntervals = 100;
-        uint256 growthRatePercentage = 0;
+        uint256 growthRateProportion = 0;
 
         setVestingScheduleFromDeployer(
             sampleUser,
@@ -788,7 +788,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             cliffEndTime,
             intervalLength,
             maxIntervals,
-            growthRatePercentage
+            growthRateProportion
         );
 
         //advance to end of cliff
@@ -812,7 +812,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 cliffEndTime = scheduleStartTime + 60 * 60 * 24 * 365; //1 year from scheduleStartTime
         uint256 intervalLength = 60 * 60 * 6 * 365; //3 months
         uint256 maxIntervals = 100;
-        uint256 growthRatePercentage = 0;
+        uint256 growthRateProportion = 0;
 
         setVestingScheduleFromDeployer(
             sampleUser,
@@ -824,7 +824,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             cliffEndTime,
             intervalLength,
             maxIntervals,
-            growthRatePercentage
+            growthRateProportion
         );
 
         //advance to end of cliff
@@ -841,13 +841,13 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
     function testExponentialVestingPrecisionIntegerLimits() public {
         uint256 tokensToVestAfterFirstInterval = 1_000_000_000 * 1e18; //1 billion tokens
         uint256 numIntervals = 250;
-        uint256 growthRatePercentage = 5800; //58%
+        uint256 growthRateProportion = 58e16; //58%
 
         // for 1B, 250, 5800 ==> 79587295150251613031275354740710165573553129976227557061834411350789655172413
         uint256 vestedTokens = VVVVestingInstance.calculateVestedAmountAtInterval(
             tokensToVestAfterFirstInterval,
             numIntervals,
-            growthRatePercentage
+            growthRateProportion
         );
 
         /**
@@ -858,34 +858,113 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
          */
         uint256 decimalTruncAmount = 79587295150251613031637969154688648553684948992737317191113982553943583309412;
 
-        //arbitrary 0.000000000000000001% tolerance
-        uint256 tolerance = decimalTruncAmount / 1e18;
+        //arbitrary 0.000000000001% tolerance
+        uint256 tolerance = decimalTruncAmount / 1e12;
 
         assertTrue(decimalTruncAmount - vestedTokens <= tolerance);
     }
 
-    //tests expoential vesting does not lose precision with a guess of what an initial interval's value might be (lower values)
-    function testExponentialVestingPrecisionExpectedInitialVesting() public {
-        uint256 tokensToVestAfterFirstInterval = 1000 * 1e18; //1000 tokens
-        uint256 numIntervals = 17;
-        uint256 growthRatePercentage = 1300; //13%
+    /**
+        tests expoential vesting does not lose precision pre-seed case of:
+        tokensToVestAfterFirstInterval = 5,725.241018
+        growthRate = 0.005432994453
+        maxIntervals = 540
+        intervalLength = day
+     */
+    function testExponentialVestingPreSeed() public {
+        uint256 tokensToVestAfterFirstInterval = 5725.24018 ether; //5725.24018 tokens
+        uint256 numIntervals = 540;
+        uint256 growthRateProportion = 5432994453e6; //0.005432994453 = 5432994453e6/1e18
 
-        // for 1000 tokens, 13%, 17 intervals, solidity output is 53739060348320478607692
         uint256 vestedTokens = VVVVestingInstance.calculateVestedAmountAtInterval(
             tokensToVestAfterFirstInterval,
             numIntervals,
-            growthRatePercentage
+            growthRateProportion
         );
 
         /**
-            Matlab symbolic equation yields 53739060348320478615860.542105067
-            nearest integer is 53739060348320478615860
+            Matlab symbolic equation yields 18599997275290930836317870.473398
+            nearest integer is 18599997275290930836317870
          */
-        uint256 decimalTruncAmount = 53739060348320478615860;
+        uint256 decimalTruncAmount = 18599997275290930836317870;
 
-        //arbitrary 0.000000000000000001% tolerance
-        uint256 tolerance = decimalTruncAmount / 1e18;
+        //arbitrary 0.000000000001% tolerance
+        uint256 tolerance = decimalTruncAmount / 1e12;
 
-        assertTrue(decimalTruncAmount - vestedTokens <= tolerance);
+        uint256 difference = decimalTruncAmount > vestedTokens
+            ? decimalTruncAmount - vestedTokens
+            : vestedTokens - decimalTruncAmount;
+
+        assertTrue(difference <= tolerance);
+    }
+
+    /**
+        tests expoential vesting does not lose precision pre-seed case of:
+        tokensToVestAfterFirstInterval = 6234.604511
+        growthRate = 0.007949174554
+        maxIntervals = 420
+        intervalLength = day
+     */
+    function testExponentialVestingSeed() public {
+        uint256 tokensToVestAfterFirstInterval = 6234.604511 ether; //6,234.604511 tokens
+        uint256 numIntervals = 420; //nice
+        uint256 growthRateProportion = 7949174554e6; //0.007949174554 = 7949174554e6/1e18
+
+        uint256 vestedTokens = VVVVestingInstance.calculateVestedAmountAtInterval(
+            tokensToVestAfterFirstInterval,
+            numIntervals,
+            growthRateProportion
+        );
+
+        /**
+            Matlab symbolic equation yields 21028569000593437859369453.658997
+            nearest integer is 21028569000593437859369453
+         */
+        uint256 decimalTruncAmount = 21028569000593437859369453;
+
+        //arbitrary 0.000000000001% tolerance
+        uint256 tolerance = decimalTruncAmount / 1e12;
+
+        uint256 difference = decimalTruncAmount > vestedTokens
+            ? decimalTruncAmount - vestedTokens
+            : vestedTokens - decimalTruncAmount;
+        assertTrue(difference <= tolerance);
+    }
+
+    /**
+        tests expoential vesting does not lose precision future case of:
+        tokensToVestAfterFirstInterval = 200,000.00
+        growthRate = 0.17650557680462953
+        maxIntervals = 18
+        intervalLength = month
+
+        20000000000636745803926644
+        21028569000593437859369453
+     */
+    function testExponentialVestingFuture() public {
+        uint256 tokensToVestAfterFirstInterval = 200000.00 ether; //200k tokens
+        uint256 numIntervals = 18; //nice
+        uint256 growthRateProportion = 176505576804629530; //0.17650557680462953 = 176505576804629530/1e18
+
+        uint256 vestedTokens = VVVVestingInstance.calculateVestedAmountAtInterval(
+            tokensToVestAfterFirstInterval,
+            numIntervals,
+            growthRateProportion
+        );
+
+        /**
+            Matlab symbolic equation yields 20000000000636743647859458.098462
+            nearest integer is 20000000000636743647859458
+         */
+        uint256 decimalTruncAmount = 20000000000636743647859458;
+
+        //arbitrary 0.000000000001% tolerance
+        uint256 tolerance = decimalTruncAmount / 1e12;
+
+        uint256 difference = decimalTruncAmount > vestedTokens
+            ? decimalTruncAmount - vestedTokens
+            : vestedTokens - decimalTruncAmount;
+
+        assertTrue(difference <= tolerance);
     }
 }

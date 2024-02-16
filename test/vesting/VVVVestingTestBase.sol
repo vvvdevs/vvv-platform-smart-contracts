@@ -34,7 +34,7 @@ abstract contract VVVVestingTestBase is Test {
         uint256 cliffEndTime;
         uint256 intervalLength;
         uint256 maxIntervals;
-        uint256 growthRatePercentage;
+        uint256 growthRateProportion;
     }
 
     function advanceBlockNumberAndTimestampInBlocks(uint256 blocks) public {
@@ -61,7 +61,7 @@ abstract contract VVVVestingTestBase is Test {
         uint256 _cliffEndTime,
         uint256 _intervalLength,
         uint256 _maxIntervals,
-        uint256 _growthRatePercentage
+        uint256 _growthRateProportion
     ) public {
         vm.startPrank(deployer, deployer);
         VVVVestingInstance.setVestingSchedule(
@@ -74,7 +74,7 @@ abstract contract VVVVestingTestBase is Test {
             _cliffEndTime,
             _intervalLength,
             _maxIntervals,
-            _growthRatePercentage
+            _growthRateProportion
         );
         vm.stopPrank();
     }
@@ -100,7 +100,7 @@ abstract contract VVVVestingTestBase is Test {
     // and varies vestedUser and vestingScheduleIndex because these are the factors by which the vesting schedule is identified
     function generateSetVestingScheduleData(
         uint256 _numUsers,
-        uint256 _growthRatePercentage,
+        uint256 _growthRateProportion,
         string memory paramToVary
     ) public view returns (VVVVesting.SetVestingScheduleParams[] memory) {
         VVVVesting.SetVestingScheduleParams[]
@@ -130,7 +130,7 @@ abstract contract VVVVestingTestBase is Test {
                     30; //30 days
                 setVestingScheduleParams[i].vestingSchedule.intervalLength = 60 * 24 * 30; //30 days
                 setVestingScheduleParams[i].vestingSchedule.maxIntervals = 10;
-                setVestingScheduleParams[i].vestingSchedule.growthRatePercentage = _growthRatePercentage;
+                setVestingScheduleParams[i].vestingSchedule.growthRateProportion = _growthRateProportion;
             }
         } else if (
             keccak256(abi.encodePacked(paramToVary)) == keccak256(abi.encodePacked("vestingScheduleIndex"))
@@ -149,7 +149,7 @@ abstract contract VVVVestingTestBase is Test {
                 setVestingScheduleParams[i].vestingSchedule.cliffEndTime = block.timestamp * 60 * 24 * 30; //30 days
                 setVestingScheduleParams[i].vestingSchedule.intervalLength = 60 * 24 * 30; //30 days
                 setVestingScheduleParams[i].vestingSchedule.maxIntervals = 10;
-                setVestingScheduleParams[i].vestingSchedule.growthRatePercentage = _growthRatePercentage;
+                setVestingScheduleParams[i].vestingSchedule.growthRateProportion = _growthRateProportion;
             }
         } else {
             revert("invalid paramToVary");

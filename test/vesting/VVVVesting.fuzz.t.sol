@@ -37,7 +37,7 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
             cliffEndTime: 1 + 60, //1 minute cliff
             intervalLength: 30,
             maxIntervals: 100,
-            growthRatePercentage: 0
+            growthRateProportion: 0
         });
 
         setVestingScheduleFromDeployer(
@@ -50,7 +50,7 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
             params.cliffEndTime,
             params.intervalLength,
             params.maxIntervals,
-            params.growthRatePercentage
+            params.growthRateProportion
         );
 
         uint256 vestingTime = _vestingTime > params.cliffEndTime ? _vestingTime : params.cliffEndTime;
@@ -78,7 +78,7 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
         uint256 cliffEndTime = scheduleStartTime + 60; //1 minute cliff
         uint256 intervalLength = 30;
         uint256 maxIntervals = 100;
-        uint256 growthRatePercentage = 0;
+        uint256 growthRateProportion = 0;
 
         setVestingScheduleFromDeployer(
             _vestedUser,
@@ -90,7 +90,7 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
             cliffEndTime,
             intervalLength,
             maxIntervals,
-            growthRatePercentage
+            growthRateProportion
         );
 
         //bound to some considerable amount past the end of the schedule
@@ -103,7 +103,7 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
         uint256 refAccuredPostCliff = VVVVestingInstance.calculateVestedAmountAtInterval(
             tokensToVestAfterFirstInterval,
             elapsedIntervals,
-            growthRatePercentage
+            growthRateProportion
         );
 
         uint256 referenceVestedAmount = Math.min(
