@@ -100,7 +100,7 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
         uint256 vestedAmount = VVVVestingInstance.getVestedAmount(_vestedUser, vestingScheduleIndex);
         uint256 elapsedIntervals = (block.timestamp - cliffEndTime) / intervalLength;
 
-        uint256 refAccuredPostCliff = VVVVestingInstance._calculateVestedAmountAtInterval(
+        uint256 refAccuredPostCliff = VVVVestingInstance.calculateVestedAmountAtInterval(
             tokensToVestAfterFirstInterval,
             elapsedIntervals,
             growthRatePercentage

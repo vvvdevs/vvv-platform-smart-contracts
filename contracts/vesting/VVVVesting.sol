@@ -4,17 +4,16 @@ pragma solidity ^0.8.23;
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { ABDKMath64x64 } from "./ABDKMath64x64.sol";
+import { UD60x18, wrap, unwrap, div, powu, mul, add, sub } from "@prb/math/src/UD60x18.sol";
 
 contract VVVVesting is Ownable {
     using SafeERC20 for IERC20;
-    using ABDKMath64x64 for int128;
 
-    ///@notice for ABDKMath64x64 calculations, scaling to maximize precision without overflow for expected token quantity ranges
-    uint256 public constant SCALE_DECIMALS = 6;
-
-    ///@notice 100% represented as 10000, for ABDKMath64x64 calculations/divisions
+    ///@notice 100% represented as 10000, for divisions
     uint256 public constant DENOMINATOR = 10000;
+
+    ///@notice the number 1, considering in PRBMath, 1 == wrap(1e18)
+    uint256 public constant ONE = 1e18;
 
     ///@notice the VVV token being vested
     IERC20 public VVVToken;
@@ -233,7 +232,7 @@ contract VVVVesting is Ownable {
                 ? vestingSchedule.maxIntervals
                 : elapsedIntervals;
             return (vestingSchedule.tokensToVestAtStart +
-                _calculateVestedAmountAtInterval(
+                calculateVestedAmountAtInterval(
                     vestingSchedule.tokensToVestAfterFirstInterval,
                     elapsedIntervals,
                     vestingSchedule.growthRatePercentage
@@ -242,30 +241,35 @@ contract VVVVesting is Ownable {
     }
 
     /**
-        @notice handles accrual calculations for getVestedAmount using ABDKMath64x64
+        @notice handles accrual calculations for getVestedAmount using PRBMath
         @dev handles linear case (r=0) and exponential case (r>0)
-        @dev uses sum of geometric series where each element of series is y_n = y_0 * (1 + r)^(n - 1)
-        @dev so sum of series is Sn = y_0 * (r^n - 1) / (r - 1)
+        @dev uses sum of geometric series where each element of series is y_n = a * (1 + r)^(n - 1)
+        @dev so sum of series is S_n = a * (r^n - 1) / (r - 1)
         @dev scales input amount (in token-wei) to that/10^SCALE_DECIMALS for ABDKMath64x64 calculations, then scales back for return
         @param _firstIntervalAccrual the amount of tokens to be vested after the first interval
         @param _elapsedIntervals the number of intervals over which to calculate the vested amount
-        @param _growthRatePercentage the % increase in tokens to be vested per interval
+        @param _growthRatePercentage the proportion of DENOMINATOR to increase token vesting per interval (500 = 5%)
      */
-    function _calculateVestedAmountAtInterval(
+    function calculateVestedAmountAtInterval(
         uint256 _firstIntervalAccrual,
         uint256 _elapsedIntervals,
         uint256 _growthRatePercentage
     ) public pure returns (uint256) {
-        if (_growthRatePercentage == 0) {
+        if (_growthRatePercentage == 0 || _elapsedIntervals == 0) {
             return _firstIntervalAccrual * _elapsedIntervals;
         } else {
-            int128 firstIntervalAccrual = ABDKMath64x64.divu(_firstIntervalAccrual, 10 ** SCALE_DECIMALS);
-            int128 growthRate = ABDKMath64x64.divu(_growthRatePercentage + DENOMINATOR, DENOMINATOR);
-            int128 growthRateToElapsedIntervals = growthRate.pow(_elapsedIntervals);
-            int128 seriesSum = firstIntervalAccrual
-                .mul(growthRateToElapsedIntervals.sub(ABDKMath64x64.fromInt(1)))
-                .div(growthRate.sub(ABDKMath64x64.fromInt(1)));
-            return uint256(seriesSum.toUInt()) * 10 ** SCALE_DECIMALS;
+            UD60x18 a = wrap(_firstIntervalAccrual);
+
+            // Calculate the growth rate as a UD60x18 fixed-point number
+            UD60x18 r = div(wrap(_growthRatePercentage + DENOMINATOR), wrap(DENOMINATOR));
+
+            // Calculate r^n
+            UD60x18 rToN = powu(r, _elapsedIntervals);
+
+            // Calculate the sum of the geometric series
+            UD60x18 Sn = div(mul(a, sub(rToN, wrap(ONE))), sub(r, wrap(ONE)));
+
+            return unwrap(Sn);
         }
     }
 
