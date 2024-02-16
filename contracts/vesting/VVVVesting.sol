@@ -9,8 +9,11 @@ import { ABDKMath64x64 } from "./ABDKMath64x64.sol";
 contract VVVVesting is Ownable {
     using SafeERC20 for IERC20;
 
-    uint256 public constant DECIMALS = 18;
-    uint256 public constant DENOMINATOR = 100;
+    ///@notice for ABDKMath64x64 calculations, scaling to maximize precision without overflow for expected token quantity ranges
+    uint256 public constant SCALE_DECIMALS = 6;
+
+    ///@notice 100% represented as 10000, for ABDKMath64x64 calculations/divisions
+    uint256 public constant DENOMINATOR = 10000;
 
     ///@notice the VVV token being vested
     IERC20 public VVVToken;
@@ -230,7 +233,7 @@ contract VVVVesting is Ownable {
                 : elapsedIntervals;
             return (vestingSchedule.tokensToVestAtStart +
                 _calculateVestedAmountAtInterval(
-                    vestingSchedule.tokensToVestAtStart,
+                    vestingSchedule.tokensToVestAfterFirstInterval,
                     elapsedIntervals,
                     vestingSchedule.growthRatePercentage
                 ));
@@ -239,8 +242,10 @@ contract VVVVesting is Ownable {
 
     /**
         @notice handles ABDKMath64x64 calculations for getVestedAmount
+        @dev handles linear case (r=0) and exponential case (r>0)
         @dev uses sum of geometric series where each element of series is y_n = y_0 * (1 + r)^(n - 1)
-        @dev sum of series is Sn = y_0 * (r^n - 1) / (r - 1)
+        @dev so sum of series is Sn = y_0 * (r^n - 1) / (r - 1)
+        @dev scales input amount (in token-wei) to that/10^SCALE_DECIMALS for ABDKMath64x64 calculations, then scales back for return
         @param _firstIntervalAccrual the amount of tokens to be vested after the first interval
         @param _elapsedIntervals the number of intervals over which to calculate the vested amount
         @param _growthRatePercentage the % increase in tokens to be vested per interval
@@ -249,18 +254,22 @@ contract VVVVesting is Ownable {
         uint256 _firstIntervalAccrual,
         uint256 _elapsedIntervals,
         uint256 _growthRatePercentage
-    ) private pure returns (uint256) {
-        int128 firstIntervalAccrual = ABDKMath64x64.divu(_firstIntervalAccrual, 10 ** DECIMALS);
-        int128 growthRate = ABDKMath64x64.divu(_growthRatePercentage + DENOMINATOR, DENOMINATOR);
-        int128 growthRateToElapsedIntervals = ABDKMath64x64.pow(growthRate, _elapsedIntervals);
-        int128 seriesSum = ABDKMath64x64.div(
-            ABDKMath64x64.mul(
-                firstIntervalAccrual,
-                ABDKMath64x64.sub(growthRateToElapsedIntervals, ABDKMath64x64.fromInt(1))
-            ),
-            ABDKMath64x64.sub(growthRate, ABDKMath64x64.fromInt(1))
-        );
-        return uint256(ABDKMath64x64.toUInt(seriesSum)) * 10 ** DECIMALS;
+    ) public pure returns (uint256) {
+        if (_growthRatePercentage == 0) {
+            return _firstIntervalAccrual * _elapsedIntervals;
+        } else {
+            int128 firstIntervalAccrual = ABDKMath64x64.divu(_firstIntervalAccrual, 10 ** SCALE_DECIMALS);
+            int128 growthRate = ABDKMath64x64.divu(_growthRatePercentage + DENOMINATOR, DENOMINATOR);
+            int128 growthRateToElapsedIntervals = ABDKMath64x64.pow(growthRate, _elapsedIntervals);
+            int128 seriesSum = ABDKMath64x64.div(
+                ABDKMath64x64.mul(
+                    firstIntervalAccrual,
+                    ABDKMath64x64.sub(growthRateToElapsedIntervals, ABDKMath64x64.fromInt(1))
+                ),
+                ABDKMath64x64.sub(growthRate, ABDKMath64x64.fromInt(1))
+            );
+            return uint256(ABDKMath64x64.toUInt(seriesSum)) * 10 ** SCALE_DECIMALS;
+        }
     }
 
     /**

@@ -157,22 +157,4 @@ abstract contract VVVVestingTestBase is Test {
 
         return setVestingScheduleParams;
     }
-
-    function _calculateVestedAmountAtInterval(
-        uint256 _firstIntervalAccrual,
-        uint256 _elapsedIntervals,
-        uint256 _growthRatePercentage
-    ) internal pure returns (uint256) {
-        int128 firstIntervalAccrual = ABDKMath64x64.divu(_firstIntervalAccrual, 10 ** DECIMALS);
-        int128 growthRate = ABDKMath64x64.divu(_growthRatePercentage + DENOMINATOR, DENOMINATOR);
-        int128 growthRateToElapsedIntervals = ABDKMath64x64.pow(growthRate, _elapsedIntervals);
-        int128 seriesSum = ABDKMath64x64.div(
-            ABDKMath64x64.mul(
-                firstIntervalAccrual,
-                ABDKMath64x64.sub(growthRateToElapsedIntervals, ABDKMath64x64.fromInt(1))
-            ),
-            ABDKMath64x64.sub(growthRate, ABDKMath64x64.fromInt(1))
-        );
-        return uint256(ABDKMath64x64.toUInt(seriesSum)) * 10 ** DECIMALS;
-    }
 }

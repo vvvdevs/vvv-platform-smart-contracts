@@ -65,7 +65,11 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
     }
 
     //tests both that the correct amount of vested and withdrawn tokens are read
+    //basically tests the on-contract logic against reference logic here,
+    //using same contract functions but directly feeding in relevant inputs
     function testFuzz_GetVestedAmount(address _vestedUser, uint256 _vestingTime) public {
+        vm.assume(_vestedUser != address(0));
+
         uint256 vestingScheduleIndex = 0;
         uint256 tokensToVestAtStart = 1_000 * 1e18; //1k tokens
         uint256 tokensToVestAfterFirstInterval = 100 * 1e18; //100 tokens
@@ -96,9 +100,15 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
         uint256 vestedAmount = VVVVestingInstance.getVestedAmount(_vestedUser, vestingScheduleIndex);
         uint256 elapsedIntervals = (block.timestamp - cliffEndTime) / intervalLength;
 
+        uint256 refAccuredPostCliff = VVVVestingInstance._calculateVestedAmountAtInterval(
+            tokensToVestAfterFirstInterval,
+            elapsedIntervals,
+            growthRatePercentage
+        );
+
         uint256 referenceVestedAmount = Math.min(
             maxIntervals * tokensToVestAfterFirstInterval,
-            elapsedIntervals * tokensToVestAfterFirstInterval
+            refAccuredPostCliff
         ) + tokensToVestAtStart;
 
         assertEq(vestedAmount, referenceVestedAmount);
