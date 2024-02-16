@@ -703,7 +703,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         assertTrue(
             vestedAmount ==
                 tokensToVestAtStart +
-                    _calculateVestedAmountAtInterval(
+                    VVVVestingInstance._calculateVestedAmountAtInterval(
                         tokensToVestAfterFirstInterval,
                         (95 * maxIntervals) / 100,
                         growthRatePercentage
@@ -715,7 +715,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 vestedAmount2 = VVVVestingInstance.getVestedAmount(sampleUser, vestingScheduleIndex);
         assertTrue(
             vestedAmount2 ==
-                _calculateVestedAmountAtInterval(
+                VVVVestingInstance._calculateVestedAmountAtInterval(
                     tokensToVestAfterFirstInterval,
                     maxIntervals,
                     growthRatePercentage
