@@ -241,7 +241,7 @@ contract VVVVesting is Ownable {
     }
 
     /**
-        @notice handles ABDKMath64x64 calculations for getVestedAmount
+        @notice handles accrual calculations for getVestedAmount
         @dev handles linear case (r=0) and exponential case (r>0)
         @dev uses sum of geometric series where each element of series is y_n = y_0 * (1 + r)^(n - 1)
         @dev so sum of series is Sn = y_0 * (r^n - 1) / (r - 1)
