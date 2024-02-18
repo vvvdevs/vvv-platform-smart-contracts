@@ -380,13 +380,8 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
         /**
             assumes that truncation errors are less than 1/1e18 of the proxy wallet balance.
             this is arbitrary based on observing the truncation that happens, and assumed negligible
-            One example with 3333 investors:
-            sumOfClaimAmounts: 999999999999999999999936
-            proxyWalletBalance: 1000000000000000000000000
-            so truncation accounts for 6.4e-23 18-decimal token loss across all investors,
-            if 1 Million 18-decimal tokens are claimable as part of the round
          */
         assertTrue(sumOfClaimAmounts > proxyWalletBalance - (proxyWalletBalance / 1e18));
-        assertTrue(sumOfClaimAmounts < proxyWalletBalance + (proxyWalletBalance / 1e18));
+        assertTrue(sumOfClaimAmounts <= proxyWalletBalance);
     }
 }
