@@ -77,8 +77,46 @@ contract VVVETHStakingUnitFuzzTests is VVVETHStakingTestBase {
         vm.stopPrank();
     }
 
-    // Incoming Test Cases
-    // function testFuzz_claimVvv() public {}
-    // function testFuzz_calculateAccruedVvvAmount() public {}
-    // function testFuzz_calculateClaimableVvvAmount() public {}
+    // Test that any amount < claimableVvv is claimable by the user after the stake duration elapses
+    // also tests that the claimed + remaining claimable add up to originally claimable amount
+    function testFuzz_claimVvv(
+        uint256 _callerKey,
+        uint256 _stakeAmount,
+        uint256 _stakeDuration,
+        uint256 _claimAmount
+    ) public {
+        uint256 callerKey = bound(_callerKey, 1, 100000);
+        address caller = vm.addr(callerKey);
+        uint8 stakeDuration = uint8(bound(_stakeDuration, 0, 2));
+        vm.assume(caller != address(0));
+        vm.assume(_stakeAmount != 0);
+        vm.assume(_claimAmount != 0);
+        uint256 stakeAmount = bound(_stakeAmount, 1, 100 ether);
+
+        vm.deal(caller, _stakeAmount);
+        vm.startPrank(caller, caller);
+
+        VVVETHStaking.StakingDuration stakeDurationEnum = VVVETHStaking.StakingDuration(stakeDuration);
+        EthStakingInstance.stakeEth{ value: stakeAmount }(stakeDurationEnum);
+
+        advanceBlockNumberAndTimestampInSeconds(
+            EthStakingInstance.durationToSeconds(stakeDurationEnum) + 1
+        );
+
+        uint256 claimableVvv = EthStakingInstance.calculateClaimableVvvAmount();
+
+        // Ensure the claim amount is not more than what's available
+        vm.assume(_claimAmount <= claimableVvv);
+
+        uint256 vvvBalanceBefore = VvvTokenInstance.balanceOf(caller);
+        EthStakingInstance.claimVvv(_claimAmount);
+        uint256 vvvBalanceAfter = VvvTokenInstance.balanceOf(caller);
+
+        uint256 claimableVvv2 = EthStakingInstance.calculateClaimableVvvAmount();
+
+        assertTrue(vvvBalanceAfter == vvvBalanceBefore + _claimAmount);
+        assertTrue(claimableVvv2 == claimableVvv - _claimAmount);
+
+        vm.stopPrank();
+    }
 }
