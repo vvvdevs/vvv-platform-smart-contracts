@@ -8,7 +8,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 contract VVVETHStaking is Ownable {
     using SafeERC20 for IERC20;
 
-    uint256 public constant DENOMINATOR = 100;
+    uint256 public constant DENOMINATOR = 10_000;
 
     ///@notice the interface to the $VVV token
     IERC20 public vvvToken;
@@ -100,9 +100,9 @@ contract VVVETHStaking is Ownable {
         durationToSeconds[StakingDuration.SixMonths] = 180 days;
         durationToSeconds[StakingDuration.OneYear] = 360 days;
 
-        durationToMultiplier[StakingDuration.ThreeMonths] = 100;
-        durationToMultiplier[StakingDuration.SixMonths] = 150;
-        durationToMultiplier[StakingDuration.OneYear] = 300;
+        durationToMultiplier[StakingDuration.ThreeMonths] = 10_000;
+        durationToMultiplier[StakingDuration.SixMonths] = 15_000;
+        durationToMultiplier[StakingDuration.OneYear] = 30_000;
 
         vvvToken = IERC20(_vvvToken);
     }
@@ -193,6 +193,7 @@ contract VVVETHStaking is Ownable {
     /**
         @notice Returns the total amount of $VVV accrued by a single stake
         @dev considers the "nominalAccruedEth" and multiplies by the exchange rate and duration multiplier to obtain the total $VVV accrued
+        @param _stake A StakeData struct representing the stake for which the accrued $VVV is to be calculated
         @return $VVV accrued
      */
     function calculateAccruedVvvAmount(StakeData memory _stake) public view returns (uint256) {
@@ -221,7 +222,7 @@ contract VVVETHStaking is Ownable {
     }
 
     ///@notice Returns the exchange rate of ETH to $VVV for staking reward accrual
-    function ethToVvvExchangeRate() public view returns (uint256) {
+    function ethToVvvExchangeRate() public pure returns (uint256) {
         return 1;
     }
 
@@ -241,7 +242,7 @@ contract VVVETHStaking is Ownable {
     }
 
     ///@notice Sets the address of the $VVV token
-    function setVvvTokenAddress(address _vvvTokenAddress) external onlyOwner {
+    function setVvvToken(address _vvvTokenAddress) external onlyOwner {
         vvvToken = IERC20(_vvvTokenAddress);
     }
 }
