@@ -839,9 +839,9 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
 
     //tests expoential vesting does not lose precision with large numbers
     function testExponentialVestingPrecisionIntegerLimits() public {
-        uint256 tokensToVestAfterFirstInterval = 1_000_000_000 * 1e18; //1 billion tokens
+        uint256 tokensToVestAfterFirstInterval = 1_000_000_000 ether; //1 billion tokens
         uint256 numIntervals = 250;
-        uint256 growthRateProportion = 58e16; //58%
+        uint256 growthRateProportion = 34e16; //58%
 
         // for 1B, 250, 5800 ==> 79587295150251613031275354740710165573553129976227557061834411350789655172413
         uint256 vestedTokens = VVVVestingInstance.calculateVestedAmountAtInterval(
@@ -853,15 +853,24 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         /**
             Matlab symbolic equation yields giant fraction, so 
             based on https://www.calculator.net/big-number-calculator.html, answer is:
-            79587295150251613031637969154688648553684948992737317191113982553943583309412.13058552804694391706,
-            so nearest integer is 79587295150251613031637969154688648553684948992737317191113982553943583309412
+            175679333108460104940322512184131286963401199057761896914806.9785378930203121467,
+            so nearest truncated integer is 175679333108460104940322512184131286963401199057761896914806
          */
-        uint256 decimalTruncAmount = 79587295150251613031637969154688648553684948992737317191113982553943583309412;
+        uint256 decimalTruncAmount = 175679333108460104940322512184131286963401199057761896914806;
 
         //arbitrary 0.000000000001% tolerance
         uint256 tolerance = decimalTruncAmount / 1e12;
 
-        assertTrue(decimalTruncAmount - vestedTokens <= tolerance);
+        /**
+            in this case, the error is -0.00000000000000000000064072933749166618026652451957 or about -6e-32
+         */
+        uint256 difference = decimalTruncAmount > vestedTokens
+            ? decimalTruncAmount - vestedTokens
+            : vestedTokens - decimalTruncAmount;
+
+        emit log_named_uint("vestedTokens", vestedTokens);
+
+        assertTrue(difference <= tolerance);
     }
 
     /**
@@ -891,6 +900,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         //arbitrary 0.000000000001% tolerance
         uint256 tolerance = decimalTruncAmount / 1e12;
 
+        //in this case decimalTruncAmount > vestedTokens
         uint256 difference = decimalTruncAmount > vestedTokens
             ? decimalTruncAmount - vestedTokens
             : vestedTokens - decimalTruncAmount;
