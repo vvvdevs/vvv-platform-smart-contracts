@@ -10,12 +10,6 @@ contract VVVVesting is Ownable {
     using SafeERC20 for IERC20;
     using FixedPointMathLib for uint256;
 
-    ///@notice ex: 58% represented as 58e16, for divisions
-    uint256 public constant DENOMINATOR = 1e18;
-
-    ///@notice the number 1, considering in PRBMath, 1 == wrap(1e18)
-    uint256 public constant ONE = 1e18;
-
     ///@notice the VVV token being vested
     IERC20 public VVVToken;
 
@@ -243,7 +237,7 @@ contract VVVVesting is Ownable {
     }
 
     /**
-        @notice handles accrual calculations for getVestedAmount using PRBMath
+        @notice handles accrual calculations for getVestedAmount using FixedPointMathLib
         @dev handles linear case (r=0) and exponential case (r>0)
         @dev uses sum of geometric series where each element of series is y_n = a * (1 + r)^(n - 1)
         @dev so sum of series is S_n = a * (r^n - 1) / (r - 1)
