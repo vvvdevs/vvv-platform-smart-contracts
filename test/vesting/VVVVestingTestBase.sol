@@ -7,7 +7,6 @@ pragma solidity ^0.8.23;
  */
 import { Test } from "lib/forge-std/src/Test.sol"; //for stateless tests
 import { VVVVesting } from "contracts/vesting/VVVVesting.sol";
-import { ABDKMath64x64 } from "contracts/vesting/ABDKMath64x64.sol";
 import { MockERC20 } from "contracts/mock/MockERC20.sol";
 
 abstract contract VVVVestingTestBase is Test {

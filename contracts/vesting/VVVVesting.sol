@@ -4,10 +4,11 @@ pragma solidity ^0.8.23;
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { UD60x18, wrap, unwrap, div, powu, mul, add, sub } from "@prb/math/src/UD60x18.sol";
+import { FixedPointMathLib } from "./FixedPointMathLib.sol";
 
 contract VVVVesting is Ownable {
     using SafeERC20 for IERC20;
+    using FixedPointMathLib for uint256;
 
     ///@notice ex: 58% represented as 58e16, for divisions
     uint256 public constant DENOMINATOR = 1e18;
@@ -259,18 +260,21 @@ contract VVVVesting is Ownable {
         if (_growthRateProportion == 0 || _elapsedIntervals == 0) {
             return _firstIntervalAccrual * _elapsedIntervals;
         } else {
-            UD60x18 a = wrap(_firstIntervalAccrual);
-
-            // Calculate the growth rate as a UD60x18 fixed-point number
-            UD60x18 r = div(wrap(_growthRateProportion + DENOMINATOR), wrap(DENOMINATOR));
+            // Convert growth rate proportion to a fixed-point number with 1e18 scale
+            uint256 r = FixedPointMathLib.divWadDown(
+                _growthRateProportion + FixedPointMathLib.WAD,
+                FixedPointMathLib.WAD
+            );
 
             // Calculate r^n
-            UD60x18 rToN = powu(r, _elapsedIntervals);
+            uint256 rToN = FixedPointMathLib.rpow(r, _elapsedIntervals, FixedPointMathLib.WAD);
 
             // Calculate the sum of the geometric series
-            UD60x18 Sn = div(mul(a, sub(rToN, wrap(ONE))), sub(r, wrap(ONE)));
+            uint256 Sn = _firstIntervalAccrual.mulWadDown((rToN - FixedPointMathLib.WAD)).divWadDown(
+                r - FixedPointMathLib.WAD
+            );
 
-            return unwrap(Sn);
+            return Sn;
         }
     }
 
