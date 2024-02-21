@@ -16,7 +16,8 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
     function setUp() public {
         vm.startPrank(deployer, deployer);
         VvvTokenInstance = new VVVToken(type(uint256).max, 0);
-        EthStakingInstance = new VVVETHStaking(address(VvvTokenInstance), deployer);
+        EthStakingInstance = new VVVETHStaking(deployer);
+        EthStakingInstance.setVvvToken(address(VvvTokenInstance));
 
         //mint 1,000,000 $VVV tokens to the staking contract
         VvvTokenInstance.mint(address(EthStakingInstance), 1_000_000 * 1e18);
@@ -500,6 +501,32 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         VVVToken newVvvToken = new VVVToken(type(uint256).max, 0);
         EthStakingInstance.setVvvToken(address(newVvvToken));
         assertTrue(address(EthStakingInstance.vvvToken()) == address(newVvvToken));
+        vm.stopPrank();
+    }
+
+    //test that even though the user has accrued $VVV, that they can't claim it without the VvvToken address being set
+    function testCantWithdrawWithoutVvvAddressSet() public {
+        vm.startPrank(deployer, deployer);
+        EthStakingInstance.setVvvToken(address(0));
+        vm.stopPrank();
+
+        vm.startPrank(sampleUser, sampleUser);
+        uint256 stakeEthAmount = 1 ether;
+        uint256 stakeId = EthStakingInstance.stakeEth{ value: stakeEthAmount }(
+            VVVETHStaking.StakingDuration.ThreeMonths
+        );
+
+        // forward to first timestamp with released stake
+        advanceBlockNumberAndTimestampInSeconds(
+            EthStakingInstance.durationToSeconds(VVVETHStaking.StakingDuration.ThreeMonths) + 1
+        );
+
+        uint256 claimableVvv = EthStakingInstance.calculateClaimableVvvAmount();
+
+        //should revert because trying to transfer tokens from address(0), which indicates token address is not yet set (pre-TGE)
+        vm.expectRevert();
+        EthStakingInstance.claimVvv(claimableVvv);
+
         vm.stopPrank();
     }
 }

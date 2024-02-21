@@ -15,7 +15,8 @@ contract VVVETHStakingUnitFuzzTests is VVVETHStakingTestBase {
     function setUp() public {
         vm.startPrank(deployer, deployer);
         VvvTokenInstance = new VVVToken(type(uint256).max, 0);
-        EthStakingInstance = new VVVETHStaking(address(VvvTokenInstance), deployer);
+        EthStakingInstance = new VVVETHStaking(deployer);
+        EthStakingInstance.setVvvToken(address(VvvTokenInstance));
 
         //mint 1,000,000 $VVV tokens to the staking contract
         VvvTokenInstance.mint(address(EthStakingInstance), 1_000_000 * 1e18);
