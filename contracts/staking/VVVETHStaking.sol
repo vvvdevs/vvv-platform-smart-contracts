@@ -95,7 +95,7 @@ contract VVVETHStaking is Ownable {
     error WithdrawFailed();
 
     ///@notice initializes the second values corresponding to each duration enum entry
-    constructor(address _vvvToken, address _owner) Ownable(_owner) {
+    constructor(address _owner) Ownable(_owner) {
         durationToSeconds[StakingDuration.ThreeMonths] = 90 days;
         durationToSeconds[StakingDuration.SixMonths] = 180 days;
         durationToSeconds[StakingDuration.OneYear] = 360 days;
@@ -103,8 +103,6 @@ contract VVVETHStaking is Ownable {
         durationToMultiplier[StakingDuration.ThreeMonths] = 10_000;
         durationToMultiplier[StakingDuration.SixMonths] = 15_000;
         durationToMultiplier[StakingDuration.OneYear] = 30_000;
-
-        vvvToken = IERC20(_vvvToken);
     }
 
     /**
