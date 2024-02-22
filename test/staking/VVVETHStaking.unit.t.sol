@@ -1,6 +1,8 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
+import { VVVToken } from "contracts/tokens/VvvToken.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { VVVETHStakingTestBase } from "test/staking/VVVETHStakingTestBase.sol";
 import { VVVETHStaking } from "contracts/staking/VVVETHStaking.sol";
 
@@ -13,7 +15,13 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
     // Sets up project and payment tokens, and an instance of the ETH staking contract
     function setUp() public {
         vm.startPrank(deployer, deployer);
-        EthStakingInstance = new VVVETHStaking();
+        VvvTokenInstance = new VVVToken(type(uint256).max, 0);
+        EthStakingInstance = new VVVETHStaking(deployer);
+        EthStakingInstance.setVvvToken(address(VvvTokenInstance));
+
+        //mint 1,000,000 $VVV tokens to the staking contract
+        VvvTokenInstance.mint(address(EthStakingInstance), 1_000_000 * 1e18);
+
         vm.deal(sampleUser, 10 ether);
         vm.stopPrank();
     }
@@ -137,8 +145,7 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
             VVVETHStaking.StakingDuration.ThreeMonths
         );
 
-        //fast forward the staking duration + 1 to have the current timestamp
-        //be *greater than* the staking duration
+        // forward to first timestamp with released stake
         advanceBlockNumberAndTimestampInSeconds(
             EthStakingInstance.durationToSeconds(VVVETHStaking.StakingDuration.ThreeMonths) + 1
         );
@@ -170,6 +177,7 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
 
         uint256[] memory stakeIds = EthStakingInstance.userStakeIds(sampleUser);
 
+        // forward to first timestamp with released stake
         advanceBlockNumberAndTimestampInSeconds(
             EthStakingInstance.durationToSeconds(VVVETHStaking.StakingDuration.OneYear) + 1
         );
@@ -197,8 +205,7 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
             VVVETHStaking.StakingDuration.ThreeMonths
         );
 
-        //fast forward the staking duration + 1 to have the current timestamp
-        //be *greater than* the staking duration
+        // forward to first timestamp with released stake
         advanceBlockNumberAndTimestampInSeconds(
             EthStakingInstance.durationToSeconds(VVVETHStaking.StakingDuration.ThreeMonths) + 1
         );
@@ -234,6 +241,293 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         vm.startPrank(sampleUser, sampleUser);
         vm.expectRevert(VVVETHStaking.InvalidStakeId.selector);
         EthStakingInstance.withdrawStake(0);
+        vm.stopPrank();
+    }
+
+    // Tests that a user can stake ETH, withdraw the stake, then claim $VVV tokens
+    // Claimed $VVV tokens should be equal to staked ETH * duration multiplier * exchange rate
+    function testClaimVvv() public {
+        vm.startPrank(sampleUser, sampleUser);
+        uint256 stakeEthAmount = 1 ether;
+        EthStakingInstance.stakeEth{ value: stakeEthAmount }(VVVETHStaking.StakingDuration.ThreeMonths);
+
+        // forward to first timestamp with released stake
+        advanceBlockNumberAndTimestampInSeconds(
+            EthStakingInstance.durationToSeconds(VVVETHStaking.StakingDuration.ThreeMonths) + 1
+        );
+
+        uint256 claimableVvv = EthStakingInstance.calculateClaimableVvvAmount();
+
+        uint256 vvvBalanceBefore = VvvTokenInstance.balanceOf(sampleUser);
+
+        EthStakingInstance.claimVvv(claimableVvv);
+        uint256 vvvBalanceAfter = VvvTokenInstance.balanceOf(sampleUser);
+
+        uint256 expectedClaimedVvv = (stakeEthAmount *
+            EthStakingInstance.ethToVvvExchangeRate() *
+            EthStakingInstance.durationToMultiplier(VVVETHStaking.StakingDuration.ThreeMonths)) /
+            EthStakingInstance.DENOMINATOR();
+
+        assertTrue(vvvBalanceAfter == vvvBalanceBefore + expectedClaimedVvv);
+        vm.stopPrank();
+    }
+
+    // Tests that a user can stake ETH, withdraw the stake, then claim $VVV tokens afterwards
+    function testClaimVvvAfterWithdrawStake() public {
+        vm.startPrank(sampleUser, sampleUser);
+        uint256 stakeEthAmount = 1 ether;
+        uint256 stakeId = EthStakingInstance.stakeEth{ value: stakeEthAmount }(
+            VVVETHStaking.StakingDuration.ThreeMonths
+        );
+
+        // forward to first timestamp with released stake
+        advanceBlockNumberAndTimestampInSeconds(
+            EthStakingInstance.durationToSeconds(VVVETHStaking.StakingDuration.ThreeMonths) + 1
+        );
+
+        uint256 claimableVvv = EthStakingInstance.calculateClaimableVvvAmount();
+        uint256 vvvBalanceBefore = VvvTokenInstance.balanceOf(sampleUser);
+
+        EthStakingInstance.withdrawStake(stakeId);
+        EthStakingInstance.claimVvv(claimableVvv);
+
+        uint256 vvvBalanceAfter = VvvTokenInstance.balanceOf(sampleUser);
+
+        uint256 expectedClaimedVvv = (stakeEthAmount *
+            EthStakingInstance.ethToVvvExchangeRate() *
+            EthStakingInstance.durationToMultiplier(VVVETHStaking.StakingDuration.ThreeMonths)) /
+            EthStakingInstance.DENOMINATOR();
+
+        assertTrue(vvvBalanceAfter == vvvBalanceBefore + expectedClaimedVvv);
+        vm.stopPrank();
+    }
+
+    // Tests that a user can stake ETH, claim $VVV, then withdraw the stake, then claim $VVV again, and that the two claims add up to the expected total
+    function testClaimVvvBeforeAndAfterWithdrawStakeMultipleClaims() public {
+        vm.startPrank(sampleUser, sampleUser);
+        uint256 stakingDurationDivisor = 2;
+        uint256 stakeEthAmount = 1 ether;
+        uint256 stakeId = EthStakingInstance.stakeEth{ value: stakeEthAmount }(
+            VVVETHStaking.StakingDuration.ThreeMonths
+        );
+
+        //forward staking duration / stakingDurationDivisor
+        advanceBlockNumberAndTimestampInSeconds(
+            EthStakingInstance.durationToSeconds(VVVETHStaking.StakingDuration.ThreeMonths) /
+                stakingDurationDivisor
+        );
+
+        uint256 claimableVvv = EthStakingInstance.calculateClaimableVvvAmount();
+        uint256 vvvBalanceBefore = VvvTokenInstance.balanceOf(sampleUser);
+
+        EthStakingInstance.claimVvv(claimableVvv);
+
+        //forward (staking duration / stakingDurationDivisor)  + 1 to release stake
+        advanceBlockNumberAndTimestampInSeconds(
+            (EthStakingInstance.durationToSeconds(VVVETHStaking.StakingDuration.ThreeMonths) /
+                stakingDurationDivisor) + 1
+        );
+
+        EthStakingInstance.withdrawStake(stakeId);
+
+        uint256 claimableVvv2 = EthStakingInstance.calculateClaimableVvvAmount();
+
+        EthStakingInstance.claimVvv(claimableVvv2);
+
+        uint256 vvvBalanceAfter = VvvTokenInstance.balanceOf(sampleUser);
+
+        uint256 expectedClaimedVvv = (stakeEthAmount *
+            EthStakingInstance.ethToVvvExchangeRate() *
+            EthStakingInstance.durationToMultiplier(VVVETHStaking.StakingDuration.ThreeMonths)) /
+            EthStakingInstance.DENOMINATOR();
+
+        assertTrue(vvvBalanceAfter == vvvBalanceBefore + expectedClaimedVvv);
+        vm.stopPrank();
+    }
+
+    // Tests that a user cannot claim 0 $VVV
+    // It's the first error to be checked in the contract, so no staking necessary
+    function testClaimVvvZero() public {
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVVETHStaking.CantClaimZeroVvv.selector);
+        EthStakingInstance.claimVvv(0);
+        vm.stopPrank();
+    }
+
+    // Tests that a user cannot claim more $VVV than they have accrued
+    function testClaimVvvInsufficient() public {
+        vm.startPrank(sampleUser, sampleUser);
+        uint256 stakingDurationDivisor = 2;
+        uint256 stakeEthAmount = 1 ether;
+        EthStakingInstance.stakeEth{ value: stakeEthAmount }(VVVETHStaking.StakingDuration.ThreeMonths);
+
+        //forward staking duration / stakingDurationDivisor
+        advanceBlockNumberAndTimestampInSeconds(
+            EthStakingInstance.durationToSeconds(VVVETHStaking.StakingDuration.ThreeMonths) /
+                stakingDurationDivisor
+        );
+
+        uint256 claimableVvv = EthStakingInstance.calculateClaimableVvvAmount();
+
+        vm.expectRevert(VVVETHStaking.InsufficientClaimableVvv.selector);
+        EthStakingInstance.claimVvv(claimableVvv + 1);
+        vm.stopPrank();
+    }
+
+    // These are tested in the above tests as well, but I'm adding them here for showing explicit testing of these functions by name
+
+    // Tests the calculation of the accrued $VVV amount
+    function testCalculateAccruedVvvAmount() public {
+        vm.startPrank(sampleUser, sampleUser);
+        uint256 stakingDurationDivisor = 2;
+        uint256 stakeEthAmount = 1 ether;
+        EthStakingInstance.stakeEth{ value: stakeEthAmount }(VVVETHStaking.StakingDuration.ThreeMonths);
+
+        //forward (staking duration / 2) + 1 --> half of the total-to-be-accrued is claimable at this point (not at only staking duration / 2)
+        advanceBlockNumberAndTimestampInSeconds(
+            (EthStakingInstance.durationToSeconds(VVVETHStaking.StakingDuration.ThreeMonths) /
+                stakingDurationDivisor) + 1
+        );
+
+        uint256 accruedVvv = EthStakingInstance.calculateAccruedVvvAmount();
+
+        uint256 expectedAccruedVvv = (stakeEthAmount *
+            EthStakingInstance.ethToVvvExchangeRate() *
+            EthStakingInstance.durationToMultiplier(VVVETHStaking.StakingDuration.ThreeMonths)) /
+            EthStakingInstance.DENOMINATOR() /
+            stakingDurationDivisor;
+
+        assertTrue(accruedVvv == expectedAccruedVvv);
+        vm.stopPrank();
+    }
+
+    // Tests the calculation of the accrued $VVV amount for a single stake
+    function testCalculateAccruedVvvAmountSingleStake() public {
+        VVVETHStaking.StakeData memory stake = VVVETHStaking.StakeData({
+            stakedEthAmount: 1 ether,
+            stakeStartTimestamp: block.timestamp,
+            stakeIsWithdrawn: false,
+            stakeDuration: VVVETHStaking.StakingDuration.ThreeMonths
+        });
+
+        //forward staking duration + 1
+        advanceBlockNumberAndTimestampInSeconds(
+            EthStakingInstance.durationToSeconds(VVVETHStaking.StakingDuration.ThreeMonths) + 1
+        );
+
+        uint256 expectedAccruedVvv = (stake.stakedEthAmount *
+            EthStakingInstance.ethToVvvExchangeRate() *
+            EthStakingInstance.durationToMultiplier(VVVETHStaking.StakingDuration.ThreeMonths)) /
+            EthStakingInstance.DENOMINATOR();
+
+        uint256 accruedVvv = EthStakingInstance.calculateAccruedVvvAmount(stake);
+
+        assertTrue(accruedVvv == expectedAccruedVvv);
+    }
+
+    // Tests that an empty stake array returns 0 accrued $VVV
+    function testCalculateAccruedVvvAmountNoStakes() public {
+        VVVETHStaking.StakeData memory stake;
+
+        uint256 expectedAccruedVvv = 0;
+        uint256 accruedVvv = EthStakingInstance.calculateAccruedVvvAmount(stake);
+
+        assertTrue(accruedVvv == expectedAccruedVvv);
+    }
+
+    // Tests that the claimable $VVV amount is calculated correctly
+    function testCalculateClaimableVvvAmount() public {
+        vm.startPrank(sampleUser, sampleUser);
+        uint256 stakingDurationDivisor = 3;
+        uint256 stakeEthAmount = 1 ether;
+        EthStakingInstance.stakeEth{ value: stakeEthAmount }(VVVETHStaking.StakingDuration.OneYear);
+
+        //forward (staking duration / 2) + 1 --> half of the total-to-be-accrued is claimable at this point (not at only staking duration / 2)
+        advanceBlockNumberAndTimestampInSeconds(
+            (EthStakingInstance.durationToSeconds(VVVETHStaking.StakingDuration.OneYear) /
+                stakingDurationDivisor) + 1
+        );
+
+        uint256 claimableVvv = EthStakingInstance.calculateClaimableVvvAmount();
+
+        EthStakingInstance.claimVvv(claimableVvv);
+
+        //forward past end of staking duration, user forgets about this for a while lol
+        advanceBlockNumberAndTimestampInSeconds(
+            EthStakingInstance.durationToSeconds(VVVETHStaking.StakingDuration.OneYear)
+        );
+
+        uint256 claimableVvv2 = EthStakingInstance.calculateClaimableVvvAmount();
+
+        uint256 expectedClaimableVvv = (stakeEthAmount *
+            EthStakingInstance.ethToVvvExchangeRate() *
+            EthStakingInstance.durationToMultiplier(VVVETHStaking.StakingDuration.OneYear)) /
+            EthStakingInstance.DENOMINATOR();
+
+        assertTrue(claimableVvv + claimableVvv2 == expectedClaimableVvv);
+        vm.stopPrank();
+    }
+
+    // Testing admin functions
+
+    // Test that the owner can properly set the duration multipliers
+    function testSetDurationMultiplier() public {
+        vm.startPrank(deployer, deployer);
+        VVVETHStaking.StakingDuration[] memory durations = new VVVETHStaking.StakingDuration[](3);
+        durations[0] = VVVETHStaking.StakingDuration.ThreeMonths;
+        durations[1] = VVVETHStaking.StakingDuration.SixMonths;
+        durations[2] = VVVETHStaking.StakingDuration.OneYear;
+
+        uint256[] memory multipliers = new uint256[](3);
+        multipliers[0] = 20_000;
+        multipliers[1] = 27_000;
+        multipliers[2] = 33_000;
+
+        EthStakingInstance.setDurationMultiplier(durations, multipliers);
+
+        assertTrue(
+            EthStakingInstance.durationToMultiplier(VVVETHStaking.StakingDuration.ThreeMonths) == 20_000
+        );
+        assertTrue(
+            EthStakingInstance.durationToMultiplier(VVVETHStaking.StakingDuration.SixMonths) == 27_000
+        );
+        assertTrue(
+            EthStakingInstance.durationToMultiplier(VVVETHStaking.StakingDuration.OneYear) == 33_000
+        );
+    }
+
+    // Test that the owner can properly set the VvvToken address
+    function testSetVvvToken() public {
+        vm.startPrank(deployer, deployer);
+        VVVToken newVvvToken = new VVVToken(type(uint256).max, 0);
+        EthStakingInstance.setVvvToken(address(newVvvToken));
+        assertTrue(address(EthStakingInstance.vvvToken()) == address(newVvvToken));
+        vm.stopPrank();
+    }
+
+    //test that even though the user has accrued $VVV, that they can't claim it without the VvvToken address being set
+    function testCantWithdrawWithoutVvvAddressSet() public {
+        vm.startPrank(deployer, deployer);
+        EthStakingInstance.setVvvToken(address(0));
+        vm.stopPrank();
+
+        vm.startPrank(sampleUser, sampleUser);
+        uint256 stakeEthAmount = 1 ether;
+        uint256 stakeId = EthStakingInstance.stakeEth{ value: stakeEthAmount }(
+            VVVETHStaking.StakingDuration.ThreeMonths
+        );
+
+        // forward to first timestamp with released stake
+        advanceBlockNumberAndTimestampInSeconds(
+            EthStakingInstance.durationToSeconds(VVVETHStaking.StakingDuration.ThreeMonths) + 1
+        );
+
+        uint256 claimableVvv = EthStakingInstance.calculateClaimableVvvAmount();
+
+        //should revert because trying to transfer tokens from address(0), which indicates token address is not yet set (pre-TGE)
+        vm.expectRevert();
+        EthStakingInstance.claimVvv(claimableVvv);
+
         vm.stopPrank();
     }
 }
