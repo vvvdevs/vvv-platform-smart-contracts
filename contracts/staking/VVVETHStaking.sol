@@ -196,10 +196,10 @@ contract VVVETHStaking is Ownable {
      */
     function calculateAccruedVvvAmount(StakeData memory _stake) public view returns (uint256) {
         uint256 stakeDuration = durationToSeconds[_stake.stakeDuration];
-
-        uint256 secondsStaked = block.timestamp - _stake.stakeStartTimestamp >= stakeDuration
+        uint256 secondsSinceStakingStarted = block.timestamp - _stake.stakeStartTimestamp;
+        uint256 secondsStaked = secondsSinceStakingStarted >= stakeDuration
             ? stakeDuration
-            : block.timestamp - _stake.stakeStartTimestamp;
+            : secondsSinceStakingStarted;
 
         uint256 nominalAccruedEth = (secondsStaked * _stake.stakedEthAmount) / stakeDuration;
 
