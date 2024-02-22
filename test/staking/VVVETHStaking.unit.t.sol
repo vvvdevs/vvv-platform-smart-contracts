@@ -245,7 +245,7 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
     }
 
     // Tests that a user can stake ETH, withdraw the stake, then claim $VVV tokens
-    // Claimed $VVV toknens should be equal to staked ETH * duration multiplier * exchange rate
+    // Claimed $VVV tokens should be equal to staked ETH * duration multiplier * exchange rate
     function testClaimVvv() public {
         vm.startPrank(sampleUser, sampleUser);
         uint256 stakeEthAmount = 1 ether;
