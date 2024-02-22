@@ -371,6 +371,7 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
 
         vm.expectRevert(VVVETHStaking.InsufficientClaimableVvv.selector);
         EthStakingInstance.claimVvv(claimableVvv + 1);
+        vm.stopPrank();
     }
 
     // These are tested in the above tests as well, but I'm adding them here for showing explicit testing of these functions by name
