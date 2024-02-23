@@ -7,8 +7,10 @@ pragma solidity 0.8.23;
 
 import "lib/forge-std/src/Test.sol";
 import { VVVETHStaking } from "contracts/staking/VVVETHStaking.sol";
+import { VVVToken } from "contracts/tokens/VvvToken.sol";
 
 abstract contract VVVETHStakingTestBase is Test {
+    VVVToken VvvTokenInstance;
     VVVETHStaking EthStakingInstance;
 
     uint256 deployerKey = 1234;
