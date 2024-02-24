@@ -274,7 +274,7 @@ contract VVVVesting is Ownable {
 
     /**
         @notice sets or replaces vesting schedule
-        @notice only callable by admin        
+        @notice only callable by admin
         @param _vestedUser the address of the user whose vesting schedule is being set
         @param _vestingScheduleIndex the index of the vesting schedule being set
         @param _tokensToVestAtStart the total amount of tokens to be vested at schedule start
