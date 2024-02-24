@@ -4,7 +4,7 @@ pragma solidity ^0.8.23;
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { FixedPointMathLib } from "./FixedPointMathLib.sol";
+import { FixedPointMathLib } from "@solmate/src/utils/FixedPointMathLib.sol";
 
 contract VVVVesting is Ownable {
     using SafeERC20 for IERC20;
@@ -238,13 +238,12 @@ contract VVVVesting is Ownable {
 
     /**
         @notice handles accrual calculations for getVestedAmount using FixedPointMathLib
+        @dev calculates vesting with formula for sum of geometric series: Sn = a * (r^n - 1) / (r - 1)       
+        @dev Here, Sn is the sum of the series (total amount accrued after n intervals have elapsed), a is the first interval's accrual, r is the growth rate per interval, and n is the number of intervals
         @dev handles linear case (r=0) and exponential case (r>0)
-        @dev uses sum of geometric series where each element of series is y_n = a * (1 + r)^(n - 1)
-        @dev so sum of series is S_n = a * (r^n - 1) / (r - 1)
-        @dev scales input amount (in token-wei) to that/10^SCALE_DECIMALS for ABDKMath64x64 calculations, then scales back for return
-        @param _firstIntervalAccrual the amount of tokens to be vested after the first interval
-        @param _elapsedIntervals the number of intervals over which to calculate the vested amount
-        @param _growthRateProportion the proportion of DENOMINATOR to increase token vesting per interval (500 = 5%)
+        @param _firstIntervalAccrual the amount of tokens to be vested after the first interval (equivalent to "a")
+        @param _elapsedIntervals the number of intervals over which to calculate the vested amount (equivalent to "n")
+        @param _growthRateProportion the proportion of FixedPointMathLib.WAD to increase token vesting per interval (500 = 5%, equivalent to "r-1" in the above formula, but scaled for fixed-point math where WAD is 10e18)
      */
     function calculateVestedAmountAtInterval(
         uint256 _firstIntervalAccrual,
