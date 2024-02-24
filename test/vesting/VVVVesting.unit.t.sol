@@ -164,7 +164,6 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         assertTrue(_growthRateProportion == params.growthRateProportion);
     }
 
-    // START HERE!
     //test that a vesting schedule can be updated and the correct values are stored/read
     function testSetExistingVestingSchedule() public {
         {
@@ -694,16 +693,12 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
 
         uint256 vestedAmount = VVVVestingInstance.getVestedAmount(sampleUser, vestingScheduleIndex);
 
-        emit log_named_uint("vestedAmount", vestedAmount);
-
         uint256 calcVestedAmount = tokensToVestAtStart +
             VVVVestingInstance.calculateVestedAmountAtInterval(
                 tokensToVestAfterFirstInterval,
                 numberOfIntervalsToAdvanceTimestamp,
                 growthRateProportion
             );
-
-        emit log_named_uint("calcVestedAmount", calcVestedAmount);
 
         assertTrue(
             vestedAmount ==
@@ -837,11 +832,11 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         vm.stopPrank();
     }
 
-    //tests expoential vesting does not lose precision with large numbers
+    //tests exponential vesting does not lose precision with large numbers
     function testExponentialVestingPrecisionIntegerLimits() public {
         uint256 tokensToVestAfterFirstInterval = 1_000_000_000 ether; //1 billion tokens
         uint256 numIntervals = 250;
-        uint256 growthRateProportion = 34e16; //58%
+        uint256 growthRateProportion = 34e16; //34%
 
         // for 1B, 250, 5800 ==> 79587295150251613031275354740710165573553129976227557061834411350789655172413
         uint256 vestedTokens = VVVVestingInstance.calculateVestedAmountAtInterval(
@@ -868,13 +863,11 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             ? decimalTruncAmount - vestedTokens
             : vestedTokens - decimalTruncAmount;
 
-        emit log_named_uint("vestedTokens", vestedTokens);
-
         assertTrue(difference <= tolerance);
     }
 
     /**
-        tests expoential vesting does not lose precision pre-seed case of:
+        tests exponential vesting is within error tolerance of reference floating point calculation for pre-seed round case:
         tokensToVestAfterFirstInterval = 5,725.241018
         growthRate = 0.005432994453
         maxIntervals = 540
@@ -909,7 +902,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
     }
 
     /**
-        tests expoential vesting does not lose precision pre-seed case of:
+        tests exponential vesting is within error tolerance of reference floating point calculation for seed round case of:
         tokensToVestAfterFirstInterval = 6234.604511
         growthRate = 0.007949174554
         maxIntervals = 420
@@ -942,14 +935,11 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
     }
 
     /**
-        tests expoential vesting does not lose precision future case of:
+        tests exponential vesting is within error tolerance of reference floating point calculation for future round case of:
         tokensToVestAfterFirstInterval = 200,000.00
         growthRate = 0.17650557680462953
         maxIntervals = 18
         intervalLength = month
-
-        20000000000636745803926644
-        21028569000593437859369453
      */
     function testExponentialVestingFuture() public {
         uint256 tokensToVestAfterFirstInterval = 200000.00 ether; //200k tokens
