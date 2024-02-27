@@ -13,6 +13,9 @@ contract VVVETHStaking is Ownable {
     ///@notice the interface to the $VVV token
     IERC20 public vvvToken;
 
+    ///@notice flag for whether new stakes are allowed
+    bool public newStakesPermitted;
+
     ///@notice The id of the last stake
     uint256 public stakeId;
 
@@ -88,6 +91,9 @@ contract VVVETHStaking is Ownable {
     ///@notice thrown when a user tries to withdraw a stake that hasn't been initialized
     error InvalidStakeId();
 
+    ///@notice thrown when a user attempts to staken when new stakes are not permitted
+    error NewStakesNotPermitted();
+
     ///@notice thrown when a user tries to withdraw a stake that has already been withdrawn
     error StakeIsWithdrawn();
 
@@ -105,13 +111,22 @@ contract VVVETHStaking is Ownable {
         durationToMultiplier[StakingDuration.OneYear] = 30_000;
     }
 
+    ///@notice enforces that newStakesPermitted is true before allowing a stake
+    modifier whenStakingIsPermitted() {
+        if (!newStakesPermitted) revert NewStakesNotPermitted();
+        _;
+    }
+
     /**
         @notice Stakes ETH for a given duration
         @param _stakeDuration The duration of the stake
         @return The id of the stake
      */
-    function stakeEth(StakingDuration _stakeDuration) external payable returns (uint256) {
+    function stakeEth(
+        StakingDuration _stakeDuration
+    ) external payable whenStakingIsPermitted returns (uint256) {
         if (msg.value == 0) revert CantStakeZeroEth();
+
         ++stakeId;
 
         userStakes[msg.sender][stakeId] = StakeData({
@@ -132,7 +147,10 @@ contract VVVETHStaking is Ownable {
         @param _stakeId The id of the stake to restake
         @param _stakeDuration The duration of the new stake
      */
-    function restakeEth(uint256 _stakeId, StakingDuration _stakeDuration) external returns (uint256) {
+    function restakeEth(
+        uint256 _stakeId,
+        StakingDuration _stakeDuration
+    ) external whenStakingIsPermitted returns (uint256) {
         StakeData storage stake = userStakes[msg.sender][_stakeId];
         _withdrawChecks(stake);
 
@@ -260,9 +278,20 @@ contract VVVETHStaking is Ownable {
         }
     }
 
+    ///@notice sets newStakesPermitted
+    function setNewStakesPermitted(bool _newStakesPermitted) external onlyOwner {
+        newStakesPermitted = _newStakesPermitted;
+    }
+
     ///@notice Sets the address of the $VVV token
     function setVvvToken(address _vvvTokenAddress) external onlyOwner {
         vvvToken = IERC20(_vvvTokenAddress);
+    }
+
+    ///@notice allows admin to withdraw ETH
+    function withdrawEth(uint256 _amount, address _to) external onlyOwner {
+        (bool success, ) = payable(_to).call{ value: _amount }("");
+        if (!success) revert WithdrawFailed();
     }
 
     ///@notice checks permissions for withdrawing a stake based on eth amount, stake start time, and whether the stake has been withdrawn
