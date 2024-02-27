@@ -52,6 +52,9 @@ contract VVVETHStaking is Ownable {
     ///@notice maps user to the amount of $VVV claimed
     mapping(address => uint256) public userVvvClaimed;
 
+    ///@notice emitted when ETH is received
+    event EtherReceived();
+
     ///@notice emitted when a user stakes
     event Stake(
         address indexed staker,
@@ -103,6 +106,11 @@ contract VVVETHStaking is Ownable {
         durationToMultiplier[StakingDuration.ThreeMonths] = 10_000;
         durationToMultiplier[StakingDuration.SixMonths] = 15_000;
         durationToMultiplier[StakingDuration.OneYear] = 30_000;
+    }
+
+    ///@notice Fallback function to receive ETH
+    receive() external payable {
+        emit EtherReceived();
     }
 
     /**
