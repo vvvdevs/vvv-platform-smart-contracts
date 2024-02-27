@@ -11,10 +11,14 @@ interface IVVVAuthorizationRegistry {
 
 abstract contract VVVAuthorizationRegistryChecker {
     ///@notice interface to the VVVAuthorizationRegistry
-    IVVVAuthorizationRegistry internal _registry;
+    IVVVAuthorizationRegistry internal immutable _registry;
 
     ///@notice thrown when a function is called by an unauthorized caller
     error UnauthorizedCaller();
+
+    constructor(address _registryAddress) {
+        _registry = IVVVAuthorizationRegistry(_registryAddress);
+    }
 
     ///@notice enforces that the caller is authorized to call the contract+function combination
     modifier onlyAuthorized() {
