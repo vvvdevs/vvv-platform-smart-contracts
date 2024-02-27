@@ -54,6 +54,49 @@ contract VVVETHStakingUnitFuzzTests is VVVETHStakingTestBase {
         vm.stopPrank();
     }
 
+    // test that contract correctly stores the StakeData and stakeIds for any restake
+    function testFuzz_restakeEth(
+        uint256 _callerKey,
+        uint256 _stakeAmount,
+        uint256 _duration,
+        uint256 _newDuration
+    ) public {
+        uint256 callerKey = bound(_callerKey, 1, 100000);
+        address caller = vm.addr(callerKey);
+        uint8 duration = uint8(bound(_duration, 0, 2));
+        uint8 newDuration = uint8(bound(_newDuration, 0, 2));
+        vm.assume(caller != address(0));
+        vm.assume(_stakeAmount != 0);
+
+        vm.deal(caller, _stakeAmount);
+        vm.startPrank(caller, caller);
+
+        VVVETHStaking.StakingDuration stakeDuration = VVVETHStaking.StakingDuration(duration);
+        uint256 stakeId = EthStakingInstance.stakeEth{ value: _stakeAmount }(stakeDuration);
+
+        // Advance time to allow for restaking
+        advanceBlockNumberAndTimestampInSeconds(EthStakingInstance.durationToSeconds(stakeDuration) + 1);
+
+        // Attempt to restake with a new duration
+        VVVETHStaking.StakingDuration newStakeDuration = VVVETHStaking.StakingDuration(newDuration);
+        uint256 newStakeId = EthStakingInstance.restakeEth(stakeId, newStakeDuration);
+
+        // Verify the restake
+        (
+            uint256 restakedEthAmount,
+            uint256 restakedTimestamp,
+            bool restakeIsWithdrawn,
+            VVVETHStaking.StakingDuration restakedDuration
+        ) = EthStakingInstance.userStakes(caller, newStakeId);
+
+        assert(restakedEthAmount == _stakeAmount);
+        assert(restakedTimestamp >= block.timestamp);
+        assert(restakeIsWithdrawn == false);
+        assert(restakedDuration == newStakeDuration);
+
+        vm.stopPrank();
+    }
+
     // Test that any valid stake is withdrawable
     function testFuzz_withdrawStake(uint256 _callerKey, uint256 _stakeAmount, uint256 _duration) public {
         uint256 callerKey = bound(_callerKey, 1, 100000);
