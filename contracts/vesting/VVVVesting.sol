@@ -4,33 +4,35 @@ pragma solidity ^0.8.23;
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { FixedPointMathLib } from "@solmate/src/utils/FixedPointMathLib.sol";
 
 contract VVVVesting is Ownable {
     using SafeERC20 for IERC20;
-    ///@notice the VVV token being vested
+    using FixedPointMathLib for uint256;
 
+    ///@notice the VVV token being vested
     IERC20 public VVVToken;
 
     /**
         @notice struct representing a user's vesting schedule
-        @param tokensToVestAfterStart the total amount of tokens to be vested after schedule start
         @param tokensToVestAtStart the total amount of tokens to be vested at schedule start
+        @param tokensToVestAfterFirstInterval the total amount of tokens to be vested after the first interval
         @param tokenAmountWithdrawn the amount of tokens that have been withdrawn
-        @param postCliffDuration the postCliffDuration of the vesting schedule
         @param scheduleStartTime the start time of the vesting schedule
         @param cliffEndTime the end time of the cliff
         @param intervalLength the length of each interval in seconds
-        @param tokenAmountPerInterval the amount of tokens to be vested per interval
+        @param maxIntervals number of post-cliff intervals
+        @param growthRateProportion the % increase in tokens to be vested per interval
      */
     struct VestingSchedule {
-        uint256 tokensToVestAfterStart;
         uint256 tokensToVestAtStart;
+        uint256 tokensToVestAfterFirstInterval;
         uint256 tokenAmountWithdrawn;
-        uint256 postCliffDuration;
         uint256 scheduleStartTime;
         uint256 cliffEndTime;
         uint256 intervalLength;
-        uint256 tokenAmountPerInterval;
+        uint256 maxIntervals;
+        uint256 growthRateProportion;
     }
 
     /**
@@ -52,26 +54,26 @@ contract VVVVesting is Ownable {
         @notice emitted when a user's vesting schedule is set or updated
         @param _vestedUser the address of the user whose vesting schedule is being set
         @param _vestingScheduleIndex the index of the vesting schedule being set
-        @param _tokensToVestAfterStart the total amount of tokens to be vested after schedule start
         @param _tokensToVestAtStart the total amount of tokens to be vested at schedule start
+        @param _tokensToVestAfterFirstInterval the total amount of tokens to be vested after the first interval
         @param _vestingScheduleAmountWithdrawn the amount of tokens that have been withdrawn
-        @param _vestingScheduleDuration the postCliffDuration of the vesting schedule
         @param _vestingScheduleStartTime the start time of the vesting schedule
         @param _vestingScheduleCliffEndTime the end time of the cliff
         @param _vestingScheduleIntervalLength the length of each interval in seconds
-        @param _vestingScheduleTokenAmountPerInterval the amount of tokens to be vested per interval
+        @param _vestingScheduleMaxIntervals number of post-cliff intervals
+        @param _vestingScheduleGrowthRateProportion the % increase in tokens to be vested per interval
     */
     event SetVestingSchedule(
         address indexed _vestedUser,
         uint256 _vestingScheduleIndex,
-        uint256 _tokensToVestAfterStart,
         uint256 _tokensToVestAtStart,
+        uint256 _tokensToVestAfterFirstInterval,
         uint256 _vestingScheduleAmountWithdrawn,
-        uint256 _vestingScheduleDuration,
         uint256 _vestingScheduleStartTime,
         uint256 _vestingScheduleCliffEndTime,
         uint256 _vestingScheduleIntervalLength,
-        uint256 _vestingScheduleTokenAmountPerInterval
+        uint256 _vestingScheduleMaxIntervals,
+        uint256 _vestingScheduleGrowthRateProportion
     );
 
     /**
@@ -172,10 +174,6 @@ contract VVVVesting is Ownable {
     function _setVestingSchedule(SetVestingScheduleParams memory _params) private {
         VestingSchedule memory newSchedule = _params.vestingSchedule;
 
-        newSchedule.tokenAmountPerInterval =
-            newSchedule.tokensToVestAfterStart /
-            (newSchedule.postCliffDuration / newSchedule.intervalLength);
-
         if (_params.vestingScheduleIndex == userVestingSchedules[_params.vestedUser].length) {
             userVestingSchedules[_params.vestedUser].push(newSchedule);
         } else if (_params.vestingScheduleIndex < userVestingSchedules[_params.vestedUser].length) {
@@ -187,14 +185,14 @@ contract VVVVesting is Ownable {
         emit SetVestingSchedule(
             _params.vestedUser,
             _params.vestingScheduleIndex,
-            _params.vestingSchedule.tokensToVestAfterStart,
             _params.vestingSchedule.tokensToVestAtStart,
+            _params.vestingSchedule.tokensToVestAfterFirstInterval,
             _params.vestingSchedule.tokenAmountWithdrawn,
-            _params.vestingSchedule.postCliffDuration,
             _params.vestingSchedule.scheduleStartTime,
             _params.vestingSchedule.cliffEndTime,
             _params.vestingSchedule.intervalLength,
-            _params.vestingSchedule.tokenAmountPerInterval
+            _params.vestingSchedule.maxIntervals,
+            _params.vestingSchedule.growthRateProportion
         );
     }
 
@@ -222,14 +220,54 @@ contract VVVVesting is Ownable {
             return 0;
         } else if (block.timestamp < vestingSchedule.cliffEndTime) {
             return vestingSchedule.tokensToVestAtStart;
-        } else if (block.timestamp >= vestingSchedule.cliffEndTime + vestingSchedule.postCliffDuration) {
-            return vestingSchedule.tokensToVestAfterStart + vestingSchedule.tokensToVestAtStart;
         } else {
             uint256 elapsedIntervals = (block.timestamp - vestingSchedule.cliffEndTime) /
                 vestingSchedule.intervalLength;
-            return
-                (elapsedIntervals * vestingSchedule.tokenAmountPerInterval) +
-                vestingSchedule.tokensToVestAtStart;
+            elapsedIntervals = elapsedIntervals > vestingSchedule.maxIntervals
+                ? vestingSchedule.maxIntervals
+                : elapsedIntervals;
+
+            return (vestingSchedule.tokensToVestAtStart +
+                calculateVestedAmountAtInterval(
+                    vestingSchedule.tokensToVestAfterFirstInterval,
+                    elapsedIntervals,
+                    vestingSchedule.growthRateProportion
+                ));
+        }
+    }
+
+    /**
+        @notice handles accrual calculations for getVestedAmount using FixedPointMathLib
+        @dev calculates vesting with formula for sum of geometric series: Sn = a * (r^n - 1) / (r - 1)       
+        @dev Here, Sn is the sum of the series (total amount accrued after n intervals have elapsed), a is the first interval's accrual, r is the growth rate per interval, and n is the number of intervals
+        @dev handles linear case (r=0) and exponential case (r>0)
+        @param _firstIntervalAccrual the amount of tokens to be vested after the first interval (equivalent to "a")
+        @param _elapsedIntervals the number of intervals over which to calculate the vested amount (equivalent to "n")
+        @param _growthRateProportion the proportion of FixedPointMathLib.WAD to increase token vesting per interval (500 = 5%, equivalent to "r-1" in the above formula, but scaled for fixed-point math where WAD is 10e18)
+     */
+    function calculateVestedAmountAtInterval(
+        uint256 _firstIntervalAccrual,
+        uint256 _elapsedIntervals,
+        uint256 _growthRateProportion
+    ) public pure returns (uint256) {
+        if (_growthRateProportion == 0 || _elapsedIntervals == 0) {
+            return _firstIntervalAccrual * _elapsedIntervals;
+        } else {
+            // Convert growth rate proportion to a fixed-point number with 1e18 scale
+            uint256 r = FixedPointMathLib.divWadDown(
+                _growthRateProportion + FixedPointMathLib.WAD,
+                FixedPointMathLib.WAD
+            );
+
+            // Calculate r^n
+            uint256 rToN = FixedPointMathLib.rpow(r, _elapsedIntervals, FixedPointMathLib.WAD);
+
+            // Calculate the sum of the geometric series
+            uint256 Sn = _firstIntervalAccrual.mulWadDown((rToN - FixedPointMathLib.WAD)).divWadDown(
+                r - FixedPointMathLib.WAD
+            );
+
+            return Sn;
         }
     }
 
@@ -238,33 +276,36 @@ contract VVVVesting is Ownable {
         @notice only callable by admin
         @param _vestedUser the address of the user whose vesting schedule is being set
         @param _vestingScheduleIndex the index of the vesting schedule being set
-        @param _tokensToVestAfterStart the total amount of tokens to be vested after schedule start
-        @param _tokensToVestAtStart the total amount of tokens that are vested at schedule start
+        @param _tokensToVestAtStart the total amount of tokens to be vested at schedule start
+        @param _tokensToVestAfterFirstInterval the total amount of tokens to be vested after the first interval
         @param _vestingScheduleAmountWithdrawn the amount of tokens that have been withdrawn
-        @param _vestingScheduleDuration the postCliffDuration of the vesting schedule
         @param _vestingScheduleStartTime the start time of the vesting schedule
-        @param _vestingScheduleCliffEndTime the end time of the vesting schedule
+        @param _vestingScheduleCliffEndTime the end time of the cliff
         @param _vestingScheduleIntervalLength the length of each interval in seconds
-     */
+        @param _vestingScheduleMaxIntervals number of post-cliff intervals
+        @param _vestingScheduleGrowthRateProportion the % increase in tokens to be vested per interval
+    */
     function setVestingSchedule(
         address _vestedUser,
         uint256 _vestingScheduleIndex,
-        uint256 _tokensToVestAfterStart,
         uint256 _tokensToVestAtStart,
+        uint256 _tokensToVestAfterFirstInterval,
         uint256 _vestingScheduleAmountWithdrawn,
-        uint256 _vestingScheduleDuration,
         uint256 _vestingScheduleStartTime,
         uint256 _vestingScheduleCliffEndTime,
-        uint256 _vestingScheduleIntervalLength
+        uint256 _vestingScheduleIntervalLength,
+        uint256 _vestingScheduleMaxIntervals,
+        uint256 _vestingScheduleGrowthRateProportion
     ) external onlyOwner {
         VestingSchedule memory newSchedule;
-        newSchedule.tokensToVestAfterStart = _tokensToVestAfterStart;
         newSchedule.tokensToVestAtStart = _tokensToVestAtStart;
+        newSchedule.tokensToVestAfterFirstInterval = _tokensToVestAfterFirstInterval;
         newSchedule.tokenAmountWithdrawn = _vestingScheduleAmountWithdrawn;
-        newSchedule.postCliffDuration = _vestingScheduleDuration;
         newSchedule.scheduleStartTime = _vestingScheduleStartTime;
         newSchedule.cliffEndTime = _vestingScheduleCliffEndTime;
         newSchedule.intervalLength = _vestingScheduleIntervalLength;
+        newSchedule.maxIntervals = _vestingScheduleMaxIntervals;
+        newSchedule.growthRateProportion = _vestingScheduleGrowthRateProportion;
 
         SetVestingScheduleParams memory params = SetVestingScheduleParams(
             _vestedUser,
