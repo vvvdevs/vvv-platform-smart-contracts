@@ -13,6 +13,9 @@ abstract contract VVVVestingTestBase is Test {
     MockERC20 public VVVTokenInstance;
     VVVVesting public VVVVestingInstance;
 
+    uint256 public constant DECIMALS = 18;
+    uint256 public constant DENOMINATOR = 100;
+
     uint256 public deployerKey = 1;
     uint256 public userKey = 2;
     address deployer = vm.addr(deployerKey);
@@ -20,6 +23,18 @@ abstract contract VVVVestingTestBase is Test {
 
     uint256 blockNumber;
     uint256 blockTimestamp;
+
+    struct VestingParams {
+        uint256 vestingScheduleIndex;
+        uint256 tokensToVestAtStart;
+        uint256 tokensToVestAfterFirstInterval;
+        uint256 amountWithdrawn;
+        uint256 scheduleStartTime;
+        uint256 cliffEndTime;
+        uint256 intervalLength;
+        uint256 maxIntervals;
+        uint256 growthRateProportion;
+    }
 
     function advanceBlockNumberAndTimestampInBlocks(uint256 blocks) public {
         blockNumber += blocks;
@@ -38,25 +53,27 @@ abstract contract VVVVestingTestBase is Test {
     function setVestingScheduleFromDeployer(
         address _user,
         uint256 _vestingScheduleIndex,
-        uint256 _tokensToVestAfterStart,
         uint256 _tokensToVestAtStart,
+        uint256 _tokensToVestAfterFirstInterval,
         uint256 _amountWithdrawn,
-        uint256 _postCliffDuration,
         uint256 _scheduleStartTime,
         uint256 _cliffEndTime,
-        uint256 _intervalLength
+        uint256 _intervalLength,
+        uint256 _maxIntervals,
+        uint256 _growthRateProportion
     ) public {
         vm.startPrank(deployer, deployer);
         VVVVestingInstance.setVestingSchedule(
             _user,
             _vestingScheduleIndex,
-            _tokensToVestAfterStart,
             _tokensToVestAtStart,
+            _tokensToVestAfterFirstInterval,
             _amountWithdrawn,
-            _postCliffDuration,
             _scheduleStartTime,
             _cliffEndTime,
-            _intervalLength
+            _intervalLength,
+            _maxIntervals,
+            _growthRateProportion
         );
         vm.stopPrank();
     }
@@ -82,6 +99,7 @@ abstract contract VVVVestingTestBase is Test {
     // and varies vestedUser and vestingScheduleIndex because these are the factors by which the vesting schedule is identified
     function generateSetVestingScheduleData(
         uint256 _numUsers,
+        uint256 _growthRateProportion,
         string memory paramToVary
     ) public view returns (VVVVesting.SetVestingScheduleParams[] memory) {
         VVVVesting.SetVestingScheduleParams[]
@@ -93,16 +111,10 @@ abstract contract VVVVestingTestBase is Test {
                     uint160(uint256(keccak256(abi.encodePacked(i))))
                 );
                 setVestingScheduleParams[i].vestingScheduleIndex = 0;
-                setVestingScheduleParams[i].vestingSchedule.tokensToVestAfterStart =
+                setVestingScheduleParams[i].vestingSchedule.tokensToVestAfterFirstInterval =
                     (i + 1) *
-                    10_000 *
-                    1e18; //10k
-                setVestingScheduleParams[i].vestingSchedule.postCliffDuration =
-                    (i + 1) *
-                    60 *
-                    24 *
-                    365 *
-                    2; //2 years
+                    100 *
+                    1e18; //100 tokens
                 setVestingScheduleParams[i].vestingSchedule.scheduleStartTime =
                     block.timestamp +
                     i *
@@ -116,6 +128,8 @@ abstract contract VVVVestingTestBase is Test {
                     24 *
                     30; //30 days
                 setVestingScheduleParams[i].vestingSchedule.intervalLength = 60 * 24 * 30; //30 days
+                setVestingScheduleParams[i].vestingSchedule.maxIntervals = 10;
+                setVestingScheduleParams[i].vestingSchedule.growthRateProportion = _growthRateProportion;
             }
         } else if (
             keccak256(abi.encodePacked(paramToVary)) == keccak256(abi.encodePacked("vestingScheduleIndex"))
@@ -125,8 +139,7 @@ abstract contract VVVVestingTestBase is Test {
                     uint160(uint256(keccak256(abi.encodePacked("vestedUser"))))
                 );
                 setVestingScheduleParams[i].vestingScheduleIndex = i;
-                setVestingScheduleParams[i].vestingSchedule.tokensToVestAfterStart = 10_000 * 1e18; //10k tokens
-                setVestingScheduleParams[i].vestingSchedule.postCliffDuration = 60 * 24 * 365 * 2; //2 years
+                setVestingScheduleParams[i].vestingSchedule.tokensToVestAfterFirstInterval = 100 * 1e18; //100 tokens
                 setVestingScheduleParams[i].vestingSchedule.scheduleStartTime =
                     block.timestamp *
                     60 *
@@ -134,6 +147,8 @@ abstract contract VVVVestingTestBase is Test {
                     2; //2 days from now
                 setVestingScheduleParams[i].vestingSchedule.cliffEndTime = block.timestamp * 60 * 24 * 30; //30 days
                 setVestingScheduleParams[i].vestingSchedule.intervalLength = 60 * 24 * 30; //30 days
+                setVestingScheduleParams[i].vestingSchedule.maxIntervals = 10;
+                setVestingScheduleParams[i].vestingSchedule.growthRateProportion = _growthRateProportion;
             }
         } else {
             revert("invalid paramToVary");
