@@ -41,6 +41,8 @@ contract VVVAuthorizationRegistryTests is Test {
     //ensures contract is deployed as expected
     function testDeployment() public {
         assertTrue(address(registry) != address(0));
+        assertTrue(registry.defaultAdmin() == defaultAdmin);
+        assertTrue(registry.defaultAdminDelay() == defaultAdminTransferDelay);
     }
 
     //tests that DEFAULT_ADMIN_ROLE is transferrable per 2-step process of AccessControlDefaultAdminRules
