@@ -132,7 +132,165 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
     function testInvalidStakingDuration() public {
         vm.startPrank(sampleUser, sampleUser);
         vm.expectRevert();
-        EthStakingInstance.stakeEth{ value: 1 ether }(VVVETHStaking.StakingDuration(uint(3)));
+        EthStakingInstance.stakeEth{ value: 1 ether }(VVVETHStaking.StakingDuration(uint8(3)));
+        vm.stopPrank();
+    }
+
+    // Testing of restakeEth() function
+    // Tests that a user can restake their ETH
+    function testRestakeETH() public {
+        vm.startPrank(sampleUser, sampleUser);
+        uint256 stakeEthAmount = 1 ether;
+        uint256 stakeId = EthStakingInstance.stakeEth{ value: stakeEthAmount }(
+            VVVETHStaking.StakingDuration.ThreeMonths
+        );
+
+        // forward to first timestamp with released stake
+        advanceBlockNumberAndTimestampInSeconds(
+            EthStakingInstance.durationToSeconds(VVVETHStaking.StakingDuration.ThreeMonths) + 1
+        );
+
+        // restake
+        VVVETHStaking.StakingDuration restakeDuration = VVVETHStaking.StakingDuration.SixMonths;
+        uint256 restakeId = EthStakingInstance.restakeEth(stakeId, restakeDuration);
+        vm.stopPrank();
+
+        (uint256 stakedEthAmount, , bool stakeIsWithdrawn, ) = EthStakingInstance.userStakes(
+            sampleUser,
+            stakeId
+        );
+        (
+            uint256 restakedEthAmount,
+            uint256 restakeStartTimestamp,
+            bool restakeIsWithdrawn,
+            VVVETHStaking.StakingDuration restakeDurationRead
+        ) = EthStakingInstance.userStakes(sampleUser, restakeId);
+
+        assertTrue(restakeId == stakeId + 1);
+        assertTrue(stakedEthAmount == restakedEthAmount);
+        assertTrue(restakeStartTimestamp == block.timestamp);
+        assertTrue(stakeIsWithdrawn == true);
+        assertTrue(restakeIsWithdrawn == false);
+        assertTrue(restakeDuration == restakeDurationRead);
+    }
+
+    // Tests that a user can withdraw their new stake (from restakeETH() call) when the new duration has passed
+    function testUserCanWithdrawRestake() public {
+        //restake
+        vm.startPrank(sampleUser, sampleUser);
+        uint256 stakeEthAmount = 1 ether;
+        uint256 stakeId = EthStakingInstance.stakeEth{ value: stakeEthAmount }(
+            VVVETHStaking.StakingDuration.ThreeMonths
+        );
+
+        // forward to first timestamp with released stake
+        advanceBlockNumberAndTimestampInSeconds(
+            EthStakingInstance.durationToSeconds(VVVETHStaking.StakingDuration.ThreeMonths) + 1
+        );
+
+        // restake
+        VVVETHStaking.StakingDuration restakeDuration = VVVETHStaking.StakingDuration.SixMonths;
+        uint256 restakeId = EthStakingInstance.restakeEth(stakeId, restakeDuration);
+
+        // forward to first timestamp with released stake
+        advanceBlockNumberAndTimestampInSeconds(EthStakingInstance.durationToSeconds(restakeDuration) + 1);
+
+        uint256 balanceBefore = address(sampleUser).balance;
+        EthStakingInstance.withdrawStake(restakeId);
+        uint256 balanceAfter = address(sampleUser).balance;
+
+        vm.stopPrank();
+
+        assertTrue(balanceAfter == balanceBefore + stakeEthAmount);
+    }
+
+    // Tests that a user cannot restake before the first stake duration has passed
+    function testUserCannotRestakeBeforePreviousStakeIsComplete() public {
+        vm.startPrank(sampleUser, sampleUser);
+        uint256 stakeEthAmount = 1 ether;
+        uint256 stakeId = EthStakingInstance.stakeEth{ value: stakeEthAmount }(
+            VVVETHStaking.StakingDuration.ThreeMonths
+        );
+
+        //fast forward the staking duration to be 1 second short of the release timestamp
+        advanceBlockNumberAndTimestampInSeconds(
+            EthStakingInstance.durationToSeconds(VVVETHStaking.StakingDuration.ThreeMonths)
+        );
+
+        vm.expectRevert(VVVETHStaking.CantWithdrawBeforeStakeDuration.selector);
+        EthStakingInstance.restakeEth(stakeId, VVVETHStaking.StakingDuration.SixMonths);
+        vm.stopPrank();
+    }
+
+    // Tests that a user cannot restake on behalf of another user
+    function testUserCannotRestakeForAnotherUser() public {
+        vm.startPrank(sampleUser, sampleUser);
+        uint256 stakeEthAmount = 1 ether;
+        uint256 stakeId = EthStakingInstance.stakeEth{ value: stakeEthAmount }(
+            VVVETHStaking.StakingDuration.ThreeMonths
+        );
+
+        //fast forward the staking duration to be 1 second short of the release timestamp
+        advanceBlockNumberAndTimestampInSeconds(
+            EthStakingInstance.durationToSeconds(VVVETHStaking.StakingDuration.ThreeMonths) + 1
+        );
+        vm.stopPrank();
+
+        vm.startPrank(deployer, deployer);
+        //will revert because deployer does not have a stake with the given stakeId, which will yield an empty StakeData which trigger the InvalidStakeId error
+        vm.expectRevert(VVVETHStaking.InvalidStakeId.selector);
+        EthStakingInstance.restakeEth(stakeId, VVVETHStaking.StakingDuration.SixMonths);
+        vm.stopPrank();
+    }
+
+    // Tests that a user cannot withdraw the previous stake after restaking
+    function testUserCannotWithdrawPreviousStakeAfterRestake() public {
+        vm.startPrank(sampleUser, sampleUser);
+        uint256 stakeEthAmount = 1 ether;
+        uint256 stakeId = EthStakingInstance.stakeEth{ value: stakeEthAmount }(
+            VVVETHStaking.StakingDuration.ThreeMonths
+        );
+
+        // forward to first timestamp with released stake
+        advanceBlockNumberAndTimestampInSeconds(
+            EthStakingInstance.durationToSeconds(VVVETHStaking.StakingDuration.ThreeMonths) + 1
+        );
+
+        // restake
+        VVVETHStaking.StakingDuration restakeDuration = VVVETHStaking.StakingDuration.SixMonths;
+        EthStakingInstance.restakeEth(stakeId, restakeDuration);
+
+        // attempt to withdraw previous stake
+        vm.expectRevert(VVVETHStaking.StakeIsWithdrawn.selector);
+        EthStakingInstance.withdrawStake(stakeId);
+
+        vm.stopPrank();
+    }
+
+    // Tests that a user cannot withdraw a restaked stake before the new duration has passed
+    function testUserCannotWithdrawRestakeBeforeDuration() public {
+        vm.startPrank(sampleUser, sampleUser);
+        uint256 stakeEthAmount = 1 ether;
+        uint256 stakeId = EthStakingInstance.stakeEth{ value: stakeEthAmount }(
+            VVVETHStaking.StakingDuration.ThreeMonths
+        );
+
+        // forward to first timestamp with released stake
+        advanceBlockNumberAndTimestampInSeconds(
+            EthStakingInstance.durationToSeconds(VVVETHStaking.StakingDuration.ThreeMonths) + 1
+        );
+
+        // restake
+        VVVETHStaking.StakingDuration restakeDuration = VVVETHStaking.StakingDuration.SixMonths;
+        uint256 restakeId = EthStakingInstance.restakeEth(stakeId, restakeDuration);
+
+        // forward to first timestamp with released stake
+        advanceBlockNumberAndTimestampInSeconds(EthStakingInstance.durationToSeconds(restakeDuration) - 1);
+
+        // attempt to withdraw previous stake
+        vm.expectRevert(VVVETHStaking.CantWithdrawBeforeStakeDuration.selector);
+        EthStakingInstance.withdrawStake(restakeId);
+
         vm.stopPrank();
     }
 
@@ -506,16 +664,14 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
     }
 
     //test that even though the user has accrued $VVV, that they can't claim it without the VvvToken address being set
-    function testCantWithdrawWithoutVvvAddressSet() public {
+    function testCantClaimVvvWithoutVvvAddressSet() public {
         vm.startPrank(deployer, deployer);
         EthStakingInstance.setVvvToken(address(0));
         vm.stopPrank();
 
         vm.startPrank(sampleUser, sampleUser);
         uint256 stakeEthAmount = 1 ether;
-        uint256 stakeId = EthStakingInstance.stakeEth{ value: stakeEthAmount }(
-            VVVETHStaking.StakingDuration.ThreeMonths
-        );
+        EthStakingInstance.stakeEth{ value: stakeEthAmount }(VVVETHStaking.StakingDuration.ThreeMonths);
 
         // forward to first timestamp with released stake
         advanceBlockNumberAndTimestampInSeconds(
