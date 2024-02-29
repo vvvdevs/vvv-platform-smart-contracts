@@ -43,6 +43,39 @@ contract VVVAuthorizationRegistryTests is Test {
         assertTrue(address(registry) != address(0));
     }
 
+    //tests that DEFAULT_ADMIN_ROLE is transferrable per 2-step process of AccessControlDefaultAdminRules
+    function testTransferDefaultAdminRole() public {
+        vm.startPrank(deployer, deployer);
+        registry.beginDefaultAdminTransfer(manager);
+        vm.stopPrank();
+
+        //advance delay time + 2 to accomodate time > delaytime (not >=), and the test starting at t=0
+        advanceBlockNumberAndTimestampInSeconds(defaultAdminTransferDelay + 2);
+
+        vm.startPrank(manager, manager);
+        registry.acceptDefaultAdminTransfer();
+        vm.stopPrank();
+
+        assertTrue(registry.defaultAdmin() == manager);
+    }
+
+    //tests that DEFAULT_ADMIN_ROLE cannot be transferred without the delay between steps having passed
+    function testCannotTransferDefaultAdminRoleBeforeDelay() public {
+        vm.startPrank(deployer, deployer);
+        registry.beginDefaultAdminTransfer(manager);
+        vm.stopPrank();
+
+        //advance delay time +1, 1 second before eligibility to accept transfer of DEFAULT_ADMIN_ROLE
+        advanceBlockNumberAndTimestampInSeconds(defaultAdminTransferDelay + 1);
+
+        vm.startPrank(manager, manager);
+        vm.expectRevert(
+            abi.encodeWithSignature("AccessControlEnforcedDefaultAdminDelay(uint48)", block.timestamp)
+        );
+        registry.acceptDefaultAdminTransfer();
+        vm.stopPrank();
+    }
+
     //ensures that the DEFAULT_ADMIN_ROLE can set permissions
     function testDefaultAdminSetPermission() public {
         bytes4 selector = bytes4(keccak256("test()"));
@@ -72,6 +105,76 @@ contract VVVAuthorizationRegistryTests is Test {
 
         assertTrue(registry.permissions(key) == bytes32(0));
 
+        vm.stopPrank();
+    }
+
+    //tests that permission cannot be set without DEFAULT_ADMIN_ROLE
+    function testNonDefaultAdminGrantPermission() public {
+        bytes4 selector = bytes4(keccak256("test()"));
+        bytes32 role = bytes32(keccak256("TEST_ROLE"));
+        address contractToCall = address(mockToken);
+
+        vm.startPrank(manager, manager);
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "AccessControlUnauthorizedAccount(address,bytes32)",
+                manager,
+                registry.DEFAULT_ADMIN_ROLE()
+            )
+        );
+        registry.setPermission(contractToCall, selector, role);
+        vm.stopPrank();
+    }
+
+    //tests that permission cannot be removed without DEFAULT_ADMIN_ROLE
+    //in this context, role removal is done by setting the role to bytes32(0)
+    function testNonDefaultAdminRevokePermission() public {
+        bytes4 selector = bytes4(keccak256("test()"));
+        bytes32 role = bytes32(0); //restoring default mapping value, only DEFAULT_ADMIN_ROLE has authorization for this key
+        address contractToCall = address(mockToken);
+
+        vm.startPrank(manager, manager);
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "AccessControlUnauthorizedAccount(address,bytes32)",
+                manager,
+                registry.DEFAULT_ADMIN_ROLE()
+            )
+        );
+        registry.setPermission(contractToCall, selector, role);
+        vm.stopPrank();
+    }
+
+    //test the isAuthorized function directly to ensure MockERC20_AuthRegistry is not misusing the isAuthorized modifier
+    function testIsAuthorized() public {
+        vm.startPrank(deployer, deployer);
+        //create permission for role
+        bytes4 selector = mockToken.mintWithAuth.selector;
+        bytes32 role = bytes32(keccak256("TEST_ROLE"));
+        address contractToCall = address(mockToken);
+        registry.setPermission(contractToCall, selector, role);
+        //assign role to non-super-admin (non-deployer) address
+        registry.grantRole(role, manager);
+        vm.stopPrank();
+
+        vm.startPrank(manager, manager);
+        assertTrue(registry.isAuthorized(contractToCall, selector, manager));
+        vm.stopPrank();
+    }
+
+    //test that isAuthorized returns false if the caller does not have the required role
+    function testNotAuthorized() public {
+        vm.startPrank(deployer, deployer);
+        //create permission for role
+        bytes4 selector = mockToken.mintWithAuth.selector;
+        bytes32 role = bytes32(keccak256("TEST_ROLE"));
+        address contractToCall = address(mockToken);
+        registry.setPermission(contractToCall, selector, role);
+        //no role granted to manager here, unlike testIsAuthorized
+        vm.stopPrank();
+
+        vm.startPrank(manager, manager);
+        assertTrue(!registry.isAuthorized(contractToCall, selector, manager));
         vm.stopPrank();
     }
 
