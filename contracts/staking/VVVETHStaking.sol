@@ -137,32 +137,6 @@ contract VVVETHStaking is Ownable {
     }
 
     /**
-        @notice Restakes ETH for a given duration, marks previous stake as withdrawn but does not transfer the ETH
-        @param _stakeId The id of the stake to restake
-        @param _stakeDuration The duration of the new stake
-     */
-    function restakeEth(uint256 _stakeId, StakingDuration _stakeDuration) external returns (uint256) {
-        StakeData storage stake = userStakes[msg.sender][_stakeId];
-        _withdrawChecks(stake);
-
-        stake.stakeIsWithdrawn = true;
-
-        ++stakeId;
-
-        userStakes[msg.sender][stakeId] = StakeData({
-            stakedEthAmount: stake.stakedEthAmount,
-            stakeStartTimestamp: block.timestamp,
-            stakeIsWithdrawn: false,
-            stakeDuration: _stakeDuration
-        });
-
-        _userStakeIds[msg.sender].push(stakeId);
-
-        emit Stake(msg.sender, stakeId, stake.stakedEthAmount, block.timestamp, _stakeDuration);
-        return stakeId;
-    }
-
-    /**
         @notice Withdraws a stake
         @param _stakeId The id of the stake
      */
