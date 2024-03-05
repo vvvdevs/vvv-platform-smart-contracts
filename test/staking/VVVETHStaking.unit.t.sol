@@ -325,6 +325,7 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         vm.startPrank(sampleUser, sampleUser);
         vm.expectRevert(VVVETHStaking.NewStakesNotPermitted.selector);
         EthStakingInstance.stakeEth{ value: 1 ether }(VVVETHStaking.StakingDuration.ThreeMonths);
+
         vm.stopPrank();
     }
 
