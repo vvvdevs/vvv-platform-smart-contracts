@@ -5,12 +5,12 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-
+import { VVVAuthorizationRegistryChecker } from "contracts/auth/VVVAuthorizationRegistryChecker.sol";
 /**
  * @title VVV VC Investment Ledger
  * @notice This contract facilitates investments in VVV VC projects
  */
-contract VVVVCInvestmentLedger is Ownable {
+contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
     using SafeERC20 for IERC20;
 
     /// @notice EIP-712 standard definitions
@@ -83,7 +83,11 @@ contract VVVVCInvestmentLedger is Ownable {
         @param _signer The address authorized to sign investment transactions
         @param _environmentTag The environment tag for the EIP-712 domain separator
      */
-    constructor(address _signer, string memory _environmentTag) Ownable(msg.sender) {
+    constructor(
+        address _signer,
+        string memory _environmentTag,
+        address _registryAddress
+    ) VVVAuthorizationRegistryChecker(_registryAddress) {
         signer = _signer;
 
         // EIP-712 domain separator
@@ -185,7 +189,7 @@ contract VVVVCInvestmentLedger is Ownable {
     }
 
     /// @notice Allows admin to withdraw ERC20 tokens from this contract
-    function withdraw(address _tokenAddress, address _to, uint256 _amount) external onlyOwner {
+    function withdraw(address _tokenAddress, address _to, uint256 _amount) external onlyAuthorized {
         IERC20(_tokenAddress).safeTransfer(_to, _amount);
     }
 
@@ -194,7 +198,7 @@ contract VVVVCInvestmentLedger is Ownable {
         address _kycAddress,
         uint256 _investmentRound,
         uint256 _amountToInvest
-    ) external onlyOwner {
+    ) external onlyAuthorized {
         kycAddressInvestedPerRound[_kycAddress][_investmentRound] += _amountToInvest;
         totalInvestedPerRound[_investmentRound] += _amountToInvest;
         emit VCInvestment(_investmentRound, _kycAddress, _amountToInvest);
