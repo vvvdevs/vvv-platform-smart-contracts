@@ -119,19 +119,20 @@ contract VVVETHStaking is Ownable {
         @return The id of the stake
      */
     function stakeEth(StakingDuration _stakeDuration) external payable returns (uint256) {
-        if (msg.value == 0) revert CantStakeZeroEth();
-        ++stakeId;
+        _stakeEth(_stakeDuration, msg.value);
+        return stakeId;
+    }
 
-        userStakes[msg.sender][stakeId] = StakeData({
-            stakedEthAmount: msg.value,
-            stakeStartTimestamp: block.timestamp,
-            stakeIsWithdrawn: false,
-            stakeDuration: _stakeDuration
-        });
-
-        _userStakeIds[msg.sender].push(stakeId);
-
-        emit Stake(msg.sender, stakeId, msg.value, block.timestamp, _stakeDuration);
+    /**
+        @notice Restakes ETH for a given duration, marks previous stake as withdrawn but does not transfer the ETH
+        @param _stakeId The id of the stake to restake
+        @param _stakeDuration The duration of the new stake
+     */
+    function restakeEth(uint256 _stakeId, StakingDuration _stakeDuration) external returns (uint256) {
+        StakeData storage stake = userStakes[msg.sender][_stakeId];
+        _withdrawChecks(stake);
+        stake.stakeIsWithdrawn = true;
+        _stakeEth(_stakeDuration, stake.stakedEthAmount);
         return stakeId;
     }
 
@@ -271,6 +272,23 @@ contract VVVETHStaking is Ownable {
     ///@notice Sets the address of the $VVV token
     function setVvvToken(address _vvvTokenAddress) external onlyOwner {
         vvvToken = IERC20(_vvvTokenAddress);
+    }
+
+    ///@notice Private function to stake ETH, used by both stakeEth and restakeEth
+    function _stakeEth(StakingDuration _stakeDuration, uint256 _stakedEthAmount) private {
+        if (_stakedEthAmount == 0) revert CantStakeZeroEth();
+        ++stakeId;
+
+        userStakes[msg.sender][stakeId] = StakeData({
+            stakedEthAmount: _stakedEthAmount,
+            stakeStartTimestamp: block.timestamp,
+            stakeIsWithdrawn: false,
+            stakeDuration: _stakeDuration
+        });
+
+        _userStakeIds[msg.sender].push(stakeId);
+
+        emit Stake(msg.sender, stakeId, _stakedEthAmount, block.timestamp, _stakeDuration);
     }
 
     ///@notice checks permissions for withdrawing a stake based on eth amount, stake start time, and whether the stake has been withdrawn
