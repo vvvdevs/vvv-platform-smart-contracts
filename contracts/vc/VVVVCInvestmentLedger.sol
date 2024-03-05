@@ -188,4 +188,15 @@ contract VVVVCInvestmentLedger is Ownable {
     function withdraw(address _tokenAddress, address _to, uint256 _amount) external onlyOwner {
         IERC20(_tokenAddress).safeTransfer(_to, _amount);
     }
+
+    ///@notice Allows admin to add an investment record to the ledger
+    function addInvestmentRecord(
+        address _kycAddress,
+        uint256 _investmentRound,
+        uint256 _amountToInvest
+    ) external onlyOwner {
+        kycAddressInvestedPerRound[_kycAddress][_investmentRound] += _amountToInvest;
+        totalInvestedPerRound[_investmentRound] += _amountToInvest;
+        emit VCInvestment(_investmentRound, _kycAddress, _amountToInvest);
+    }
 }

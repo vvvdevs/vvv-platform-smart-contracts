@@ -200,4 +200,43 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             (postTransferRecipientBalance - preTransferRecipientBalance) == preTransferContractBalance
         );
     }
+
+    /**
+     * @notice Tests addition of investment record by admin
+     */
+    function testAdminAddInvestmentRecord() public {
+        address kycAddress = sampleUser;
+        uint256 investmentRound = sampleInvestmentRoundIds[0];
+        uint256 investmentAmount = 1000;
+
+        uint256 userInvested = LedgerInstance.kycAddressInvestedPerRound(kycAddress, investmentRound);
+        uint256 totalInvested = LedgerInstance.totalInvestedPerRound(investmentRound);
+
+        vm.startPrank(deployer, deployer);
+        LedgerInstance.addInvestmentRecord(kycAddress, investmentRound, investmentAmount);
+        vm.stopPrank();
+
+        assertTrue(
+            LedgerInstance.kycAddressInvestedPerRound(kycAddress, investmentRound) ==
+                userInvested + investmentAmount
+        );
+
+        assertTrue(
+            LedgerInstance.totalInvestedPerRound(investmentRound) == totalInvested + investmentAmount
+        );
+    }
+
+    /**
+     * @notice Tests addition of investment record by admin
+     */
+    function testUserCantAddInvestmentRecord() public {
+        address kycAddress = sampleUser;
+        uint256 investmentRound = sampleInvestmentRoundIds[0];
+        uint256 investmentAmount = 1000;
+
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert();
+        LedgerInstance.addInvestmentRecord(kycAddress, investmentRound, investmentAmount);
+        vm.stopPrank();
+    }
 }
