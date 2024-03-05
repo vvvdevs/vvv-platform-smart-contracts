@@ -165,6 +165,19 @@ contract VVVVesting is Ownable {
             _tokenAmountToWithdraw,
             _vestingScheduleIndex
         );
+
+        emit SetVestingSchedule(
+            msg.sender,
+            _vestingScheduleIndex,
+            vestingSchedule.tokensToVestAtStart,
+            vestingSchedule.tokensToVestAfterFirstInterval,
+            vestingSchedule.tokenAmountWithdrawn,
+            vestingSchedule.scheduleStartTime,
+            vestingSchedule.cliffEndTime,
+            vestingSchedule.intervalLength,
+            vestingSchedule.maxIntervals,
+            vestingSchedule.growthRateProportion
+        );
     }
 
     /**
