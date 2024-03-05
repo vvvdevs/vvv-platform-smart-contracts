@@ -122,21 +122,10 @@ contract VVVETHStaking is Ownable {
         @param _stakeDuration The duration of the stake
         @return The id of the stake
      */
-    function stakeEth(StakingDuration _stakeDuration) external payable returns (uint256) {
+    function stakeEth(
+        StakingDuration _stakeDuration
+    ) external payable whenStakingIsPermitted returns (uint256) {
         _stakeEth(_stakeDuration, msg.value);
-        return stakeId;
-    }
-
-    /**
-        @notice Restakes ETH for a given duration, marks previous stake as withdrawn but does not transfer the ETH
-        @param _stakeId The id of the stake to restake
-        @param _stakeDuration The duration of the new stake
-     */
-    function restakeEth(uint256 _stakeId, StakingDuration _stakeDuration) external returns (uint256) {
-        StakeData storage stake = userStakes[msg.sender][_stakeId];
-        _withdrawChecks(stake);
-        stake.stakeIsWithdrawn = true;
-        _stakeEth(_stakeDuration, stake.stakedEthAmount);
         return stakeId;
     }
 
@@ -151,21 +140,8 @@ contract VVVETHStaking is Ownable {
     ) external whenStakingIsPermitted returns (uint256) {
         StakeData storage stake = userStakes[msg.sender][_stakeId];
         _withdrawChecks(stake);
-
         stake.stakeIsWithdrawn = true;
-
-        ++stakeId;
-
-        userStakes[msg.sender][stakeId] = StakeData({
-            stakedEthAmount: stake.stakedEthAmount,
-            stakeStartTimestamp: block.timestamp,
-            stakeIsWithdrawn: false,
-            stakeDuration: _stakeDuration
-        });
-
-        _userStakeIds[msg.sender].push(stakeId);
-
-        emit Stake(msg.sender, stakeId, stake.stakedEthAmount, block.timestamp, _stakeDuration);
+        _stakeEth(_stakeDuration, stake.stakedEthAmount);
         return stakeId;
     }
 
@@ -290,6 +266,7 @@ contract VVVETHStaking is Ownable {
     function withdrawEth(uint256 _amount, address _to) external onlyOwner {
         (bool success, ) = payable(_to).call{ value: _amount }("");
         if (!success) revert WithdrawFailed();
+    }
 
     ///@notice Private function to stake ETH, used by both stakeEth and restakeEth
     function _stakeEth(StakingDuration _stakeDuration, uint256 _stakedEthAmount) private {
