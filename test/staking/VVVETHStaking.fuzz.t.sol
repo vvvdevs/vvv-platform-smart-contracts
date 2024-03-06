@@ -21,6 +21,9 @@ contract VVVETHStakingUnitFuzzTests is VVVETHStakingTestBase {
         //mint 1,000,000 $VVV tokens to the staking contract
         VvvTokenInstance.mint(address(EthStakingInstance), 1_000_000 * 1e18);
 
+        //set newStakesPermitted to true to allow new stakes
+        EthStakingInstance.setNewStakesPermitted(true);
+
         vm.deal(sampleUser, 10 ether);
         vm.stopPrank();
     }
