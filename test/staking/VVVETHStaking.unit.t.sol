@@ -733,7 +733,7 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         uint256 userBalanceBefore = address(deployer).balance;
 
         vm.startPrank(deployer, deployer);
-        EthStakingInstance.withdrawEth(stakeEthAmount, deployer);
+        EthStakingInstance.withdrawEth(stakeEthAmount);
         vm.stopPrank();
 
         uint256 contractBalanceAfter = address(EthStakingInstance).balance;
