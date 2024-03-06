@@ -263,8 +263,8 @@ contract VVVETHStaking is Ownable {
     }
 
     ///@notice allows admin to withdraw ETH
-    function withdrawEth(uint256 _amount, address _to) external onlyOwner {
-        (bool success, ) = payable(_to).call{ value: _amount }("");
+    function withdrawEth(uint256 _amount) external onlyOwner {
+        (bool success, ) = payable(msg.sender).call{ value: _amount }("");
         if (!success) revert WithdrawFailed();
     }
 
