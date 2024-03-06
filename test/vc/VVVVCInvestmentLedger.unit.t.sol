@@ -245,7 +245,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
     }
 
     /**
-     * @notice Tests addition of investment record by admin
+     * @notice Tests that a non-admin cannot add an investment record
      */
     function testUserCantAddInvestmentRecord() public {
         address kycAddress = sampleUser;
