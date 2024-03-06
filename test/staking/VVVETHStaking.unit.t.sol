@@ -308,7 +308,7 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         vm.stopPrank();
     }
 
-    // tests that a user cannot stake when newStakesPermitted is false
+    // tests that a user cannot restake when newStakesPermitted is false
     function testRestakeWhenNewStakesPermittedFalse() public {
         vm.startPrank(sampleUser, sampleUser);
         uint256 stakeEthAmount = 1 ether;
