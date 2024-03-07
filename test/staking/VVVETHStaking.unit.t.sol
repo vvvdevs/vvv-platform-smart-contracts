@@ -722,6 +722,19 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         vm.stopPrank();
     }
 
+    // tests that the EtherReceived event is emitted when the receive function is called
+    function testEmitEtherReceived() public {
+        vm.startPrank(deployer, deployer);
+        vm.deal(deployer, 1 ether);
+
+        vm.expectEmit(address(EthStakingInstance));
+        emit VVVETHStaking.EtherReceived();
+        (bool success, ) = address(EthStakingInstance).call{ value: 1 ether }("");
+        assertTrue(success);
+
+        vm.stopPrank();
+    }
+
     // Tests that admin can withdraw eth that was sent by staker
     function testWithdrawStakedEth() public {
         vm.startPrank(sampleUser, sampleUser);
