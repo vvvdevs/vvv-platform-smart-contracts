@@ -22,6 +22,9 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         //mint 1,000,000 $VVV tokens to the staking contract
         VvvTokenInstance.mint(address(EthStakingInstance), 1_000_000 * 1e18);
 
+        //set newStakesPermitted to true to allow new stakes
+        EthStakingInstance.setNewStakesPermitted(true);
+
         vm.deal(sampleUser, 10 ether);
         vm.stopPrank();
     }
@@ -133,6 +136,17 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         vm.startPrank(sampleUser, sampleUser);
         vm.expectRevert();
         EthStakingInstance.stakeEth{ value: 1 ether }(VVVETHStaking.StakingDuration(uint8(3)));
+        vm.stopPrank();
+    }
+
+    // tests that a user cannot stake when newStakesPermitted is false
+    function testStakeWhenNewStakesPermittedFalse() public {
+        vm.startPrank(deployer, deployer);
+        EthStakingInstance.setNewStakesPermitted(false);
+        vm.stopPrank();
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVVETHStaking.NewStakesNotPermitted.selector);
+        EthStakingInstance.stakeEth{ value: 1 ether }(VVVETHStaking.StakingDuration.ThreeMonths);
         vm.stopPrank();
     }
 
@@ -290,6 +304,27 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         // attempt to withdraw previous stake
         vm.expectRevert(VVVETHStaking.CantWithdrawBeforeStakeDuration.selector);
         EthStakingInstance.withdrawStake(restakeId);
+
+        vm.stopPrank();
+    }
+
+    // tests that a user cannot restake when newStakesPermitted is false
+    function testRestakeWhenNewStakesPermittedFalse() public {
+        vm.startPrank(sampleUser, sampleUser);
+        uint256 stakeEthAmount = 1 ether;
+        VVVETHStaking.StakingDuration stakeDuration = VVVETHStaking.StakingDuration.OneYear;
+        EthStakingInstance.stakeEth{ value: stakeEthAmount }(stakeDuration);
+        // forward to first timestamp with released stake, which would allow restaking
+        advanceBlockNumberAndTimestampInSeconds(EthStakingInstance.durationToSeconds(stakeDuration) + 1);
+        vm.stopPrank();
+
+        vm.startPrank(deployer, deployer);
+        EthStakingInstance.setNewStakesPermitted(false);
+        vm.stopPrank();
+
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVVETHStaking.NewStakesNotPermitted.selector);
+        EthStakingInstance.stakeEth{ value: 1 ether }(VVVETHStaking.StakingDuration.ThreeMonths);
 
         vm.stopPrank();
     }
@@ -698,5 +733,26 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         assertTrue(success);
 
         vm.stopPrank();
+    }
+    
+    // Tests that admin can withdraw eth that was sent by staker
+    function testWithdrawStakedEth() public {
+        vm.startPrank(sampleUser, sampleUser);
+        uint256 stakeEthAmount = 1 ether;
+        EthStakingInstance.stakeEth{ value: stakeEthAmount }(VVVETHStaking.StakingDuration.ThreeMonths);
+        vm.stopPrank();
+
+        uint256 contractBalanceBefore = address(EthStakingInstance).balance;
+        uint256 userBalanceBefore = address(deployer).balance;
+
+        vm.startPrank(deployer, deployer);
+        EthStakingInstance.withdrawEth(stakeEthAmount);
+        vm.stopPrank();
+
+        uint256 contractBalanceAfter = address(EthStakingInstance).balance;
+        uint256 userBalanceAfter = address(deployer).balance;
+
+        assertTrue(contractBalanceAfter == contractBalanceBefore - stakeEthAmount);
+        assertTrue(userBalanceAfter == userBalanceBefore + stakeEthAmount);
     }
 }
