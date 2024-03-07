@@ -734,7 +734,7 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
 
         vm.stopPrank();
     }
-    
+
     // Tests that admin can withdraw eth that was sent by staker
     function testWithdrawStakedEth() public {
         vm.startPrank(sampleUser, sampleUser);
