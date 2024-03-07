@@ -967,4 +967,54 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
 
         assertTrue(difference <= tolerance);
     }
+
+    // tests that SetVestingSchedule event is emitted with correct parameters when withdrawVestedTokens is called
+    function testEmitSetVestingSchedule() public {
+        uint256 vestingScheduleIndex = 0;
+        uint256 tokensToVestAtStart = 1_000 * 1e18; //1k tokens
+        uint256 tokensToVestAfterFirstInterval = 100 * 1e18; //100 tokens
+        uint256 amountWithdrawn = 0;
+        uint256 scheduleStartTime = block.timestamp + 60 * 60 * 24 * 2; //2 days from now
+        uint256 cliffEndTime = scheduleStartTime + 60 * 60 * 24 * 365; //1 year from scheduleStartTime
+        uint256 intervalLength = 60 * 60 * 6 * 365; //3 months
+        uint256 maxIntervals = 100;
+        uint256 growthRateProportion = 0;
+
+        setVestingScheduleFromDeployer(
+            sampleUser,
+            vestingScheduleIndex,
+            tokensToVestAtStart,
+            tokensToVestAfterFirstInterval,
+            amountWithdrawn,
+            scheduleStartTime,
+            cliffEndTime,
+            intervalLength,
+            maxIntervals,
+            growthRateProportion
+        );
+
+        //advance partially through the vesting schedule
+        advanceBlockNumberAndTimestampInBlocks((maxIntervals * intervalLength) / 12 / 2); //seconds/(seconds per block)/fraction of postCliffDuration
+
+        uint256 vestedAmount = VVVVestingInstance.getVestedAmount(sampleUser, vestingScheduleIndex);
+
+        vm.startPrank(sampleUser, sampleUser);
+
+        vm.expectEmit(true, true, true, true, address(VVVVestingInstance));
+        emit VVVVesting.SetVestingSchedule(
+            sampleUser,
+            vestingScheduleIndex,
+            tokensToVestAtStart,
+            tokensToVestAfterFirstInterval,
+            vestedAmount,
+            scheduleStartTime,
+            cliffEndTime,
+            intervalLength,
+            maxIntervals,
+            growthRateProportion
+        );
+
+        VVVVestingInstance.withdrawVestedTokens(vestedAmount, sampleUser, vestingScheduleIndex);
+        vm.stopPrank();
+    }
 }
