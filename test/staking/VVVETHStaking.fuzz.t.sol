@@ -22,13 +22,13 @@ contract VVVETHStakingUnitFuzzTests is VVVETHStakingTestBase {
 
         //set auth registry permissions for ethStakingManager (ETH_STAKING_MANAGER_ROLE)
         AuthRegistry.grantRole(ethStakingManagerRole, ethStakingManager);
-        bytes4 setDurationMultiplierSelector = EthStakingInstance.setDurationMultiplier.selector;
+        bytes4 setDurationMultipliersSelector = EthStakingInstance.setDurationMultipliers.selector;
         bytes4 setNewStakesPermittedSelector = EthStakingInstance.setNewStakesPermitted.selector;
         bytes4 setVvvTokenSelector = EthStakingInstance.setVvvToken.selector;
         bytes4 withdrawEthSelector = EthStakingInstance.withdrawEth.selector;
         AuthRegistry.setPermission(
             address(EthStakingInstance),
-            setDurationMultiplierSelector,
+            setDurationMultipliersSelector,
             ethStakingManagerRole
         );
         AuthRegistry.setPermission(
