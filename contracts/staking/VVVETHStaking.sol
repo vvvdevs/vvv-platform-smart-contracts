@@ -2,10 +2,10 @@
 pragma solidity 0.8.23;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { VVVAuthorizationRegistryChecker } from "contracts/auth/VVVAuthorizationRegistryChecker.sol";
 
-contract VVVETHStaking is Ownable {
+contract VVVETHStaking is VVVAuthorizationRegistryChecker {
     using SafeERC20 for IERC20;
 
     uint256 public constant DENOMINATOR = 10_000;
@@ -104,7 +104,9 @@ contract VVVETHStaking is Ownable {
     error WithdrawFailed();
 
     ///@notice initializes the second values corresponding to each duration enum entry
-    constructor(address _owner) Ownable(_owner) {
+    constructor(
+        address _authorizationRegistryAddress
+    ) VVVAuthorizationRegistryChecker(_authorizationRegistryAddress) {
         durationToSeconds[StakingDuration.ThreeMonths] = 90 days;
         durationToSeconds[StakingDuration.SixMonths] = 180 days;
         durationToSeconds[StakingDuration.OneYear] = 360 days;
@@ -254,24 +256,24 @@ contract VVVETHStaking is Ownable {
     function setDurationMultiplier(
         StakingDuration[] memory _duration,
         uint256[] memory _multipliers
-    ) external onlyOwner {
+    ) external onlyAuthorized {
         for (uint256 i = 0; i < _duration.length; ++i) {
             durationToMultiplier[_duration[i]] = _multipliers[i];
         }
     }
 
     ///@notice sets newStakesPermitted
-    function setNewStakesPermitted(bool _newStakesPermitted) external onlyOwner {
+    function setNewStakesPermitted(bool _newStakesPermitted) external onlyAuthorized {
         newStakesPermitted = _newStakesPermitted;
     }
 
     ///@notice Sets the address of the $VVV token
-    function setVvvToken(address _vvvTokenAddress) external onlyOwner {
+    function setVvvToken(address _vvvTokenAddress) external onlyAuthorized {
         vvvToken = IERC20(_vvvTokenAddress);
     }
 
     ///@notice allows admin to withdraw ETH
-    function withdrawEth(uint256 _amount) external onlyOwner {
+    function withdrawEth(uint256 _amount) external onlyAuthorized {
         (bool success, ) = payable(msg.sender).call{ value: _amount }("");
         if (!success) revert WithdrawFailed();
     }

@@ -2,7 +2,7 @@
 pragma solidity 0.8.23;
 
 import { VVVToken } from "contracts/tokens/VvvToken.sol";
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { VVVAuthorizationRegistry } from "contracts/auth/VVVAuthorizationRegistry.sol";
 import { VVVETHStakingTestBase } from "test/staking/VVVETHStakingTestBase.sol";
 import { VVVETHStaking } from "contracts/staking/VVVETHStaking.sol";
 
@@ -16,16 +16,48 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
     function setUp() public {
         vm.startPrank(deployer, deployer);
         VvvTokenInstance = new VVVToken(type(uint256).max, 0);
-        EthStakingInstance = new VVVETHStaking(deployer);
-        EthStakingInstance.setVvvToken(address(VvvTokenInstance));
+
+        AuthRegistry = new VVVAuthorizationRegistry(defaultAdminTransferDelay, deployer);
+
+        EthStakingInstance = new VVVETHStaking(address(AuthRegistry));
+
+        //set auth registry permissions for ethStakingManager (ETH_STAKING_MANAGER_ROLE)
+        AuthRegistry.grantRole(ethStakingManagerRole, ethStakingManager);
+        bytes4 setDurationMultiplierSelector = EthStakingInstance.setDurationMultiplier.selector;
+        bytes4 setNewStakesPermittedSelector = EthStakingInstance.setNewStakesPermitted.selector;
+        bytes4 setVvvTokenSelector = EthStakingInstance.setVvvToken.selector;
+        bytes4 withdrawEthSelector = EthStakingInstance.withdrawEth.selector;
+        AuthRegistry.setPermission(
+            address(EthStakingInstance),
+            setDurationMultiplierSelector,
+            ethStakingManagerRole
+        );
+        AuthRegistry.setPermission(
+            address(EthStakingInstance),
+            setNewStakesPermittedSelector,
+            ethStakingManagerRole
+        );
+        AuthRegistry.setPermission(
+            address(EthStakingInstance),
+            setVvvTokenSelector,
+            ethStakingManagerRole
+        );
+        AuthRegistry.setPermission(
+            address(EthStakingInstance),
+            withdrawEthSelector,
+            ethStakingManagerRole
+        );
 
         //mint 1,000,000 $VVV tokens to the staking contract
         VvvTokenInstance.mint(address(EthStakingInstance), 1_000_000 * 1e18);
 
-        //set newStakesPermitted to true to allow new stakes
-        EthStakingInstance.setNewStakesPermitted(true);
-
         vm.deal(sampleUser, 10 ether);
+        vm.stopPrank();
+
+        //now that ethStakingManager has been granted the ETH_STAKING_MANAGER_ROLE, it can call setVvvToken and setNewStakesPermitted
+        vm.startPrank(ethStakingManager, ethStakingManager);
+        EthStakingInstance.setVvvToken(address(VvvTokenInstance));
+        EthStakingInstance.setNewStakesPermitted(true);
         vm.stopPrank();
     }
 
@@ -141,7 +173,7 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
 
     // tests that a user cannot stake when newStakesPermitted is false
     function testStakeWhenNewStakesPermittedFalse() public {
-        vm.startPrank(deployer, deployer);
+        vm.startPrank(ethStakingManager, ethStakingManager);
         EthStakingInstance.setNewStakesPermitted(false);
         vm.stopPrank();
         vm.startPrank(sampleUser, sampleUser);
@@ -250,7 +282,7 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         );
         vm.stopPrank();
 
-        vm.startPrank(deployer, deployer);
+        vm.startPrank(ethStakingManager, ethStakingManager);
         //will revert because deployer does not have a stake with the given stakeId, which will yield an empty StakeData which trigger the InvalidStakeId error
         vm.expectRevert(VVVETHStaking.InvalidStakeId.selector);
         EthStakingInstance.restakeEth(stakeId, VVVETHStaking.StakingDuration.SixMonths);
@@ -318,7 +350,7 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         advanceBlockNumberAndTimestampInSeconds(EthStakingInstance.durationToSeconds(stakeDuration) + 1);
         vm.stopPrank();
 
-        vm.startPrank(deployer, deployer);
+        vm.startPrank(ethStakingManager, ethStakingManager);
         EthStakingInstance.setNewStakesPermitted(false);
         vm.stopPrank();
 
@@ -663,9 +695,9 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
 
     // Testing admin functions
 
-    // Test that the owner can properly set the duration multipliers
+    // Test that the ethStakingManager can properly set the duration multipliers
     function testSetDurationMultiplier() public {
-        vm.startPrank(deployer, deployer);
+        vm.startPrank(ethStakingManager, ethStakingManager);
         VVVETHStaking.StakingDuration[] memory durations = new VVVETHStaking.StakingDuration[](3);
         durations[0] = VVVETHStaking.StakingDuration.ThreeMonths;
         durations[1] = VVVETHStaking.StakingDuration.SixMonths;
@@ -689,9 +721,9 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         );
     }
 
-    // Test that the owner can properly set the VvvToken address
+    // Test that the ethStakingManager can properly set the VvvToken address
     function testSetVvvToken() public {
-        vm.startPrank(deployer, deployer);
+        vm.startPrank(ethStakingManager, ethStakingManager);
         VVVToken newVvvToken = new VVVToken(type(uint256).max, 0);
         EthStakingInstance.setVvvToken(address(newVvvToken));
         assertTrue(address(EthStakingInstance.vvvToken()) == address(newVvvToken));
@@ -700,7 +732,7 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
 
     //test that even though the user has accrued $VVV, that they can't claim it without the VvvToken address being set
     function testCantClaimVvvWithoutVvvAddressSet() public {
-        vm.startPrank(deployer, deployer);
+        vm.startPrank(ethStakingManager, ethStakingManager);
         EthStakingInstance.setVvvToken(address(0));
         vm.stopPrank();
 
@@ -724,8 +756,8 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
 
     // tests that the EtherReceived event is emitted when the receive function is called
     function testEmitEtherReceived() public {
-        vm.startPrank(deployer, deployer);
-        vm.deal(deployer, 1 ether);
+        vm.startPrank(sampleUser, sampleUser);
+        vm.deal(sampleUser, 1 ether);
 
         vm.expectEmit(address(EthStakingInstance));
         emit VVVETHStaking.EtherReceived();
@@ -743,14 +775,14 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         vm.stopPrank();
 
         uint256 contractBalanceBefore = address(EthStakingInstance).balance;
-        uint256 userBalanceBefore = address(deployer).balance;
+        uint256 userBalanceBefore = address(ethStakingManager).balance;
 
-        vm.startPrank(deployer, deployer);
+        vm.startPrank(ethStakingManager, ethStakingManager);
         EthStakingInstance.withdrawEth(stakeEthAmount);
         vm.stopPrank();
 
         uint256 contractBalanceAfter = address(EthStakingInstance).balance;
-        uint256 userBalanceAfter = address(deployer).balance;
+        uint256 userBalanceAfter = address(ethStakingManager).balance;
 
         assertTrue(contractBalanceAfter == contractBalanceBefore - stakeEthAmount);
         assertTrue(userBalanceAfter == userBalanceBefore + stakeEthAmount);
