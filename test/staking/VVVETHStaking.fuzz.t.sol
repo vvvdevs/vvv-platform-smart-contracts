@@ -15,11 +15,10 @@ contract VVVETHStakingUnitFuzzTests is VVVETHStakingTestBase {
     // Sets up project and payment tokens, and an instance of the ETH staking contract
     function setUp() public {
         vm.startPrank(deployer, deployer);
-        VvvTokenInstance = new VVVToken(type(uint256).max, 0);
 
         AuthRegistry = new VVVAuthorizationRegistry(defaultAdminTransferDelay, deployer);
-
         EthStakingInstance = new VVVETHStaking(address(AuthRegistry));
+        VvvTokenInstance = new VVVToken(type(uint256).max, 0, address(AuthRegistry));
 
         //set auth registry permissions for ethStakingManager (ETH_STAKING_MANAGER_ROLE)
         AuthRegistry.grantRole(ethStakingManagerRole, ethStakingManager);
