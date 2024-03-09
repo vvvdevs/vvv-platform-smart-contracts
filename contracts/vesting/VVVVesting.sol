@@ -2,11 +2,11 @@
 pragma solidity ^0.8.23;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { FixedPointMathLib } from "@solmate/src/utils/FixedPointMathLib.sol";
+import { VVVAuthorizationRegistryChecker } from "contracts/auth/VVVAuthorizationRegistryChecker.sol";
 
-contract VVVVesting is Ownable {
+contract VVVVesting is VVVAuthorizationRegistryChecker {
     using SafeERC20 for IERC20;
     using FixedPointMathLib for uint256;
 
@@ -116,16 +116,20 @@ contract VVVVesting is Ownable {
     error InvalidTokenAddress();
 
     /**
-       @notice constructor
-           @param _vvvtoken the VVV token being vested
-           @dev reverts if _vvvtoken is the zero address
+        @notice constructor
+        @param _vvvToken the VVV token being vested
+        @param _authorizationRegistryAddress the address of the VVVAuthorizationRegistry
+        @dev reverts if _vvvToken is the zero address
      */
-    constructor(address _vvvtoken) Ownable(msg.sender) {
-        if (_vvvtoken == address(0)) {
+    constructor(
+        address _vvvToken,
+        address _authorizationRegistryAddress
+    ) VVVAuthorizationRegistryChecker(_authorizationRegistryAddress) {
+        if (_vvvToken == address(0) || _authorizationRegistryAddress == address(0)) {
             revert InvalidConstructorArguments();
         }
 
-        VVVToken = IERC20(_vvvtoken);
+        VVVToken = IERC20(_vvvToken);
     }
 
     /**
@@ -309,7 +313,7 @@ contract VVVVesting is Ownable {
         uint256 _vestingScheduleIntervalLength,
         uint256 _vestingScheduleMaxIntervals,
         uint256 _vestingScheduleGrowthRateProportion
-    ) external onlyOwner {
+    ) external onlyAuthorized {
         VestingSchedule memory newSchedule;
         newSchedule.tokensToVestAtStart = _tokensToVestAtStart;
         newSchedule.tokensToVestAfterFirstInterval = _tokensToVestAfterFirstInterval;
@@ -334,7 +338,7 @@ contract VVVVesting is Ownable {
         @notice only callable by admin
         @param _params array of SetVestingScheduleParams structs
      */
-    function batchSetVestingSchedule(SetVestingScheduleParams[] calldata _params) external onlyOwner {
+    function batchSetVestingSchedule(SetVestingScheduleParams[] calldata _params) external onlyAuthorized {
         for (uint256 i = 0; i < _params.length; ++i) {
             _setVestingSchedule(_params[i]);
         }
@@ -346,7 +350,10 @@ contract VVVVesting is Ownable {
         @param _vestedUser the address of the user whose vesting schedule is being removed
         @param _vestingScheduleIndex the index of the vesting schedule being removed
      */
-    function removeVestingSchedule(address _vestedUser, uint256 _vestingScheduleIndex) external onlyOwner {
+    function removeVestingSchedule(
+        address _vestedUser,
+        uint256 _vestingScheduleIndex
+    ) external onlyAuthorized {
         delete userVestingSchedules[_vestedUser][_vestingScheduleIndex];
         emit RemoveVestingSchedule(_vestedUser, _vestingScheduleIndex);
     }
@@ -358,7 +365,7 @@ contract VVVVesting is Ownable {
         @dev in-place update that carries over existing vesting schedules and user claims
         @dev reverts if _vvvtoken is the zero address
      */
-    function setVestedToken(address _vvvtoken) external onlyOwner {
+    function setVestedToken(address _vvvtoken) external onlyAuthorized {
         if (_vvvtoken == address(0)) {
             revert InvalidTokenAddress();
         }
