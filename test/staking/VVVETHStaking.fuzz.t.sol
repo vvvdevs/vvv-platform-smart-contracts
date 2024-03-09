@@ -1,6 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
+import { VVVAuthorizationRegistry } from "contracts/auth/VVVAuthorizationRegistry.sol";
 import { VVVToken } from "contracts/tokens/VvvToken.sol";
 import { VVVETHStakingTestBase } from "test/staking/VVVETHStakingTestBase.sol";
 import { VVVETHStaking } from "contracts/staking/VVVETHStaking.sol";
@@ -15,16 +16,48 @@ contract VVVETHStakingUnitFuzzTests is VVVETHStakingTestBase {
     function setUp() public {
         vm.startPrank(deployer, deployer);
         VvvTokenInstance = new VVVToken(type(uint256).max, 0);
-        EthStakingInstance = new VVVETHStaking(deployer);
-        EthStakingInstance.setVvvToken(address(VvvTokenInstance));
+
+        AuthRegistry = new VVVAuthorizationRegistry(defaultAdminTransferDelay, deployer);
+
+        EthStakingInstance = new VVVETHStaking(address(AuthRegistry));
+
+        //set auth registry permissions for ethStakingManager (ETH_STAKING_MANAGER_ROLE)
+        AuthRegistry.grantRole(ethStakingManagerRole, ethStakingManager);
+        bytes4 setDurationMultiplierSelector = EthStakingInstance.setDurationMultiplier.selector;
+        bytes4 setNewStakesPermittedSelector = EthStakingInstance.setNewStakesPermitted.selector;
+        bytes4 setVvvTokenSelector = EthStakingInstance.setVvvToken.selector;
+        bytes4 withdrawEthSelector = EthStakingInstance.withdrawEth.selector;
+        AuthRegistry.setPermission(
+            address(EthStakingInstance),
+            setDurationMultiplierSelector,
+            ethStakingManagerRole
+        );
+        AuthRegistry.setPermission(
+            address(EthStakingInstance),
+            setNewStakesPermittedSelector,
+            ethStakingManagerRole
+        );
+        AuthRegistry.setPermission(
+            address(EthStakingInstance),
+            setVvvTokenSelector,
+            ethStakingManagerRole
+        );
+        AuthRegistry.setPermission(
+            address(EthStakingInstance),
+            withdrawEthSelector,
+            ethStakingManagerRole
+        );
 
         //mint 1,000,000 $VVV tokens to the staking contract
         VvvTokenInstance.mint(address(EthStakingInstance), 1_000_000 * 1e18);
 
-        //set newStakesPermitted to true to allow new stakes
-        EthStakingInstance.setNewStakesPermitted(true);
-
         vm.deal(sampleUser, 10 ether);
+        vm.stopPrank();
+
+        //now that ethStakingManager has been granted the ETH_STAKING_MANAGER_ROLE, it can call setVvvToken and setNewStakesPermitted
+        vm.startPrank(ethStakingManager, ethStakingManager);
+        EthStakingInstance.setVvvToken(address(VvvTokenInstance));
+        EthStakingInstance.setNewStakesPermitted(true);
         vm.stopPrank();
     }
 
