@@ -24,7 +24,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
 
         LedgerInstance = new VVVVCInvestmentLedger(testSigner, environmentTag, address(AuthRegistry));
 
-        //grant ledgerManager the legerManagerRole
+        //grant ledgerManager the ledgerManagerRole
         AuthRegistry.grantRole(ledgerManagerRole, ledgerManager);
 
         //add permissions to ledgerManagerRole for withdraw and addInvestmentRecord on the LedgerInstance
