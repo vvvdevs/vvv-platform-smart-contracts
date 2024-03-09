@@ -86,8 +86,8 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
     constructor(
         address _signer,
         string memory _environmentTag,
-        address _registryAddress
-    ) VVVAuthorizationRegistryChecker(_registryAddress) {
+        address _authorizationRegistryAddress
+    ) VVVAuthorizationRegistryChecker(_authorizationRegistryAddress) {
         signer = _signer;
 
         // EIP-712 domain separator
