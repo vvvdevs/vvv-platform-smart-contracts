@@ -786,4 +786,54 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         assertTrue(contractBalanceAfter == contractBalanceBefore - stakeEthAmount);
         assertTrue(userBalanceAfter == userBalanceBefore + stakeEthAmount);
     }
+
+    // Tests that the Stake event is emitted correctly on new stakes
+    function testEmitStakeNewStake() public {
+        vm.startPrank(sampleUser, sampleUser);
+        uint256 stakeId = 1;
+        uint256 stakedEthAmount = 1 ether;
+        uint256 stakeStartTimestamp = block.timestamp;
+        VVVETHStaking.StakingDuration stakedDuration = VVVETHStaking.StakingDuration.ThreeMonths;
+        vm.expectEmit(address(EthStakingInstance));
+        emit VVVETHStaking.Stake(
+            sampleUser,
+            stakeId,
+            stakedEthAmount,
+            stakeStartTimestamp,
+            stakedDuration
+        );
+        EthStakingInstance.stakeEth{ value: 1 ether }(VVVETHStaking.StakingDuration.ThreeMonths);
+        vm.stopPrank();
+    }
+
+    // Tests that the Stake event is emitted correctly on restakes
+    function testEmitStakeRestake() public {
+        vm.startPrank(sampleUser, sampleUser);
+        uint256 stakeId = 1;
+        uint256 restakeId = stakeId + 1;
+        uint256 stakedEthAmount = 1 ether;
+        VVVETHStaking.StakingDuration stakeDuration = VVVETHStaking.StakingDuration.ThreeMonths;
+        EthStakingInstance.stakeEth{ value: 1 ether }(stakeDuration);
+
+        // forward to first timestamp with released stake
+        advanceBlockNumberAndTimestampInSeconds(
+            EthStakingInstance.durationToSeconds(VVVETHStaking.StakingDuration.ThreeMonths) + 1
+        );
+        uint256 restakeStartTimestamp = block.timestamp;
+
+        vm.expectEmit(address(EthStakingInstance));
+        emit VVVETHStaking.Stake(
+            sampleUser,
+            restakeId,
+            stakedEthAmount,
+            restakeStartTimestamp,
+            stakeDuration
+        );
+        EthStakingInstance.restakeEth(stakeId, VVVETHStaking.StakingDuration.ThreeMonths);
+
+        vm.stopPrank();
+    }
+
+    // Tests that the Withdraw event is emitted correctly on withdrawal of stake
+    // Tests that the VvvClaim event is emitted correctly on claim of $VVV
 }
