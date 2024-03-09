@@ -253,7 +253,7 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
     }
 
     ///@notice sets the duration multipliers for a duration enum entry
-    function setDurationMultiplier(
+    function setDurationMultipliers(
         StakingDuration[] memory _duration,
         uint256[] memory _multipliers
     ) external onlyAuthorized {
