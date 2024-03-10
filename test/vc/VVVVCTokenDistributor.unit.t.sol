@@ -384,4 +384,45 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
         assertTrue(sumOfClaimAmounts > proxyWalletBalance - (proxyWalletBalance / 1e18));
         assertTrue(sumOfClaimAmounts <= proxyWalletBalance);
     }
+
+    // Test that VCClaim is correctly emitted when project tokens are claimed
+    function testEmitVCClaim() public {
+        uint256 investmentRound = sampleInvestmentRoundIds[0];
+        uint256 investmentAmount = sampleAmountsToInvest[0];
+        uint256 claimAmount = sampleTokenAmountsToClaim[0];
+
+        //invest in round 1 (sampleInvestmentRoundIds[0])
+        investAsUser(
+            sampleUser,
+            generateInvestParamsWithSignature(
+                investmentRound,
+                investmentRoundSampleLimit,
+                investmentAmount,
+                userPaymentTokenDefaultAllocation,
+                sampleKycAddress
+            )
+        );
+
+        //claim for the same round
+        VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
+            sampleUser,
+            sampleKycAddress,
+            projectTokenProxyWallets,
+            sampleInvestmentRoundIds,
+            claimAmount
+        );
+
+        //Test VCClaim emission
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectEmit(address(TokenDistributorInstance));
+        emit VVVVCTokenDistributor.VCClaim(
+            sampleKycAddress,
+            sampleUser,
+            address(ProjectTokenInstance),
+            projectTokenProxyWallets,
+            claimAmount
+        );
+        TokenDistributorInstance.claim(claimParams);
+        vm.stopPrank();
+    }
 }
