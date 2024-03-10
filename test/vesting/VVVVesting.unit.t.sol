@@ -1095,7 +1095,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         vm.stopPrank();
     }
 
-    // tests that a SetVestingSchedule event is emitted with correct parameters when removeVestingSchedule is called
+    // tests that a SetVestingSchedule event is emitted when removeVestingSchedule is called
     function testEmitSetVestingScheduleOnRemove() public {
         uint256 vestingScheduleIndex = 0;
         uint256 tokensToVestAtStart = 1_000 * 1e18; //1k tokens
