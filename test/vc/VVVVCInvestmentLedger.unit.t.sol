@@ -200,4 +200,51 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             (postTransferRecipientBalance - preTransferRecipientBalance) == preTransferContractBalance
         );
     }
+
+    /**
+     * @notice Tests emission of VCInvestment event upon user investment
+     */
+    function testEmitVCInvestment() public {
+        VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
+            sampleInvestmentRoundIds[0],
+            investmentRoundSampleLimit,
+            sampleAmountsToInvest[0],
+            userPaymentTokenDefaultAllocation,
+            sampleKycAddress
+        );
+
+        vm.startPrank(sampleUser, sampleUser);
+        PaymentTokenInstance.approve(address(LedgerInstance), params.amountToInvest);
+        vm.expectEmit(address(LedgerInstance));
+        emit VVVVCInvestmentLedger.VCInvestment(
+            params.investmentRound,
+            params.kycAddress,
+            params.amountToInvest
+        );
+        LedgerInstance.invest(params);
+        vm.stopPrank();
+    }
+
+    // /**
+    //  * @notice Tests emission of VCInvestment event upon admin investment
+    //  */
+    // function testEmitVCInvestment() public {
+    //     vm.startPrank(sampleUser, sampleUser);
+
+    //     uint256 amountToInvest = sampleAmountsToInvest[0];
+    //     uint256 investmentRoundId = sampleInvestmentRoundIds[0];
+
+    //     vm.expectEmit(address(LedgerInstance));
+    //     emit VVVVCInvestmentLedger.VCInvestment(
+    //         investmentRoundId,
+    //         sampleKycAddress,
+    //         amountToInvest
+    //     );
+    //     LedgerInstance.addInvestmentRecord(
+    //         investmentRoundId,
+    //         sampleKycAddress,
+    //         amountToInvest
+    //     );
+    //     vm.stopPrank();
+    // }
 }
