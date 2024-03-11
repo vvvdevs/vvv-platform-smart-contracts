@@ -814,7 +814,7 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         assertTrue(contractBalanceAfter == contractBalanceBefore - stakeEthAmount);
         assertTrue(userBalanceAfter == userBalanceBefore + stakeEthAmount);
     }
-    
+
     // Tests that addresses other than admin (ethStakingManager) cannot withdraw eth that was sent by staker
     function testWithdrawStakedEthNotAdmin() public {
         vm.startPrank(sampleUser, sampleUser);

@@ -230,7 +230,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             userPaymentTokenDefaultAllocation,
             sampleKycAddress
         );
-        
+
         investAsUser(sampleUser, params);
 
         vm.startPrank(sampleUser, sampleUser);
@@ -242,12 +242,21 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
 
         vm.stopPrank();
     }
-     
+
     /**
      * @notice Tests emission of VCInvestment event upon user investment
      */
-    function testEmitVCInvestment() public {
+    function testEmitVCInvestmentUser() public {
+        VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
+            sampleInvestmentRoundIds[0],
+            investmentRoundSampleLimit,
+            sampleAmountsToInvest[0],
+            userPaymentTokenDefaultAllocation,
+            sampleKycAddress
+        );
+
         vm.startPrank(sampleUser, sampleUser);
+
         PaymentTokenInstance.approve(address(LedgerInstance), params.amountToInvest);
         vm.expectEmit(address(LedgerInstance));
         emit VVVVCInvestmentLedger.VCInvestment(
@@ -259,28 +268,20 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         vm.stopPrank();
     }
 
-    // /**
-    //  * @notice Tests emission of VCInvestment event upon admin investment
-    //  */
-    // function testEmitVCInvestment() public {
-    //     vm.startPrank(sampleUser, sampleUser);
+    /**
+     * @notice Tests emission of VCInvestment event upon admin investment
+     */
+    function testEmitVCInvestmentAdmin() public {
+        vm.startPrank(ledgerManager, ledgerManager);
 
-    //     uint256 amountToInvest = sampleAmountsToInvest[0];
-    //     uint256 investmentRoundId = sampleInvestmentRoundIds[0];
+        uint256 amountToInvest = sampleAmountsToInvest[0];
+        uint256 investmentRoundId = sampleInvestmentRoundIds[0];
 
-    //     vm.expectEmit(address(LedgerInstance));
-    //     emit VVVVCInvestmentLedger.VCInvestment(
-    //         investmentRoundId,
-    //         sampleKycAddress,
-    //         amountToInvest
-    //     );
-    //     LedgerInstance.addInvestmentRecord(
-    //         investmentRoundId,
-    //         sampleKycAddress,
-    //         amountToInvest
-    //     );
-    //     vm.stopPrank();
-    // }
+        vm.expectEmit(address(LedgerInstance));
+        emit VVVVCInvestmentLedger.VCInvestment(investmentRoundId, sampleKycAddress, amountToInvest);
+        LedgerInstance.addInvestmentRecord(sampleKycAddress, investmentRoundId, amountToInvest);
+        vm.stopPrank();
+    }
 
     /**
      * @notice Tests addition of investment record by admin
