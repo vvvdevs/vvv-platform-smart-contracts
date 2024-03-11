@@ -2,7 +2,8 @@
 pragma solidity ^0.8.23;
 
 import { MockERC20 } from "contracts/mock/MockERC20.sol";
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { VVVAuthorizationRegistry } from "contracts/auth/VVVAuthorizationRegistry.sol";
+import { VVVAuthorizationRegistryChecker } from "contracts/auth/VVVAuthorizationRegistryChecker.sol";
 import { VVVVesting } from "contracts/vesting/VVVVesting.sol";
 import { VVVVestingTestBase } from "test/vesting/VVVVestingTestBase.sol";
 
@@ -15,8 +16,35 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
     function setUp() public {
         vm.startPrank(deployer, deployer);
 
+        AuthRegistry = new VVVAuthorizationRegistry(defaultAdminTransferDelay, deployer);
+
         VVVTokenInstance = new MockERC20(18);
-        VVVVestingInstance = new VVVVesting(address(VVVTokenInstance));
+        VVVVestingInstance = new VVVVesting(address(VVVTokenInstance), address(AuthRegistry));
+        AuthRegistry.grantRole(vestingManagerRole, vestingManager);
+        bytes4 setVestingScheduleSelector = VVVVestingInstance.setVestingSchedule.selector;
+        bytes4 batchSetVestingScheduleSelector = VVVVestingInstance.batchSetVestingSchedule.selector;
+        bytes4 removeVestingScheduleSelector = VVVVestingInstance.removeVestingSchedule.selector;
+        bytes4 setVestedTokenSelector = VVVVestingInstance.setVestedToken.selector;
+        AuthRegistry.setPermission(
+            address(VVVVestingInstance),
+            setVestingScheduleSelector,
+            vestingManagerRole
+        );
+        AuthRegistry.setPermission(
+            address(VVVVestingInstance),
+            batchSetVestingScheduleSelector,
+            vestingManagerRole
+        );
+        AuthRegistry.setPermission(
+            address(VVVVestingInstance),
+            removeVestingScheduleSelector,
+            vestingManagerRole
+        );
+        AuthRegistry.setPermission(
+            address(VVVVestingInstance),
+            setVestedTokenSelector,
+            vestingManagerRole
+        );
 
         VVVTokenInstance.mint(address(VVVVestingInstance), 1_000_000 * 1e18); //1M tokens
 
@@ -31,88 +59,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
     function testDeploymentWithZeroAddress() public {
         vm.startPrank(deployer, deployer);
         vm.expectRevert(VVVVesting.InvalidConstructorArguments.selector);
-        VVVVestingInstance = new VVVVesting(address(0));
-        vm.stopPrank();
-    }
-
-    //test admin/owner only functions are not accessible by other callers
-    function testAdminFunctionNotCallableByOtherUsers() public {
-        //values that would work if caller was owner/admin
-        VestingParams memory params = VestingParams({
-            vestingScheduleIndex: 0,
-            tokensToVestAtStart: 1_000 * 1e18, //1k tokens
-            tokensToVestAfterFirstInterval: 100 * 1e18, //100 tokens
-            amountWithdrawn: 0,
-            scheduleStartTime: block.timestamp,
-            cliffEndTime: block.timestamp + 60, //1 minute cliff
-            intervalLength: 12,
-            maxIntervals: 100,
-            growthRateProportion: 0
-        });
-
-        setVestingScheduleFromDeployer(
-            sampleUser,
-            params.vestingScheduleIndex,
-            params.tokensToVestAtStart,
-            params.tokensToVestAfterFirstInterval,
-            params.amountWithdrawn,
-            params.scheduleStartTime,
-            params.cliffEndTime,
-            params.intervalLength,
-            params.maxIntervals,
-            params.growthRateProportion
-        );
-
-        vm.startPrank(sampleUser, sampleUser);
-        vm.expectRevert();
-        setVestingScheduleFromDeployer(
-            sampleUser,
-            params.vestingScheduleIndex,
-            params.tokensToVestAtStart,
-            params.tokensToVestAfterFirstInterval,
-            params.amountWithdrawn,
-            params.scheduleStartTime,
-            params.cliffEndTime,
-            params.intervalLength,
-            params.maxIntervals,
-            params.growthRateProportion
-        );
-        vm.stopPrank();
-
-        vm.startPrank(sampleUser, sampleUser);
-        vm.expectRevert();
-        VVVVestingInstance.removeVestingSchedule(sampleUser, params.vestingScheduleIndex);
-        vm.stopPrank();
-    }
-
-    //test invalid vesting schedule index
-    function testInvalidVestingScheduleIndex() public {
-        VestingParams memory params = VestingParams({
-            vestingScheduleIndex: 123,
-            tokensToVestAtStart: 1_000 * 1e18, //1k tokens
-            tokensToVestAfterFirstInterval: 100 * 1e18, //100 tokens
-            amountWithdrawn: 0,
-            scheduleStartTime: block.timestamp,
-            cliffEndTime: block.timestamp + 60, //1 minute cliff
-            intervalLength: 12,
-            maxIntervals: 100,
-            growthRateProportion: 0
-        });
-
-        vm.startPrank(deployer, deployer);
-        vm.expectRevert(VVVVesting.InvalidScheduleIndex.selector);
-        VVVVestingInstance.setVestingSchedule(
-            sampleUser,
-            params.vestingScheduleIndex,
-            params.tokensToVestAtStart,
-            params.tokensToVestAfterFirstInterval,
-            params.amountWithdrawn,
-            params.scheduleStartTime,
-            params.cliffEndTime,
-            params.intervalLength,
-            params.maxIntervals,
-            params.growthRateProportion
-        );
+        VVVVestingInstance = new VVVVesting(address(0), address(AuthRegistry));
         vm.stopPrank();
     }
 
@@ -130,7 +77,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             growthRateProportion: 0
         });
 
-        setVestingScheduleFromDeployer(
+        setVestingScheduleFromManager(
             sampleUser,
             params.vestingScheduleIndex,
             params.tokensToVestAtStart,
@@ -179,7 +126,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
                 growthRateProportion: 0
             });
 
-            setVestingScheduleFromDeployer(
+            setVestingScheduleFromManager(
                 sampleUser,
                 params.vestingScheduleIndex,
                 params.tokensToVestAtStart,
@@ -226,7 +173,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
                 growthRateProportion: 0
             });
 
-            setVestingScheduleFromDeployer(
+            setVestingScheduleFromManager(
                 sampleUser,
                 params.vestingScheduleIndex,
                 params.tokensToVestAtStart,
@@ -261,6 +208,37 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         }
     }
 
+    //test setting an invalid vesting schedule index
+    function testSetInvalidVestingScheduleIndex() public {
+        VestingParams memory params = VestingParams({
+            vestingScheduleIndex: 123,
+            tokensToVestAtStart: 1_000 * 1e18, //1k tokens
+            tokensToVestAfterFirstInterval: 100 * 1e18, //100 tokens
+            amountWithdrawn: 0,
+            scheduleStartTime: block.timestamp,
+            cliffEndTime: block.timestamp + 60, //1 minute cliff
+            intervalLength: 12,
+            maxIntervals: 100,
+            growthRateProportion: 0
+        });
+
+        vm.startPrank(vestingManager, vestingManager);
+        vm.expectRevert(VVVVesting.InvalidScheduleIndex.selector);
+        VVVVestingInstance.setVestingSchedule(
+            sampleUser,
+            params.vestingScheduleIndex,
+            params.tokensToVestAtStart,
+            params.tokensToVestAfterFirstInterval,
+            params.amountWithdrawn,
+            params.scheduleStartTime,
+            params.cliffEndTime,
+            params.intervalLength,
+            params.maxIntervals,
+            params.growthRateProportion
+        );
+        vm.stopPrank();
+    }
+
     //test that a vesting schedule can be removed (reset) and the correct values are stored/read
     function testRemoveVestingSchedule() public {
         uint256 vestingScheduleIndex = 0;
@@ -277,7 +255,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
                 growthRateProportion: 0
             });
 
-            setVestingScheduleFromDeployer(
+            setVestingScheduleFromManager(
                 sampleUser,
                 params.vestingScheduleIndex,
                 params.tokensToVestAtStart,
@@ -312,7 +290,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         }
 
         {
-            removeVestingScheduleFromDeployer(sampleUser, vestingScheduleIndex);
+            removeVestingScheduleFromManager(sampleUser, vestingScheduleIndex);
             (
                 uint256 _tokensToVestAtStart2,
                 uint256 _tokensToVestAfterFirstInterval2,
@@ -335,6 +313,56 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         }
     }
 
+    //test onlyAuthorized functions are not accessible by other callers
+    function testRemoveVestingScheduleAsNonAdmin() public {
+        //values that would work if caller was authorized
+        VestingParams memory params = VestingParams({
+            vestingScheduleIndex: 0,
+            tokensToVestAtStart: 1_000 * 1e18, //1k tokens
+            tokensToVestAfterFirstInterval: 100 * 1e18, //100 tokens
+            amountWithdrawn: 0,
+            scheduleStartTime: block.timestamp,
+            cliffEndTime: block.timestamp + 60, //1 minute cliff
+            intervalLength: 12,
+            maxIntervals: 100,
+            growthRateProportion: 0
+        });
+
+        setVestingScheduleFromManager(
+            sampleUser,
+            params.vestingScheduleIndex,
+            params.tokensToVestAtStart,
+            params.tokensToVestAfterFirstInterval,
+            params.amountWithdrawn,
+            params.scheduleStartTime,
+            params.cliffEndTime,
+            params.intervalLength,
+            params.maxIntervals,
+            params.growthRateProportion
+        );
+
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert();
+        setVestingScheduleFromManager(
+            sampleUser,
+            params.vestingScheduleIndex,
+            params.tokensToVestAtStart,
+            params.tokensToVestAfterFirstInterval,
+            params.amountWithdrawn,
+            params.scheduleStartTime,
+            params.cliffEndTime,
+            params.intervalLength,
+            params.maxIntervals,
+            params.growthRateProportion
+        );
+        vm.stopPrank();
+
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert();
+        VVVVestingInstance.removeVestingSchedule(sampleUser, params.vestingScheduleIndex);
+        vm.stopPrank();
+    }
+
     //test that a user can withdraw the correct amount of tokens from a vesting schedule and the vesting contract state matches the withdrawal
     function testUserWithdrawAndVestedAmount() public {
         uint256 vestingScheduleIndex = 0;
@@ -347,7 +375,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 maxIntervals = 100;
         uint256 growthRateProportion = 0;
 
-        setVestingScheduleFromDeployer(
+        setVestingScheduleFromManager(
             sampleUser,
             vestingScheduleIndex,
             tokensToVestAtStart,
@@ -396,7 +424,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 maxIntervals = 100;
         uint256 growthRateProportion = 0;
 
-        setVestingScheduleFromDeployer(
+        setVestingScheduleFromManager(
             sampleUser,
             vestingScheduleIndex,
             tokensToVestAtStart,
@@ -442,7 +470,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 maxIntervals = 100;
         uint256 growthRateProportion = 0;
 
-        setVestingScheduleFromDeployer(
+        setVestingScheduleFromManager(
             sampleUser,
             vestingScheduleIndex,
             tokensToVestAtStart,
@@ -479,7 +507,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 maxIntervals = 100;
         uint256 growthRateProportion = 0;
 
-        setVestingScheduleFromDeployer(
+        setVestingScheduleFromManager(
             sampleUser,
             vestingScheduleIndex,
             tokensToVestAtStart,
@@ -507,7 +535,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         address newVestedTokenAddress = 0x1234567890123456789012345678901234567890;
 
         // Should work
-        vm.startPrank(deployer, deployer);
+        vm.startPrank(vestingManager, vestingManager);
         VVVVestingInstance.setVestedToken(newVestedTokenAddress);
         vm.stopPrank();
 
@@ -518,7 +546,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
     function testZeroAddressCannotBeSetAsVestedToken() public {
         address zeroAddress = address(0);
 
-        vm.startPrank(deployer, deployer);
+        vm.startPrank(vestingManager, vestingManager);
         vm.expectRevert(VVVVesting.InvalidTokenAddress.selector);
         VVVVestingInstance.setVestedToken(zeroAddress);
         vm.stopPrank();
@@ -529,7 +557,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         address newVestedTokenAddress = 0x1234567890123456789012345678901234567890;
 
         vm.startPrank(sampleUser, sampleUser);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, sampleUser));
+        vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
         VVVVestingInstance.setVestedToken(newVestedTokenAddress);
         vm.stopPrank();
     }
@@ -548,7 +576,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             );
 
         //set a vesting schedule as admin
-        vm.startPrank(deployer, deployer);
+        vm.startPrank(vestingManager, vestingManager);
         VVVVestingInstance.batchSetVestingSchedule(setVestingScheduleParams);
         vm.stopPrank();
 
@@ -600,7 +628,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             );
 
         //set a vesting schedule as admin
-        vm.startPrank(deployer, deployer);
+        vm.startPrank(vestingManager, vestingManager);
         VVVVestingInstance.batchSetVestingSchedule(setVestingScheduleParams);
         vm.stopPrank();
 
@@ -655,7 +683,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
 
         //set as user (not allowed)
         vm.startPrank(sampleUser, sampleUser);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, sampleUser));
+        vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
         VVVVestingInstance.batchSetVestingSchedule(setVestingScheduleParams);
         vm.stopPrank();
     }
@@ -674,7 +702,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
 
         uint256 numberOfIntervalsToAdvanceTimestamp = 95;
 
-        setVestingScheduleFromDeployer(
+        setVestingScheduleFromManager(
             sampleUser,
             vestingScheduleIndex,
             tokensToVestAtStart,
@@ -692,13 +720,6 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         );
 
         uint256 vestedAmount = VVVVestingInstance.getVestedAmount(sampleUser, vestingScheduleIndex);
-
-        uint256 calcVestedAmount = tokensToVestAtStart +
-            VVVVestingInstance.calculateVestedAmountAtInterval(
-                tokensToVestAfterFirstInterval,
-                numberOfIntervalsToAdvanceTimestamp,
-                growthRateProportion
-            );
 
         assertTrue(
             vestedAmount ==
@@ -738,7 +759,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 maxIntervals = 100;
         uint256 growthRateProportion = 0;
 
-        setVestingScheduleFromDeployer(
+        setVestingScheduleFromManager(
             sampleUser,
             vestingScheduleIndex,
             tokensToVestAtStart,
@@ -773,7 +794,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 maxIntervals = 100;
         uint256 growthRateProportion = 0;
 
-        setVestingScheduleFromDeployer(
+        setVestingScheduleFromManager(
             sampleUser,
             vestingScheduleIndex,
             tokensToVestAtStart,
@@ -809,7 +830,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 maxIntervals = 100;
         uint256 growthRateProportion = 0;
 
-        setVestingScheduleFromDeployer(
+        setVestingScheduleFromManager(
             sampleUser,
             vestingScheduleIndex,
             tokensToVestAtStart,
@@ -980,7 +1001,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         uint256 maxIntervals = 100;
         uint256 growthRateProportion = 0;
 
-        setVestingScheduleFromDeployer(
+        setVestingScheduleFromManager(
             sampleUser,
             vestingScheduleIndex,
             tokensToVestAtStart,

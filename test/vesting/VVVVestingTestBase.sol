@@ -5,11 +5,14 @@ pragma solidity ^0.8.23;
  * @title VVVVesting Test Base
  *   @dev storage, setup, and helper functions for VVVVesting tests
  */
-import { Test } from "lib/forge-std/src/Test.sol"; //for stateless tests
-import { VVVVesting } from "contracts/vesting/VVVVesting.sol";
+
 import { MockERC20 } from "contracts/mock/MockERC20.sol";
+import { Test } from "lib/forge-std/src/Test.sol"; //for stateless tests
+import { VVVAuthorizationRegistry } from "contracts/auth/VVVAuthorizationRegistry.sol";
+import { VVVVesting } from "contracts/vesting/VVVVesting.sol";
 
 abstract contract VVVVestingTestBase is Test {
+    VVVAuthorizationRegistry AuthRegistry;
     MockERC20 public VVVTokenInstance;
     VVVVesting public VVVVestingInstance;
 
@@ -17,12 +20,17 @@ abstract contract VVVVestingTestBase is Test {
     uint256 public constant DENOMINATOR = 100;
 
     uint256 public deployerKey = 1;
-    uint256 public userKey = 2;
+    uint256 public vestingManagerKey = 2;
+    uint256 public userKey = 3;
     address deployer = vm.addr(deployerKey);
+    address vestingManager = vm.addr(vestingManagerKey);
     address sampleUser = vm.addr(userKey);
 
     uint256 blockNumber;
     uint256 blockTimestamp;
+
+    bytes32 vestingManagerRole = keccak256("VESTING_MANAGER_ROLE");
+    uint48 defaultAdminTransferDelay = 1 days;
 
     struct VestingParams {
         uint256 vestingScheduleIndex;
@@ -50,7 +58,7 @@ abstract contract VVVVestingTestBase is Test {
         vm.roll(blockNumber);
     }
 
-    function setVestingScheduleFromDeployer(
+    function setVestingScheduleFromManager(
         address _user,
         uint256 _vestingScheduleIndex,
         uint256 _tokensToVestAtStart,
@@ -62,7 +70,7 @@ abstract contract VVVVestingTestBase is Test {
         uint256 _maxIntervals,
         uint256 _growthRateProportion
     ) public {
-        vm.startPrank(deployer, deployer);
+        vm.startPrank(vestingManager, vestingManager);
         VVVVestingInstance.setVestingSchedule(
             _user,
             _vestingScheduleIndex,
@@ -78,8 +86,8 @@ abstract contract VVVVestingTestBase is Test {
         vm.stopPrank();
     }
 
-    function removeVestingScheduleFromDeployer(address _user, uint256 _vestingScheduleIndex) public {
-        vm.startPrank(deployer, deployer);
+    function removeVestingScheduleFromManager(address _user, uint256 _vestingScheduleIndex) public {
+        vm.startPrank(vestingManager, vestingManager);
         VVVVestingInstance.removeVestingSchedule(_user, _vestingScheduleIndex);
         vm.stopPrank();
     }
