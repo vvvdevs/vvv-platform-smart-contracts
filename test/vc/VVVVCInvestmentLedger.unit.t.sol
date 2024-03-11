@@ -220,6 +220,31 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
     }
 
     /**
+     * @notice Tests that a non-admin cannot withdraw ERC20 tokens
+     * @notice used the "testFail" approach this time due to issues expecting a revert on the first external call (balance check) rather than the withdraw function itself. This is a bit less explicit, but still confirms the non-admin call to withdraw reverts.
+     */
+    function testFailNonAdminCannotWithdraw() public {
+        VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
+            sampleInvestmentRoundIds[0],
+            investmentRoundSampleLimit,
+            sampleAmountsToInvest[0],
+            userPaymentTokenDefaultAllocation,
+            sampleKycAddress
+        );
+
+        investAsUser(sampleUser, params);
+
+        vm.startPrank(sampleUser, sampleUser);
+        LedgerInstance.withdraw(
+            params.paymentTokenAddress,
+            deployer,
+            PaymentTokenInstance.balanceOf(address(LedgerInstance))
+        );
+
+        vm.stopPrank();
+    }
+
+    /**
      * @notice Tests addition of investment record by admin
      */
     function testAdminAddInvestmentRecord() public {
