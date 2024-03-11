@@ -3,6 +3,7 @@ pragma solidity 0.8.23;
 
 import { VVVToken } from "contracts/tokens/VvvToken.sol";
 import { VVVAuthorizationRegistry } from "contracts/auth/VVVAuthorizationRegistry.sol";
+import { VVVAuthorizationRegistryChecker } from "contracts/auth/VVVAuthorizationRegistryChecker.sol";
 import { VVVETHStakingTestBase } from "test/staking/VVVETHStakingTestBase.sol";
 import { VVVETHStaking } from "contracts/staking/VVVETHStaking.sol";
 
@@ -22,13 +23,13 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
 
         //set auth registry permissions for ethStakingManager (ETH_STAKING_MANAGER_ROLE)
         AuthRegistry.grantRole(ethStakingManagerRole, ethStakingManager);
-        bytes4 setDurationMultiplierSelector = EthStakingInstance.setDurationMultiplier.selector;
+        bytes4 setDurationMultipliersSelector = EthStakingInstance.setDurationMultipliers.selector;
         bytes4 setNewStakesPermittedSelector = EthStakingInstance.setNewStakesPermitted.selector;
         bytes4 setVvvTokenSelector = EthStakingInstance.setVvvToken.selector;
         bytes4 withdrawEthSelector = EthStakingInstance.withdrawEth.selector;
         AuthRegistry.setPermission(
             address(EthStakingInstance),
-            setDurationMultiplierSelector,
+            setDurationMultipliersSelector,
             ethStakingManagerRole
         );
         AuthRegistry.setPermission(
@@ -694,8 +695,8 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
 
     // Testing admin functions
 
-    // Test that the ethStakingManager can properly set the duration multipliers
-    function testSetDurationMultiplier() public {
+    // Test that the admin (ethStakingManager) can properly set the duration multipliers
+    function testsetDurationMultipliers() public {
         vm.startPrank(ethStakingManager, ethStakingManager);
         VVVETHStaking.StakingDuration[] memory durations = new VVVETHStaking.StakingDuration[](3);
         durations[0] = VVVETHStaking.StakingDuration.ThreeMonths;
@@ -707,7 +708,7 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         multipliers[1] = 27_000;
         multipliers[2] = 33_000;
 
-        EthStakingInstance.setDurationMultiplier(durations, multipliers);
+        EthStakingInstance.setDurationMultipliers(durations, multipliers);
 
         assertTrue(
             EthStakingInstance.durationToMultiplier(VVVETHStaking.StakingDuration.ThreeMonths) == 20_000
@@ -720,12 +721,39 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         );
     }
 
-    // Test that the ethStakingManager can properly set the VvvToken address
+    // test that addresses other than admin (ethStakingManager) cannot set the duration multipliers
+    function testsetDurationMultipliersNotAdmin() public {
+        vm.startPrank(sampleUser, sampleUser);
+
+        VVVETHStaking.StakingDuration[] memory durations = new VVVETHStaking.StakingDuration[](3);
+        durations[0] = VVVETHStaking.StakingDuration.ThreeMonths;
+        durations[1] = VVVETHStaking.StakingDuration.SixMonths;
+        durations[2] = VVVETHStaking.StakingDuration.OneYear;
+
+        uint256[] memory multipliers = new uint256[](3);
+        multipliers[0] = 20_000;
+        multipliers[1] = 27_000;
+        multipliers[2] = 33_000;
+
+        vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
+        EthStakingInstance.setDurationMultipliers(durations, multipliers);
+        vm.stopPrank();
+    }
+
+    // Test that the admin (ethStakingManager) can properly set the VvvToken address
     function testSetVvvToken() public {
         vm.startPrank(ethStakingManager, ethStakingManager);
         VVVToken newVvvToken = new VVVToken(type(uint256).max, 0, address(AuthRegistry));
         EthStakingInstance.setVvvToken(address(newVvvToken));
         assertTrue(address(EthStakingInstance.vvvToken()) == address(newVvvToken));
+        vm.stopPrank();
+    }
+
+    // Test that addresses other than ethStakingManager cannot set the VvvToken address
+    function testSetVvvTokenNotAdmin() public {
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
+        EthStakingInstance.setVvvToken(address(0));
         vm.stopPrank();
     }
 
@@ -766,7 +794,7 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         vm.stopPrank();
     }
 
-    // Tests that admin can withdraw eth that was sent by staker
+    // Tests that admin (ethStakingManager) can withdraw eth that was sent by staker
     function testWithdrawStakedEth() public {
         vm.startPrank(sampleUser, sampleUser);
         uint256 stakeEthAmount = 1 ether;
@@ -785,6 +813,14 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
 
         assertTrue(contractBalanceAfter == contractBalanceBefore - stakeEthAmount);
         assertTrue(userBalanceAfter == userBalanceBefore + stakeEthAmount);
+    }
+    
+    // Tests that addresses other than admin (ethStakingManager) cannot withdraw eth that was sent by staker
+    function testWithdrawStakedEthNotAdmin() public {
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
+        EthStakingInstance.withdrawEth(1 ether);
+        vm.stopPrank();
     }
 
     // Tests that the Stake event is emitted correctly on new stakes
@@ -877,6 +913,5 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         vm.expectEmit(address(EthStakingInstance));
         emit VVVETHStaking.VvvClaim(sampleUser, claimableVvv);
         EthStakingInstance.claimVvv(claimableVvv);
-        vm.stopPrank();
     }
 }

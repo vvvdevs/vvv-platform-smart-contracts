@@ -5,11 +5,13 @@ import { Test } from "lib/forge-std/src/Test.sol";
 import { MockERC20 } from "contracts/mock/MockERC20.sol";
 import { VVVVCInvestmentLedger } from "contracts/vc/VVVVCInvestmentLedger.sol";
 import { VVVVCTokenDistributor } from "contracts/vc/VVVVCTokenDistributor.sol";
+import { VVVAuthorizationRegistry } from "contracts/auth/VVVAuthorizationRegistry.sol";
 
 /**
     @title VVVVC Test Base
  */
 abstract contract VVVVCTestBase is Test {
+    VVVAuthorizationRegistry AuthRegistry;
     VVVVCInvestmentLedger LedgerInstance;
     MockERC20 PaymentTokenInstance;
     MockERC20 ProjectTokenInstance;
@@ -24,12 +26,14 @@ abstract contract VVVVCTestBase is Test {
 
     //wallet setup
     uint256 deployerKey = 1234;
+    uint256 ledgerManagerKey = 1235;
     uint256 testSignerKey = 12345;
     uint256 sampleUserKey = 1234567;
     uint256 sampleKycAddressKey = 12345678;
     uint256 projectTokenProxyWalletKey = 12345679;
 
     address deployer = vm.addr(deployerKey);
+    address ledgerManager = vm.addr(ledgerManagerKey);
     address testSigner = vm.addr(testSignerKey);
     address sampleUser = vm.addr(sampleUserKey);
     address sampleKycAddress = vm.addr(sampleKycAddressKey);
@@ -45,6 +49,10 @@ abstract contract VVVVCTestBase is Test {
     uint256 chainId = 31337; //test chain id - leave this alone
 
     string environmentTag = "development";
+
+    //ledger contract-specific values
+    bytes32 ledgerManagerRole = keccak256("LEDGER_MANAGER_ROLE");
+    uint48 defaultAdminTransferDelay = 1 days;
 
     //claim contract-specific values
     uint256 projectTokenAmountToProxyWallet = 1_000_000 * 1e18; //1 million tokens

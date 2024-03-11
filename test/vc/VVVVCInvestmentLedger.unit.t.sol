@@ -4,6 +4,7 @@ pragma solidity ^0.8.23;
 import { VVVVCTestBase } from "test/vc/VVVVCTestBase.sol";
 import { MockERC20 } from "contracts/mock/MockERC20.sol";
 import { VVVVCInvestmentLedger } from "contracts/vc/VVVVCInvestmentLedger.sol";
+import { VVVAuthorizationRegistry } from "contracts/auth/VVVAuthorizationRegistry.sol";
 
 /**
  * @title VVVVCInvestmentLedger Unit Tests
@@ -18,7 +19,24 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         ProjectTokenInstance = new MockERC20(18);
         PaymentTokenInstance = new MockERC20(6); //usdc has 6 decimals
 
-        LedgerInstance = new VVVVCInvestmentLedger(testSigner, environmentTag);
+        //deploy auth registry (deployer is default admin)
+        AuthRegistry = new VVVAuthorizationRegistry(defaultAdminTransferDelay, deployer);
+
+        LedgerInstance = new VVVVCInvestmentLedger(testSigner, environmentTag, address(AuthRegistry));
+
+        //grant ledgerManager the ledgerManagerRole
+        AuthRegistry.grantRole(ledgerManagerRole, ledgerManager);
+
+        //add permissions to ledgerManagerRole for withdraw and addInvestmentRecord on the LedgerInstance
+        bytes4 withdrawSelector = LedgerInstance.withdraw.selector;
+        bytes4 addInvestmentRecordSelector = LedgerInstance.addInvestmentRecord.selector;
+        AuthRegistry.setPermission(address(LedgerInstance), withdrawSelector, ledgerManagerRole);
+        AuthRegistry.setPermission(
+            address(LedgerInstance),
+            addInvestmentRecordSelector,
+            ledgerManagerRole
+        );
+
         ledgerDomainSeparator = LedgerInstance.DOMAIN_SEPARATOR();
         investmentTypehash = LedgerInstance.INVESTMENT_TYPEHASH();
 
@@ -186,7 +204,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         uint256 preTransferRecipientBalance = PaymentTokenInstance.balanceOf(deployer);
         uint256 preTransferContractBalance = PaymentTokenInstance.balanceOf(address(LedgerInstance));
 
-        vm.startPrank(deployer, deployer);
+        vm.startPrank(ledgerManager, ledgerManager);
         LedgerInstance.withdraw(
             params.paymentTokenAddress,
             deployer,
@@ -201,10 +219,10 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         );
     }
 
-    /**
-     * @notice Tests emission of VCInvestment event upon user investment
+    /* @notice Tests that a non-admin cannot withdraw ERC20 tokens
+     * @notice used the "testFail" approach this time due to issues expecting a revert on the first external call (balance check) rather than the withdraw function itself. This is a bit less explicit, but still confirms the non-admin call to withdraw reverts.
      */
-    function testEmitVCInvestment() public {
+    function testFailNonAdminCannotWithdraw() public {
         VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
             sampleInvestmentRoundIds[0],
             investmentRoundSampleLimit,
@@ -212,7 +230,23 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             userPaymentTokenDefaultAllocation,
             sampleKycAddress
         );
+        
+        investAsUser(sampleUser, params);
 
+        vm.startPrank(sampleUser, sampleUser);
+        LedgerInstance.withdraw(
+            params.paymentTokenAddress,
+            deployer,
+            PaymentTokenInstance.balanceOf(address(LedgerInstance))
+        );
+
+        vm.stopPrank();
+    }
+     
+    /**
+     * @notice Tests emission of VCInvestment event upon user investment
+     */
+    function testEmitVCInvestment() public {
         vm.startPrank(sampleUser, sampleUser);
         PaymentTokenInstance.approve(address(LedgerInstance), params.amountToInvest);
         vm.expectEmit(address(LedgerInstance));
@@ -247,4 +281,43 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
     //     );
     //     vm.stopPrank();
     // }
+
+    /**
+     * @notice Tests addition of investment record by admin
+     */
+    function testAdminAddInvestmentRecord() public {
+        address kycAddress = sampleUser;
+        uint256 investmentRound = sampleInvestmentRoundIds[0];
+        uint256 investmentAmount = 1000;
+
+        uint256 userInvested = LedgerInstance.kycAddressInvestedPerRound(kycAddress, investmentRound);
+        uint256 totalInvested = LedgerInstance.totalInvestedPerRound(investmentRound);
+
+        vm.startPrank(ledgerManager, ledgerManager);
+        LedgerInstance.addInvestmentRecord(kycAddress, investmentRound, investmentAmount);
+        vm.stopPrank();
+
+        assertTrue(
+            LedgerInstance.kycAddressInvestedPerRound(kycAddress, investmentRound) ==
+                userInvested + investmentAmount
+        );
+
+        assertTrue(
+            LedgerInstance.totalInvestedPerRound(investmentRound) == totalInvested + investmentAmount
+        );
+    }
+
+    /**
+     * @notice Tests that a non-admin cannot add an investment record
+     */
+    function testUserCantAddInvestmentRecord() public {
+        address kycAddress = sampleUser;
+        uint256 investmentRound = sampleInvestmentRoundIds[0];
+        uint256 investmentAmount = 1000;
+
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert();
+        LedgerInstance.addInvestmentRecord(kycAddress, investmentRound, investmentAmount);
+        vm.stopPrank();
+    }
 }

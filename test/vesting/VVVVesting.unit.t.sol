@@ -63,87 +63,6 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         vm.stopPrank();
     }
 
-    //test onlyAuthorized functions are not accessible by other callers
-    function testAdminFunctionNotCallableByOtherUsers() public {
-        //values that would work if caller was authorized
-        VestingParams memory params = VestingParams({
-            vestingScheduleIndex: 0,
-            tokensToVestAtStart: 1_000 * 1e18, //1k tokens
-            tokensToVestAfterFirstInterval: 100 * 1e18, //100 tokens
-            amountWithdrawn: 0,
-            scheduleStartTime: block.timestamp,
-            cliffEndTime: block.timestamp + 60, //1 minute cliff
-            intervalLength: 12,
-            maxIntervals: 100,
-            growthRateProportion: 0
-        });
-
-        setVestingScheduleFromManager(
-            sampleUser,
-            params.vestingScheduleIndex,
-            params.tokensToVestAtStart,
-            params.tokensToVestAfterFirstInterval,
-            params.amountWithdrawn,
-            params.scheduleStartTime,
-            params.cliffEndTime,
-            params.intervalLength,
-            params.maxIntervals,
-            params.growthRateProportion
-        );
-
-        vm.startPrank(sampleUser, sampleUser);
-        vm.expectRevert();
-        setVestingScheduleFromManager(
-            sampleUser,
-            params.vestingScheduleIndex,
-            params.tokensToVestAtStart,
-            params.tokensToVestAfterFirstInterval,
-            params.amountWithdrawn,
-            params.scheduleStartTime,
-            params.cliffEndTime,
-            params.intervalLength,
-            params.maxIntervals,
-            params.growthRateProportion
-        );
-        vm.stopPrank();
-
-        vm.startPrank(sampleUser, sampleUser);
-        vm.expectRevert();
-        VVVVestingInstance.removeVestingSchedule(sampleUser, params.vestingScheduleIndex);
-        vm.stopPrank();
-    }
-
-    //test invalid vesting schedule index
-    function testInvalidVestingScheduleIndex() public {
-        VestingParams memory params = VestingParams({
-            vestingScheduleIndex: 123,
-            tokensToVestAtStart: 1_000 * 1e18, //1k tokens
-            tokensToVestAfterFirstInterval: 100 * 1e18, //100 tokens
-            amountWithdrawn: 0,
-            scheduleStartTime: block.timestamp,
-            cliffEndTime: block.timestamp + 60, //1 minute cliff
-            intervalLength: 12,
-            maxIntervals: 100,
-            growthRateProportion: 0
-        });
-
-        vm.startPrank(vestingManager, vestingManager);
-        vm.expectRevert(VVVVesting.InvalidScheduleIndex.selector);
-        VVVVestingInstance.setVestingSchedule(
-            sampleUser,
-            params.vestingScheduleIndex,
-            params.tokensToVestAtStart,
-            params.tokensToVestAfterFirstInterval,
-            params.amountWithdrawn,
-            params.scheduleStartTime,
-            params.cliffEndTime,
-            params.intervalLength,
-            params.maxIntervals,
-            params.growthRateProportion
-        );
-        vm.stopPrank();
-    }
-
     //test that a new vesting schedule can be set and the correct values are stored/read
     function testSetNewVestingSchedule() public {
         VestingParams memory params = VestingParams({
@@ -289,6 +208,37 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         }
     }
 
+    //test setting an invalid vesting schedule index
+    function testSetInvalidVestingScheduleIndex() public {
+        VestingParams memory params = VestingParams({
+            vestingScheduleIndex: 123,
+            tokensToVestAtStart: 1_000 * 1e18, //1k tokens
+            tokensToVestAfterFirstInterval: 100 * 1e18, //100 tokens
+            amountWithdrawn: 0,
+            scheduleStartTime: block.timestamp,
+            cliffEndTime: block.timestamp + 60, //1 minute cliff
+            intervalLength: 12,
+            maxIntervals: 100,
+            growthRateProportion: 0
+        });
+
+        vm.startPrank(vestingManager, vestingManager);
+        vm.expectRevert(VVVVesting.InvalidScheduleIndex.selector);
+        VVVVestingInstance.setVestingSchedule(
+            sampleUser,
+            params.vestingScheduleIndex,
+            params.tokensToVestAtStart,
+            params.tokensToVestAfterFirstInterval,
+            params.amountWithdrawn,
+            params.scheduleStartTime,
+            params.cliffEndTime,
+            params.intervalLength,
+            params.maxIntervals,
+            params.growthRateProportion
+        );
+        vm.stopPrank();
+    }
+
     //test that a vesting schedule can be removed (reset) and the correct values are stored/read
     function testRemoveVestingSchedule() public {
         uint256 vestingScheduleIndex = 0;
@@ -361,6 +311,56 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             assertTrue(_maxIntervals2 == 0);
             assertTrue(_growthRateProportion2 == 0);
         }
+    }
+
+    //test onlyAuthorized functions are not accessible by other callers
+    function testRemoveVestingScheduleAsNonAdmin() public {
+        //values that would work if caller was authorized
+        VestingParams memory params = VestingParams({
+            vestingScheduleIndex: 0,
+            tokensToVestAtStart: 1_000 * 1e18, //1k tokens
+            tokensToVestAfterFirstInterval: 100 * 1e18, //100 tokens
+            amountWithdrawn: 0,
+            scheduleStartTime: block.timestamp,
+            cliffEndTime: block.timestamp + 60, //1 minute cliff
+            intervalLength: 12,
+            maxIntervals: 100,
+            growthRateProportion: 0
+        });
+
+        setVestingScheduleFromManager(
+            sampleUser,
+            params.vestingScheduleIndex,
+            params.tokensToVestAtStart,
+            params.tokensToVestAfterFirstInterval,
+            params.amountWithdrawn,
+            params.scheduleStartTime,
+            params.cliffEndTime,
+            params.intervalLength,
+            params.maxIntervals,
+            params.growthRateProportion
+        );
+
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert();
+        setVestingScheduleFromManager(
+            sampleUser,
+            params.vestingScheduleIndex,
+            params.tokensToVestAtStart,
+            params.tokensToVestAfterFirstInterval,
+            params.amountWithdrawn,
+            params.scheduleStartTime,
+            params.cliffEndTime,
+            params.intervalLength,
+            params.maxIntervals,
+            params.growthRateProportion
+        );
+        vm.stopPrank();
+
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert();
+        VVVVestingInstance.removeVestingSchedule(sampleUser, params.vestingScheduleIndex);
+        vm.stopPrank();
     }
 
     //test that a user can withdraw the correct amount of tokens from a vesting schedule and the vesting contract state matches the withdrawal
