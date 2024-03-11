@@ -1,10 +1,11 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import { VVVVestingTestBase } from "test/vesting/VVVVestingTestBase.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { MockERC20 } from "contracts/mock/MockERC20.sol";
 import { VVVVesting } from "contracts/vesting/VVVVesting.sol";
-import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+import { VVVVestingTestBase } from "test/vesting/VVVVestingTestBase.sol";
+import { VVVAuthorizationRegistry } from "contracts/auth/VVVAuthorizationRegistry.sol";
 
 /**
  * @title VVVVesting Fuzz Tests
@@ -15,8 +16,35 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
     function setUp() public {
         vm.startPrank(deployer, deployer);
 
+        AuthRegistry = new VVVAuthorizationRegistry(defaultAdminTransferDelay, deployer);
+
         VVVTokenInstance = new MockERC20(18);
-        VVVVestingInstance = new VVVVesting(address(VVVTokenInstance));
+        VVVVestingInstance = new VVVVesting(address(VVVTokenInstance), address(AuthRegistry));
+        AuthRegistry.grantRole(vestingManagerRole, vestingManager);
+        bytes4 setVestingScheduleSelector = VVVVestingInstance.setVestingSchedule.selector;
+        bytes4 batchSetVestingScheduleSelector = VVVVestingInstance.batchSetVestingSchedule.selector;
+        bytes4 removeVestingScheduleSelector = VVVVestingInstance.removeVestingSchedule.selector;
+        bytes4 setVestedTokenSelector = VVVVestingInstance.setVestedToken.selector;
+        AuthRegistry.setPermission(
+            address(VVVVestingInstance),
+            setVestingScheduleSelector,
+            vestingManagerRole
+        );
+        AuthRegistry.setPermission(
+            address(VVVVestingInstance),
+            batchSetVestingScheduleSelector,
+            vestingManagerRole
+        );
+        AuthRegistry.setPermission(
+            address(VVVVestingInstance),
+            removeVestingScheduleSelector,
+            vestingManagerRole
+        );
+        AuthRegistry.setPermission(
+            address(VVVVestingInstance),
+            setVestedTokenSelector,
+            vestingManagerRole
+        );
 
         VVVTokenInstance.mint(address(VVVVestingInstance), 1_000_000 * 1e18); //1M tokens
 
@@ -40,7 +68,7 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
             growthRateProportion: 0
         });
 
-        setVestingScheduleFromDeployer(
+        setVestingScheduleFromManager(
             sampleUser,
             params.vestingScheduleIndex,
             params.tokensToVestAtStart,
@@ -80,7 +108,7 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
         uint256 maxIntervals = 100;
         uint256 growthRateProportion = 0;
 
-        setVestingScheduleFromDeployer(
+        setVestingScheduleFromManager(
             _vestedUser,
             vestingScheduleIndex,
             tokensToVestAtStart,

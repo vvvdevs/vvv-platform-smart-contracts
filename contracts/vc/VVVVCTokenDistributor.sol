@@ -4,10 +4,9 @@ pragma solidity 0.8.23;
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IVVVVCInvestmentLedger } from "./IVVVVCInvestmentLedger.sol";
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract VVVVCTokenDistributor is Ownable {
+contract VVVVCTokenDistributor {
     using SafeERC20 for IERC20;
 
     IVVVVCInvestmentLedger public ledger;
@@ -76,7 +75,7 @@ contract VVVVCTokenDistributor is Ownable {
     /// @notice Error thrown when the signer address is not recovered from the provided signature
     error InvalidSignature();
 
-    constructor(address _signer, address _ledger, string memory _environmentTag) Ownable(msg.sender) {
+    constructor(address _signer, address _ledger, string memory _environmentTag) {
         signer = _signer;
         ledger = IVVVVCInvestmentLedger(_ledger);
 
