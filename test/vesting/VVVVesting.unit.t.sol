@@ -989,8 +989,8 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         assertTrue(difference <= tolerance);
     }
 
-    // tests that SetVestingSchedule event is emitted with correct parameters when withdrawVestedTokens is called
-    function testEmitSetVestingSchedule() public {
+    // tests that a single SetVestingSchedule event is emitted with correct parameters when withdrawVestedTokens is called
+    function testEmitSetVestingScheduleOnSingleSet() public {
         uint256 vestingScheduleIndex = 0;
         uint256 tokensToVestAtStart = 1_000 * 1e18; //1k tokens
         uint256 tokensToVestAfterFirstInterval = 100 * 1e18; //100 tokens
@@ -1021,7 +1021,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
 
         vm.startPrank(sampleUser, sampleUser);
 
-        vm.expectEmit(true, true, true, true, address(VVVVestingInstance));
+        vm.expectEmit(address(VVVVestingInstance));
         emit VVVVesting.SetVestingSchedule(
             sampleUser,
             vestingScheduleIndex,
@@ -1036,6 +1036,102 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         );
 
         VVVVestingInstance.withdrawVestedTokens(vestedAmount, sampleUser, vestingScheduleIndex);
+        vm.stopPrank();
+    }
+
+    // tests that SetVestingSchedule event is emitted with correct parameters when batchSetVestingSchedule is called
+    function testEmitSetVestingScheduleOnBatchSet() public {
+        uint256 tokensToVestAtStart = 1_000 * 1e18; //1k tokens
+        uint256 tokensToVestAfterFirstInterval = 100 * 1e18; //100 tokens
+        uint256 amountWithdrawn = 0;
+        uint256 scheduleStartTime = block.timestamp + 60 * 60 * 24 * 2; //2 days from now
+        uint256 cliffEndTime = scheduleStartTime + 60 * 60 * 24 * 365; //1 year from scheduleStartTime
+        uint256 intervalLength = 60 * 60 * 6 * 365; //3 months
+        uint256 maxIntervals = 100;
+        uint256 growthRateProportion = 0;
+
+        uint256 numVestingSchedulesToSet = 11;
+
+        //batch set vesting schedules
+        VVVVesting.SetVestingScheduleParams[]
+            memory setVestingScheduleParams = new VVVVesting.SetVestingScheduleParams[](
+                numVestingSchedulesToSet
+            );
+
+        for (uint256 i = 0; i < numVestingSchedulesToSet; i++) {
+            setVestingScheduleParams[i] = VVVVesting.SetVestingScheduleParams({
+                vestedUser: sampleUser,
+                vestingScheduleIndex: i,
+                vestingSchedule: VVVVesting.VestingSchedule({
+                    tokensToVestAtStart: tokensToVestAtStart,
+                    tokensToVestAfterFirstInterval: tokensToVestAfterFirstInterval,
+                    tokenAmountWithdrawn: amountWithdrawn,
+                    scheduleStartTime: scheduleStartTime,
+                    cliffEndTime: cliffEndTime,
+                    intervalLength: intervalLength,
+                    maxIntervals: maxIntervals,
+                    growthRateProportion: growthRateProportion
+                })
+            });
+        }
+
+        vm.startPrank(vestingManager, vestingManager);
+        for (uint256 i = 0; i < numVestingSchedulesToSet; i++) {
+            vm.expectEmit(address(VVVVestingInstance));
+            emit VVVVesting.SetVestingSchedule(
+                sampleUser,
+                i,
+                tokensToVestAtStart,
+                tokensToVestAfterFirstInterval,
+                0,
+                scheduleStartTime,
+                cliffEndTime,
+                intervalLength,
+                maxIntervals,
+                growthRateProportion
+            );
+        }
+        VVVVestingInstance.batchSetVestingSchedule(setVestingScheduleParams);
+        vm.stopPrank();
+    }
+
+    // tests that a SetVestingSchedule event is emitted when removeVestingSchedule is called
+    function testEmitSetVestingScheduleOnRemove() public {
+        uint256 vestingScheduleIndex = 0;
+        uint256 tokensToVestAtStart = 1_000 * 1e18; //1k tokens
+        uint256 tokensToVestAfterFirstInterval = 100 * 1e18; //100 tokens
+        uint256 amountWithdrawn = 0;
+        uint256 scheduleStartTime = block.timestamp + 60 * 60 * 24 * 2; //2 days from now
+        uint256 cliffEndTime = scheduleStartTime + 60 * 60 * 24 * 365; //1 year from scheduleStartTime
+        uint256 intervalLength = 60 * 60 * 6 * 365; //3 months
+        uint256 maxIntervals = 100;
+        uint256 growthRateProportion = 0;
+
+        setVestingScheduleFromManager(
+            sampleUser,
+            vestingScheduleIndex,
+            tokensToVestAtStart,
+            tokensToVestAfterFirstInterval,
+            amountWithdrawn,
+            scheduleStartTime,
+            cliffEndTime,
+            intervalLength,
+            maxIntervals,
+            growthRateProportion
+        );
+
+        vm.expectEmit(address(VVVVestingInstance));
+        emit VVVVesting.RemoveVestingSchedule(sampleUser, vestingScheduleIndex);
+        removeVestingScheduleFromManager(sampleUser, vestingScheduleIndex);
+    }
+
+    //tests emission of SetVestedToken when admin sets vested token address
+    function testEmitSetVestedToken() public {
+        vm.startPrank(vestingManager, vestingManager);
+        address newToken = address(new MockERC20(18));
+        vm.expectEmit(address(VVVVestingInstance));
+        emit VVVVesting.SetVestedToken(newToken);
+        VVVVestingInstance.setVestedToken(newToken);
         vm.stopPrank();
     }
 }
