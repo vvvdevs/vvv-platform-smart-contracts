@@ -7,7 +7,7 @@ Run all commands in the root of the repository.
 1. [Install npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
 2. `$ npm install`
 3. Install [Foundry](https://book.getfoundry.sh/getting-started/installation), or at least Forge
-4. 
+
 #### $VVV vesting
 To run tests and collect coverage for the $VVV vesting contract and its first party dependencies:
 ```
