@@ -54,7 +54,7 @@ Changes Made: VestingSchedule data packing, without touching token amounts which
 # Post-Optimizations 2
 Changes Made: reduced precision of token amounts in VestingSchedule so entire struct fits in two words, reordered struct to optimal order for packing
 
-One interesting note here is that the original ordering of the fields in VestingSchedule produced the most savings. The conventional wisdom is that ordering the struct fields such that consecutive fields add up to 32 bytes at a time, but this produced relatively little savings compared to leaving the token amounts as uint256.
+One interesting note here is that the original ordering of the fields in VestingSchedule produced the most savings. The conventional wisdom is that ordering the struct fields such that consecutive fields add up to 32 bytes at a time will save the most gas, but this produced relatively little savings compared to leaving the token amounts as uint256.
 
 | contracts/vesting/VVVVesting.sol:VVVVesting contract |                 |        |        |        |         |
 |------------------------------------------------------|-----------------|--------|--------|--------|---------|
