@@ -964,7 +964,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
      */
     function testExponentialVestingFuture() public {
         uint256 tokensToVestAfterFirstInterval = 200000.00 ether; //200k tokens
-        uint256 numIntervals = 18; //nice
+        uint256 numIntervals = 18;
         uint256 growthRateProportion = 176505576804629530; //0.17650557680462953 = 176505576804629530/1e18
 
         uint256 vestedTokens = VVVVestingInstance.calculateVestedAmountAtInterval(
@@ -1066,11 +1066,11 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
                     tokensToVestAtStart: tokensToVestAtStart,
                     tokensToVestAfterFirstInterval: tokensToVestAfterFirstInterval,
                     tokenAmountWithdrawn: amountWithdrawn,
-                    scheduleStartTime: scheduleStartTime,
-                    cliffEndTime: cliffEndTime,
-                    intervalLength: intervalLength,
-                    maxIntervals: maxIntervals,
-                    growthRateProportion: growthRateProportion
+                    scheduleStartTime: uint32(scheduleStartTime),
+                    cliffEndTime: uint32(cliffEndTime),
+                    intervalLength: uint32(intervalLength),
+                    maxIntervals: uint16(maxIntervals),
+                    growthRateProportion: uint16(growthRateProportion)
                 })
             });
         }

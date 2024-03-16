@@ -123,21 +123,17 @@ abstract contract VVVVestingTestBase is Test {
                     (i + 1) *
                     100 *
                     1e18; //100 tokens
-                setVestingScheduleParams[i].vestingSchedule.scheduleStartTime =
-                    block.timestamp +
-                    i *
-                    60 *
-                    24 *
-                    2; //2 days from now
-                setVestingScheduleParams[i].vestingSchedule.cliffEndTime =
-                    block.timestamp +
-                    i *
-                    60 *
-                    24 *
-                    30; //30 days
+                setVestingScheduleParams[i].vestingSchedule.scheduleStartTime = uint32(
+                    block.timestamp + i * 60 * 24 * 2
+                ); //2 days from now
+                setVestingScheduleParams[i].vestingSchedule.cliffEndTime = uint32(
+                    block.timestamp + i * 60 * 24 * 30
+                ); //30 days
                 setVestingScheduleParams[i].vestingSchedule.intervalLength = 60 * 24 * 30; //30 days
                 setVestingScheduleParams[i].vestingSchedule.maxIntervals = 10;
-                setVestingScheduleParams[i].vestingSchedule.growthRateProportion = _growthRateProportion;
+                setVestingScheduleParams[i].vestingSchedule.growthRateProportion = uint64(
+                    _growthRateProportion
+                );
             }
         } else if (
             keccak256(abi.encodePacked(paramToVary)) == keccak256(abi.encodePacked("vestingScheduleIndex"))
@@ -149,14 +145,18 @@ abstract contract VVVVestingTestBase is Test {
                 setVestingScheduleParams[i].vestingScheduleIndex = i;
                 setVestingScheduleParams[i].vestingSchedule.tokensToVestAfterFirstInterval = 100 * 1e18; //100 tokens
                 setVestingScheduleParams[i].vestingSchedule.scheduleStartTime =
-                    block.timestamp *
+                    uint32(block.timestamp) *
                     60 *
                     24 *
                     2; //2 days from now
-                setVestingScheduleParams[i].vestingSchedule.cliffEndTime = block.timestamp * 60 * 24 * 30; //30 days
+                setVestingScheduleParams[i].vestingSchedule.cliffEndTime =
+                    uint32(block.timestamp) +
+                    uint32(60 * 24 * 30); //30 days
                 setVestingScheduleParams[i].vestingSchedule.intervalLength = 60 * 24 * 30; //30 days
                 setVestingScheduleParams[i].vestingSchedule.maxIntervals = 10;
-                setVestingScheduleParams[i].vestingSchedule.growthRateProportion = _growthRateProportion;
+                setVestingScheduleParams[i].vestingSchedule.growthRateProportion = uint64(
+                    _growthRateProportion
+                );
             }
         } else {
             revert("invalid paramToVary");
