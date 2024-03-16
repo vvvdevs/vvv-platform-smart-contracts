@@ -629,8 +629,8 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
     // Tests the calculation of the accrued $VVV amount for a single stake
     function testCalculateAccruedVvvAmountSingleStake() public {
         VVVETHStaking.StakeData memory stake = VVVETHStaking.StakeData({
-            stakedEthAmount: 1 ether,
-            stakeStartTimestamp: block.timestamp,
+            stakedEthAmount: uint224(1 ether),
+            stakeStartTimestamp: uint32(block.timestamp),
             stakeIsWithdrawn: false,
             stakeDuration: VVVETHStaking.StakingDuration.ThreeMonths
         });
