@@ -1063,9 +1063,9 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
                 vestedUser: sampleUser,
                 vestingScheduleIndex: i,
                 vestingSchedule: VVVVesting.VestingSchedule({
-                    tokensToVestAtStart: tokensToVestAtStart,
-                    tokensToVestAfterFirstInterval: tokensToVestAfterFirstInterval,
-                    tokenAmountWithdrawn: amountWithdrawn,
+                    tokensToVestAtStart: uint88(tokensToVestAtStart),
+                    tokensToVestAfterFirstInterval: uint120(tokensToVestAfterFirstInterval),
+                    tokenAmountWithdrawn: uint128(amountWithdrawn),
                     scheduleStartTime: uint32(scheduleStartTime),
                     cliffEndTime: uint32(cliffEndTime),
                     intervalLength: uint32(intervalLength),

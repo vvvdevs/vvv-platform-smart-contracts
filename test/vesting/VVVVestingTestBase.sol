@@ -119,10 +119,9 @@ abstract contract VVVVestingTestBase is Test {
                     uint160(uint256(keccak256(abi.encodePacked(i))))
                 );
                 setVestingScheduleParams[i].vestingScheduleIndex = 0;
-                setVestingScheduleParams[i].vestingSchedule.tokensToVestAfterFirstInterval =
-                    (i + 1) *
-                    100 *
-                    1e18; //100 tokens
+                setVestingScheduleParams[i].vestingSchedule.tokensToVestAfterFirstInterval = uint120(
+                    (i + 1) * 100 * 1e18
+                ); //100 tokens
                 setVestingScheduleParams[i].vestingSchedule.scheduleStartTime = uint32(
                     block.timestamp + i * 60 * 24 * 2
                 ); //2 days from now

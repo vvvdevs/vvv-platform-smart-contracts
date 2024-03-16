@@ -25,13 +25,13 @@ contract VVVVesting is VVVAuthorizationRegistryChecker {
         @param growthRateProportion the % increase in tokens to be vested per interval
      */
     struct VestingSchedule {
-        uint256 tokensToVestAtStart;
-        uint256 tokensToVestAfterFirstInterval;
-        uint256 tokenAmountWithdrawn;
+        uint88 tokensToVestAtStart;
+        uint120 tokensToVestAfterFirstInterval;
+        uint128 tokenAmountWithdrawn;
         uint32 scheduleStartTime;
         uint32 cliffEndTime;
         uint32 intervalLength;
-        uint32 maxIntervals;
+        uint16 maxIntervals;
         uint64 growthRateProportion;
     }
 
@@ -160,7 +160,7 @@ contract VVVVesting is VVVAuthorizationRegistryChecker {
         }
 
         unchecked {
-            vestingSchedule.tokenAmountWithdrawn += _tokenAmountToWithdraw;
+            vestingSchedule.tokenAmountWithdrawn += uint128(_tokenAmountToWithdraw);
         }
 
         VVVToken.safeTransfer(_tokenDestination, _tokenAmountToWithdraw);
@@ -329,9 +329,9 @@ contract VVVVesting is VVVAuthorizationRegistryChecker {
         uint256 _vestingScheduleGrowthRateProportion
     ) external onlyAuthorized {
         VestingSchedule memory newSchedule;
-        newSchedule.tokensToVestAtStart = _tokensToVestAtStart;
-        newSchedule.tokensToVestAfterFirstInterval = _tokensToVestAfterFirstInterval;
-        newSchedule.tokenAmountWithdrawn = _vestingScheduleAmountWithdrawn;
+        newSchedule.tokensToVestAtStart = uint88(_tokensToVestAtStart);
+        newSchedule.tokensToVestAfterFirstInterval = uint120(_tokensToVestAfterFirstInterval);
+        newSchedule.tokenAmountWithdrawn = uint128(_vestingScheduleAmountWithdrawn);
         newSchedule.scheduleStartTime = uint32(_vestingScheduleStartTime);
         newSchedule.cliffEndTime = uint32(_vestingScheduleCliffEndTime);
         newSchedule.intervalLength = uint32(_vestingScheduleIntervalLength);
