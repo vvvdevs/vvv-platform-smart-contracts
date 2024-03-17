@@ -54,7 +54,7 @@ Changes Made: VestingSchedule data packing, without touching token amounts which
 # Post-Optimizations 2
 Changes Made: reduced precision of token amounts in VestingSchedule so entire struct fits in two words, reordered struct to optimal order for packing
 
-One interesting note here is that the original ordering of the fields in VestingSchedule produced the most savings. The conventional wisdom is that ordering the struct fields such that consecutive fields add up to 32 bytes at a time will save the most gas, but this produced relatively little savings compared to leaving the token amounts as uint256.
+One interesting note here is that the original ordering of the fields in VestingSchedule produced the most savings. The conventional wisdom is that ordering the struct fields such that consecutive fields add up to 32 bytes at a time will save the most gas, but this produced relatively little savings compared to leaving the token amounts as uint256. *Later found to be incorrect - see below, more savings were achieved*
 
 | contracts/vesting/VVVVesting.sol:VVVVesting contract |                 |        |        |        |         |
 |------------------------------------------------------|-----------------|--------|--------|--------|---------|
@@ -105,3 +105,57 @@ Additional gas savings compared to token amounts left as all uint256 in VestingS
 | setVestingSchedule                                  | 388             | -19370 | -21821 | -21821 | 0       |
 | userVestingSchedules                                | 43              | 43     | 43     | 43     | 0       |
 | withdrawVestedTokens                                | 104             | -8827  | 16     | -19899 | 0       |
+
+# Post-Optimizations 3
+Changes Made: Corrected storage packing into two words (previous attempt was incorrect and therefore didn't save gas as expected)
+
+| contracts/vesting/VVVVesting.sol:VVVVesting contract |                 |        |        |        |         |
+|------------------------------------------------------|-----------------|--------|--------|--------|---------|
+| Deployment Cost                                      | Deployment Size |        |        |        |         |
+| 1163033                                              | 6052            |        |        |        |         |
+| Function Name                                        | min             | avg    | median | max    | # calls |
+| VVVToken                                             | 349             | 349    | 349    | 349    | 1       |
+| batchSetVestingSchedule                              | 9010            | 220552 | 143011 | 587179 | 4       |
+| calculateVestedAmountAtInterval                      | 553             | 1759   | 1992   | 2987   | 7       |
+| getVestedAmount                                      | 1610            | 2533   | 2586   | 2699   | 10      |
+| removeVestingSchedule                                | 5040            | 5040   | 5040   | 5040   | 2       |
+| setVestedToken                                       | 8883            | 11994  | 12003  | 15088  | 4       |
+| setVestingSchedule                                   | 8664            | 72859  | 80677  | 80677  | 18      |
+| userVestingSchedules                                 | 1337            | 1337   | 1337   | 1337   | 11      |
+| withdrawVestedTokens                                 | 1638            | 21387  | 3326   | 45781  | 9       |
+
+# Difference (Pre to 3)
+
+| contracts/vesting/VVVVesting.sol:VVVVesting contract |                 |        |        |         |         |
+|------------------------------------------------------|-----------------|--------|--------|---------|---------|
+| Deployment Cost                                     | Deployment Size |        |        |         |         |
+| 153353                                              | 778             |        |        |         |         |
+| Function Name                                       | min             | avg    | median | max     | # calls |
+| VVVToken                                            | 0               | 0      | 0      | 0       | 0       |
+| batchSetVestingSchedule                             | 44              | -324415| -143814| -1010075| 0       |
+| calculateVestedAmountAtInterval                     | 0               | -107   | -186   | -186    | 0       |
+| getVestedAmount                                     | 156             | 150    | 142    | 159     | 0       |
+| removeVestingSchedule                               | -552            | -552   | -552   | -552    | 0       |
+| setVestedToken                                      | -22             | -22    | -22    | -22     | 0       |
+| setVestingSchedule                                  | 38              | -82117 | -92382 | -92382  | 0       |
+| userVestingSchedules                                | -395            | -395   | -395   | -395    | 0       |
+| withdrawVestedTokens                                | 122             | -8846  | 189    | -20063  | 0       |
+
+You can now copy and paste this table as a markdown table in your document or post.
+
+# Difference (2 to 3)
+
+| contracts/vesting/VVVVesting.sol:VVVVesting contract |                 |       |       |       |         |
+|------------------------------------------------------|-----------------|-------|-------|-------|---------|
+| Deployment Cost                                     | Deployment Size |       |       |       |         |
+| -11014                                              | -55             |       |       |       |         |
+| Function Name                                       | min             | avg   | median| max   | # calls |
+| VVVToken                                            | 0               | 0     | 0     | 0     | 0       |
+| batchSetVestingSchedule                             | 0               | -8243 | -4396 | -24178| 0       |
+| calculateVestedAmountAtInterval                     | 0               | 0     | 0     | 0     | 0       |
+| getVestedAmount                                     | 0               | 117   | 120   | 114   | 0       |
+| removeVestingSchedule                               | -366            | -366  | -366  | -366  | 0       |
+| setVestedToken                                      | 0               | 0     | 0     | 0     | 0       |
+| setVestingSchedule                                  | -180            | -1964 | -2198 | -2198 | 0       |
+| userVestingSchedules                                | -98             | -98   | -98   | -98   | 0       |
+| withdrawVestedTokens                                | 0               | 50    | 114   | 22    | 0       |
