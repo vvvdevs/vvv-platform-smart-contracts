@@ -17,21 +17,21 @@ contract VVVVesting is VVVAuthorizationRegistryChecker {
         @notice struct representing a user's vesting schedule
         @param tokensToVestAtStart the total amount of tokens to be vested at schedule start
         @param tokensToVestAfterFirstInterval the total amount of tokens to be vested after the first interval
+        @param intervalLength the length of each interval in seconds
+        @param maxIntervals number of post-cliff intervals        
         @param tokenAmountWithdrawn the amount of tokens that have been withdrawn
         @param scheduleStartTime the start time of the vesting schedule
         @param cliffEndTime the end time of the cliff
-        @param intervalLength the length of each interval in seconds
-        @param maxIntervals number of post-cliff intervals
         @param growthRateProportion the % increase in tokens to be vested per interval
      */
     struct VestingSchedule {
         uint88 tokensToVestAtStart;
         uint120 tokensToVestAfterFirstInterval;
+        uint32 intervalLength;
+        uint16 maxIntervals;
         uint128 tokenAmountWithdrawn;
         uint32 scheduleStartTime;
         uint32 cliffEndTime;
-        uint32 intervalLength;
-        uint16 maxIntervals;
         uint64 growthRateProportion;
     }
 
