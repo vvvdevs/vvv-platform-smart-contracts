@@ -1,4 +1,5 @@
-# Pre-Optimizations
+# Pre-Optimizations 
+0ffc3e524c65a1d86db3aa35af8840a4db026a3a
 Outputs of: `forge test --match-contract VVVVesting --gas-report`
 
 | contracts/vesting/VVVVesting.sol:VVVVesting contract |                 |        |        |         |         |
@@ -17,6 +18,7 @@ Outputs of: `forge test --match-contract VVVVesting --gas-report`
 | withdrawVestedTokens                                 | 1516            | 30233  | 3137   | 65844   | 9       |
 
 # Post-Optimizations 1
+4df51e47bb0d615589b4a0c3649ac7138fdba3a2
 Changes Made: VestingSchedule data packing, without touching token amounts which can be affected by precision loss
 
 | contracts/vesting/VVVVesting.sol:VVVVesting contract |                 |        |        |        |         |
@@ -52,6 +54,7 @@ Changes Made: VestingSchedule data packing, without touching token amounts which
 | withdrawVestedTokens                                | 18              | -69    | 59     | -186   | 0       |
 
 # Post-Optimizations 2
+865d0f130b394ca27a49d174cb6d1bed7967409e
 Changes Made: reduced precision of token amounts in VestingSchedule so entire struct fits in two words, reordered struct to optimal order for packing
 
 One interesting note here is that the original ordering of the fields in VestingSchedule produced the most savings. The conventional wisdom is that ordering the struct fields such that consecutive fields add up to 32 bytes at a time will save the most gas, but this produced relatively little savings compared to leaving the token amounts as uint256. *Later found to be incorrect - see below, more savings were achieved*
@@ -107,6 +110,7 @@ Additional gas savings compared to token amounts left as all uint256 in VestingS
 | withdrawVestedTokens                                | 104             | -8827  | 16     | -19899 | 0       |
 
 # Post-Optimizations 3
+dc0946c396f3d46a2a13e5767bf8bd60913464bf
 Changes Made: Corrected storage packing into two words (previous attempt was incorrect and therefore didn't save gas as expected)
 
 | contracts/vesting/VVVVesting.sol:VVVVesting contract |                 |        |        |        |         |
@@ -140,8 +144,6 @@ Changes Made: Corrected storage packing into two words (previous attempt was inc
 | setVestingSchedule                                  | 38              | -82117 | -92382 | -92382  | 0       |
 | userVestingSchedules                                | -395            | -395   | -395   | -395    | 0       |
 | withdrawVestedTokens                                | 122             | -8846  | 189    | -20063  | 0       |
-
-You can now copy and paste this table as a markdown table in your document or post.
 
 # Difference (2 to 3)
 
