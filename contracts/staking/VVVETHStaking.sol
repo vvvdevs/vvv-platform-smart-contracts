@@ -62,8 +62,8 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
     event Stake(
         address indexed staker,
         uint256 indexed stakeId,
-        uint256 stakedEthAmount,
-        uint256 stakeStartTimestamp,
+        uint224 stakedEthAmount,
+        uint32 stakeStartTimestamp,
         StakingDuration stakeDuration
     );
 
@@ -71,8 +71,8 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
     event Withdraw(
         address indexed staker,
         uint256 indexed stakeId,
-        uint256 stakedEthAmount,
-        uint256 stakeStartTimestamp,
+        uint224 stakedEthAmount,
+        uint32 stakeStartTimestamp,
         StakingDuration stakeDuration
     );
 
@@ -300,7 +300,13 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
 
         _userStakeIds[msg.sender].push(stakeId);
 
-        emit Stake(msg.sender, stakeId, _stakedEthAmount, block.timestamp, _stakeDuration);
+        emit Stake(
+            msg.sender,
+            stakeId,
+            uint224(_stakedEthAmount),
+            uint32(block.timestamp),
+            _stakeDuration
+        );
     }
 
     ///@notice checks permissions for withdrawing a stake based on eth amount, stake start time, and whether the stake has been withdrawn

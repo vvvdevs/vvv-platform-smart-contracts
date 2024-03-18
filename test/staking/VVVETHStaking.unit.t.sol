@@ -834,8 +834,8 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         emit VVVETHStaking.Stake(
             sampleUser,
             stakeId,
-            stakedEthAmount,
-            stakeStartTimestamp,
+            uint224(stakedEthAmount),
+            uint32(stakeStartTimestamp),
             stakedDuration
         );
         EthStakingInstance.stakeEth{ value: 1 ether }(VVVETHStaking.StakingDuration.ThreeMonths);
@@ -861,8 +861,8 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         emit VVVETHStaking.Stake(
             sampleUser,
             restakeId,
-            stakedEthAmount,
-            restakeStartTimestamp,
+            uint224(stakedEthAmount),
+            uint32(restakeStartTimestamp),
             stakeDuration
         );
         EthStakingInstance.restakeEth(stakeId, VVVETHStaking.StakingDuration.ThreeMonths);
@@ -889,8 +889,8 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         emit VVVETHStaking.Withdraw(
             sampleUser,
             stakeId,
-            stakedEthAmount,
-            stakeStartTimestamp,
+            uint224(stakedEthAmount),
+            uint32(stakeStartTimestamp),
             VVVETHStaking.StakingDuration.ThreeMonths
         );
         EthStakingInstance.withdrawStake(stakeId);
