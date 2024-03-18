@@ -1,4 +1,5 @@
 # Pre-Optimizations
+0ffc3e524c65a1d86db3aa35af8840a4db026a3a
 Outputs of: `forge test --match-contract VVVETHStaking --gas-report`
 
 | contracts/staking/VVVETHStaking.sol:VVVETHStaking contract       |                 |        |        |        |         |
@@ -28,6 +29,7 @@ Outputs of: `forge test --match-contract VVVETHStaking --gas-report`
 | withdrawStake                                                    | 1081            | 18238  | 11457  | 56357  | 22      |
 
 # Post-Optimizations 1
+fbb8b46461ae942c0cc8b659eedaebfd31a2eed1
 Changes Made: in StakeData, stakedEthAmount was converted to uint224, and stakeStartTimestamp to uint32 
 
 | contracts/staking/VVVETHStaking.sol:VVVETHStaking contract      |                 |       |        |        |         |    
