@@ -159,9 +159,7 @@ contract VVVVesting is VVVAuthorizationRegistryChecker {
             revert AmountIsGreaterThanWithdrawable();
         }
 
-        unchecked {
-            vestingSchedule.tokenAmountWithdrawn += uint128(_tokenAmountToWithdraw);
-        }
+        vestingSchedule.tokenAmountWithdrawn += uint128(_tokenAmountToWithdraw);
 
         VVVToken.safeTransfer(_tokenDestination, _tokenAmountToWithdraw);
 
