@@ -85,8 +85,10 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
         advanceBlockNumberAndTimestampInSeconds(vestingTime);
 
         uint256 vestedAmount = VVVVestingInstance.getVestedAmount(sampleUser, 0); // vestingScheduleIndex
-        (, , uint256 withdrawnTokens, , , , , ) = VVVVestingInstance.userVestingSchedules(sampleUser, 0); // vestingScheduleIndex
-        uint256 amountToWithdraw = Math.min(vestedAmount - withdrawnTokens, tokenAmountToWithdraw);
+        (, , uint128 withdrawnTokens, , , , , ) = VVVVestingInstance.userVestingSchedules(sampleUser, 0); // vestingScheduleIndex
+        uint128 amountToWithdraw = uint128(
+            Math.min(vestedAmount - withdrawnTokens, tokenAmountToWithdraw)
+        );
 
         withdrawVestedTokensAsUser(sampleUser, amountToWithdraw, sampleUser, 0); // vestingScheduleIndex
         assertEq(VVVTokenInstance.balanceOf(sampleUser), amountToWithdraw);
@@ -99,14 +101,14 @@ contract VVVVestingFuzzTests is VVVVestingTestBase {
         vm.assume(_vestedUser != address(0));
 
         uint256 vestingScheduleIndex = 0;
-        uint256 tokensToVestAtStart = 1_000 * 1e18; //1k tokens
-        uint256 tokensToVestAfterFirstInterval = 100 * 1e18; //100 tokens
-        uint256 amountWithdrawn = 0;
-        uint256 scheduleStartTime = 1;
-        uint256 cliffEndTime = scheduleStartTime + 60; //1 minute cliff
-        uint256 intervalLength = 30;
-        uint256 maxIntervals = 100;
-        uint256 growthRateProportion = 0;
+        uint88 tokensToVestAtStart = 1_000 * 1e18; //1k tokens
+        uint120 tokensToVestAfterFirstInterval = 100 * 1e18; //100 tokens
+        uint128 amountWithdrawn = 0;
+        uint32 scheduleStartTime = 1;
+        uint32 cliffEndTime = scheduleStartTime + 60; //1 minute cliff
+        uint32 intervalLength = 30;
+        uint16 maxIntervals = 100;
+        uint64 growthRateProportion = 0;
 
         setVestingScheduleFromManager(
             _vestedUser,
