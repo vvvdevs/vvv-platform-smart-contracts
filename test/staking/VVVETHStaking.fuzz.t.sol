@@ -61,7 +61,7 @@ contract VVVETHStakingUnitFuzzTests is VVVETHStakingTestBase {
     }
 
     // Test that contract correctly stores the StakeData and stakeIds for any valid input combination
-    function testFuzz_stakeEth(uint256 _callerKey, uint256 _stakeAmount, uint256 _duration) public {
+    function testFuzz_stakeEth(uint256 _callerKey, uint224 _stakeAmount, uint32 _duration) public {
         uint256 callerKey = bound(_callerKey, 1, 100000);
         address caller = vm.addr(callerKey);
         uint8 duration = uint8(bound(_duration, 0, 2));
@@ -75,8 +75,8 @@ contract VVVETHStakingUnitFuzzTests is VVVETHStakingTestBase {
         uint256 stakeId = EthStakingInstance.stakeEth{ value: _stakeAmount }(stakeDuration);
 
         (
-            uint256 stakedEthAmount,
-            uint256 stakedTimestamp,
+            uint224 stakedEthAmount,
+            uint32 stakedTimestamp,
             bool stakeIsWithdrawn,
             VVVETHStaking.StakingDuration stakedDuration
         ) = EthStakingInstance.userStakes(caller, stakeId);
@@ -92,9 +92,9 @@ contract VVVETHStakingUnitFuzzTests is VVVETHStakingTestBase {
     // test that contract correctly stores the StakeData and stakeIds for any restake
     function testFuzz_restakeEth(
         uint256 _callerKey,
-        uint256 _stakeAmount,
-        uint256 _duration,
-        uint256 _newDuration
+        uint224 _stakeAmount,
+        uint8 _duration,
+        uint8 _newDuration
     ) public {
         uint256 callerKey = bound(_callerKey, 1, 100000);
         address caller = vm.addr(callerKey);
@@ -118,8 +118,8 @@ contract VVVETHStakingUnitFuzzTests is VVVETHStakingTestBase {
 
         // Verify the restake
         (
-            uint256 restakedEthAmount,
-            uint256 restakedTimestamp,
+            uint224 restakedEthAmount,
+            uint32 restakedTimestamp,
             bool restakeIsWithdrawn,
             VVVETHStaking.StakingDuration restakedDuration
         ) = EthStakingInstance.userStakes(caller, newStakeId);
@@ -133,7 +133,7 @@ contract VVVETHStakingUnitFuzzTests is VVVETHStakingTestBase {
     }
 
     // Test that any valid stake is withdrawable
-    function testFuzz_withdrawStake(uint256 _callerKey, uint256 _stakeAmount, uint256 _duration) public {
+    function testFuzz_withdrawStake(uint256 _callerKey, uint224 _stakeAmount, uint8 _duration) public {
         uint256 callerKey = bound(_callerKey, 1, 100000);
         address payable caller = payable(vm.addr(callerKey));
         uint8 duration = uint8(bound(_duration, 0, 2));
@@ -160,8 +160,8 @@ contract VVVETHStakingUnitFuzzTests is VVVETHStakingTestBase {
     // also tests that the claimed + remaining claimable add up to originally claimable amount
     function testFuzz_claimVvv(
         uint256 _callerKey,
-        uint256 _stakeAmount,
-        uint256 _stakeDuration,
+        uint224 _stakeAmount,
+        uint8 _stakeDuration,
         uint256 _claimAmount
     ) public {
         uint256 callerKey = bound(_callerKey, 1, 100000);

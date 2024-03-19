@@ -629,8 +629,8 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
     // Tests the calculation of the accrued $VVV amount for a single stake
     function testCalculateAccruedVvvAmountSingleStake() public {
         VVVETHStaking.StakeData memory stake = VVVETHStaking.StakeData({
-            stakedEthAmount: 1 ether,
-            stakeStartTimestamp: block.timestamp,
+            stakedEthAmount: uint224(1 ether),
+            stakeStartTimestamp: uint32(block.timestamp),
             stakeIsWithdrawn: false,
             stakeDuration: VVVETHStaking.StakingDuration.ThreeMonths
         });
@@ -834,8 +834,8 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         emit VVVETHStaking.Stake(
             sampleUser,
             stakeId,
-            stakedEthAmount,
-            stakeStartTimestamp,
+            uint224(stakedEthAmount),
+            uint32(stakeStartTimestamp),
             stakedDuration
         );
         EthStakingInstance.stakeEth{ value: 1 ether }(VVVETHStaking.StakingDuration.ThreeMonths);
@@ -861,8 +861,8 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         emit VVVETHStaking.Stake(
             sampleUser,
             restakeId,
-            stakedEthAmount,
-            restakeStartTimestamp,
+            uint224(stakedEthAmount),
+            uint32(restakeStartTimestamp),
             stakeDuration
         );
         EthStakingInstance.restakeEth(stakeId, VVVETHStaking.StakingDuration.ThreeMonths);
@@ -889,8 +889,8 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         emit VVVETHStaking.Withdraw(
             sampleUser,
             stakeId,
-            stakedEthAmount,
-            stakeStartTimestamp,
+            uint224(stakedEthAmount),
+            uint32(stakeStartTimestamp),
             VVVETHStaking.StakingDuration.ThreeMonths
         );
         EthStakingInstance.withdrawStake(stakeId);
