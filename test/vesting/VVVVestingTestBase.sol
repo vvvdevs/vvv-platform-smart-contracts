@@ -34,14 +34,14 @@ abstract contract VVVVestingTestBase is Test {
 
     struct VestingParams {
         uint256 vestingScheduleIndex;
-        uint256 tokensToVestAtStart;
-        uint256 tokensToVestAfterFirstInterval;
-        uint256 amountWithdrawn;
-        uint256 scheduleStartTime;
-        uint256 cliffEndTime;
-        uint256 intervalLength;
-        uint256 maxIntervals;
-        uint256 growthRateProportion;
+        uint88 tokensToVestAtStart;
+        uint120 tokensToVestAfterFirstInterval;
+        uint128 amountWithdrawn;
+        uint32 scheduleStartTime;
+        uint32 cliffEndTime;
+        uint32 intervalLength;
+        uint16 maxIntervals;
+        uint64 growthRateProportion;
     }
 
     function advanceBlockNumberAndTimestampInBlocks(uint256 blocks) public {
@@ -61,14 +61,14 @@ abstract contract VVVVestingTestBase is Test {
     function setVestingScheduleFromManager(
         address _user,
         uint256 _vestingScheduleIndex,
-        uint256 _tokensToVestAtStart,
-        uint256 _tokensToVestAfterFirstInterval,
-        uint256 _amountWithdrawn,
-        uint256 _scheduleStartTime,
-        uint256 _cliffEndTime,
-        uint256 _intervalLength,
-        uint256 _maxIntervals,
-        uint256 _growthRateProportion
+        uint88 _tokensToVestAtStart,
+        uint120 _tokensToVestAfterFirstInterval,
+        uint128 _amountWithdrawn,
+        uint32 _scheduleStartTime,
+        uint32 _cliffEndTime,
+        uint32 _intervalLength,
+        uint16 _maxIntervals,
+        uint64 _growthRateProportion
     ) public {
         vm.startPrank(vestingManager, vestingManager);
         VVVVestingInstance.setVestingSchedule(
@@ -94,7 +94,7 @@ abstract contract VVVVestingTestBase is Test {
 
     function withdrawVestedTokensAsUser(
         address _caller,
-        uint256 _amount,
+        uint128 _amount,
         address _destination,
         uint256 _vestingScheduleIndex
     ) public {
