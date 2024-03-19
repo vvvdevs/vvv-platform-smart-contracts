@@ -17,22 +17,22 @@ contract VVVVesting is VVVAuthorizationRegistryChecker {
         @notice struct representing a user's vesting schedule
         @param tokensToVestAtStart the total amount of tokens to be vested at schedule start
         @param tokensToVestAfterFirstInterval the total amount of tokens to be vested after the first interval
+        @param intervalLength the length of each interval in seconds
+        @param maxIntervals number of post-cliff intervals        
         @param tokenAmountWithdrawn the amount of tokens that have been withdrawn
         @param scheduleStartTime the start time of the vesting schedule
         @param cliffEndTime the end time of the cliff
-        @param intervalLength the length of each interval in seconds
-        @param maxIntervals number of post-cliff intervals
         @param growthRateProportion the % increase in tokens to be vested per interval
      */
     struct VestingSchedule {
-        uint256 tokensToVestAtStart;
-        uint256 tokensToVestAfterFirstInterval;
-        uint256 tokenAmountWithdrawn;
-        uint256 scheduleStartTime;
-        uint256 cliffEndTime;
-        uint256 intervalLength;
-        uint256 maxIntervals;
-        uint256 growthRateProportion;
+        uint88 tokensToVestAtStart;
+        uint120 tokensToVestAfterFirstInterval;
+        uint32 intervalLength;
+        uint16 maxIntervals;
+        uint128 tokenAmountWithdrawn;
+        uint32 scheduleStartTime;
+        uint32 cliffEndTime;
+        uint64 growthRateProportion;
     }
 
     /**
@@ -159,7 +159,9 @@ contract VVVVesting is VVVAuthorizationRegistryChecker {
             revert AmountIsGreaterThanWithdrawable();
         }
 
-        vestingSchedule.tokenAmountWithdrawn += _tokenAmountToWithdraw;
+        unchecked {
+            vestingSchedule.tokenAmountWithdrawn += uint128(_tokenAmountToWithdraw);
+        }
 
         VVVToken.safeTransfer(_tokenDestination, _tokenAmountToWithdraw);
 
@@ -238,18 +240,26 @@ contract VVVVesting is VVVAuthorizationRegistryChecker {
         } else if (block.timestamp < vestingSchedule.cliffEndTime) {
             return vestingSchedule.tokensToVestAtStart;
         } else {
-            uint256 elapsedIntervals = (block.timestamp - vestingSchedule.cliffEndTime) /
-                vestingSchedule.intervalLength;
-            elapsedIntervals = elapsedIntervals > vestingSchedule.maxIntervals
-                ? vestingSchedule.maxIntervals
-                : elapsedIntervals;
+            uint256 elapsedIntervals;
+            uint256 vestedAmount;
 
-            return (vestingSchedule.tokensToVestAtStart +
-                calculateVestedAmountAtInterval(
-                    vestingSchedule.tokensToVestAfterFirstInterval,
-                    elapsedIntervals,
-                    vestingSchedule.growthRateProportion
-                ));
+            unchecked {
+                elapsedIntervals =
+                    (block.timestamp - vestingSchedule.cliffEndTime) /
+                    vestingSchedule.intervalLength;
+                elapsedIntervals = elapsedIntervals > vestingSchedule.maxIntervals
+                    ? vestingSchedule.maxIntervals
+                    : elapsedIntervals;
+                vestedAmount =
+                    vestingSchedule.tokensToVestAtStart +
+                    calculateVestedAmountAtInterval(
+                        vestingSchedule.tokensToVestAfterFirstInterval,
+                        elapsedIntervals,
+                        vestingSchedule.growthRateProportion
+                    );
+            }
+
+            return vestedAmount;
         }
     }
 
@@ -270,20 +280,24 @@ contract VVVVesting is VVVAuthorizationRegistryChecker {
         if (_growthRateProportion == 0 || _elapsedIntervals == 0) {
             return _firstIntervalAccrual * _elapsedIntervals;
         } else {
-            // Convert growth rate proportion to a fixed-point number with 1e18 scale
-            uint256 r = FixedPointMathLib.divWadDown(
-                _growthRateProportion + FixedPointMathLib.WAD,
-                FixedPointMathLib.WAD
-            );
+            uint256 r;
+            uint256 rToN;
+            uint256 Sn;
+            unchecked {
+                // Convert growth rate proportion to a fixed-point number with 1e18 scale
+                r = FixedPointMathLib.divWadDown(
+                    _growthRateProportion + FixedPointMathLib.WAD,
+                    FixedPointMathLib.WAD
+                );
 
-            // Calculate r^n
-            uint256 rToN = FixedPointMathLib.rpow(r, _elapsedIntervals, FixedPointMathLib.WAD);
+                // Calculate r^n
+                rToN = FixedPointMathLib.rpow(r, _elapsedIntervals, FixedPointMathLib.WAD);
 
-            // Calculate the sum of the geometric series
-            uint256 Sn = _firstIntervalAccrual.mulWadDown((rToN - FixedPointMathLib.WAD)).divWadDown(
-                r - FixedPointMathLib.WAD
-            );
-
+                // Calculate the sum of the geometric series
+                Sn = _firstIntervalAccrual.mulWadDown((rToN - FixedPointMathLib.WAD)).divWadDown(
+                    r - FixedPointMathLib.WAD
+                );
+            }
             return Sn;
         }
     }
@@ -315,14 +329,14 @@ contract VVVVesting is VVVAuthorizationRegistryChecker {
         uint256 _vestingScheduleGrowthRateProportion
     ) external onlyAuthorized {
         VestingSchedule memory newSchedule;
-        newSchedule.tokensToVestAtStart = _tokensToVestAtStart;
-        newSchedule.tokensToVestAfterFirstInterval = _tokensToVestAfterFirstInterval;
-        newSchedule.tokenAmountWithdrawn = _vestingScheduleAmountWithdrawn;
-        newSchedule.scheduleStartTime = _vestingScheduleStartTime;
-        newSchedule.cliffEndTime = _vestingScheduleCliffEndTime;
-        newSchedule.intervalLength = _vestingScheduleIntervalLength;
-        newSchedule.maxIntervals = _vestingScheduleMaxIntervals;
-        newSchedule.growthRateProportion = _vestingScheduleGrowthRateProportion;
+        newSchedule.tokensToVestAtStart = uint88(_tokensToVestAtStart);
+        newSchedule.tokensToVestAfterFirstInterval = uint120(_tokensToVestAfterFirstInterval);
+        newSchedule.tokenAmountWithdrawn = uint128(_vestingScheduleAmountWithdrawn);
+        newSchedule.scheduleStartTime = uint32(_vestingScheduleStartTime);
+        newSchedule.cliffEndTime = uint32(_vestingScheduleCliffEndTime);
+        newSchedule.intervalLength = uint32(_vestingScheduleIntervalLength);
+        newSchedule.maxIntervals = uint16(_vestingScheduleMaxIntervals);
+        newSchedule.growthRateProportion = uint16(_vestingScheduleGrowthRateProportion);
 
         SetVestingScheduleParams memory params = SetVestingScheduleParams(
             _vestedUser,
