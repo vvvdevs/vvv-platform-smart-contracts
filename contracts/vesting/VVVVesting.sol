@@ -66,14 +66,14 @@ contract VVVVesting is VVVAuthorizationRegistryChecker {
     event SetVestingSchedule(
         address indexed _vestedUser,
         uint256 _vestingScheduleIndex,
-        uint256 _tokensToVestAtStart,
-        uint256 _tokensToVestAfterFirstInterval,
-        uint256 _vestingScheduleAmountWithdrawn,
-        uint256 _vestingScheduleStartTime,
-        uint256 _vestingScheduleCliffEndTime,
-        uint256 _vestingScheduleIntervalLength,
-        uint256 _vestingScheduleMaxIntervals,
-        uint256 _vestingScheduleGrowthRateProportion
+        uint88 _tokensToVestAtStart,
+        uint120 _tokensToVestAfterFirstInterval,
+        uint128 _vestingScheduleAmountWithdrawn,
+        uint32 _vestingScheduleStartTime,
+        uint32 _vestingScheduleCliffEndTime,
+        uint32 _vestingScheduleIntervalLength,
+        uint16 _vestingScheduleMaxIntervals,
+        uint64 _vestingScheduleGrowthRateProportion
     );
 
     /**
@@ -93,7 +93,7 @@ contract VVVVesting is VVVAuthorizationRegistryChecker {
     event VestedTokenWithdrawal(
         address indexed _vestedUser,
         address indexed _tokenDestination,
-        uint256 _tokenAmountToWithdraw,
+        uint128 _tokenAmountToWithdraw,
         uint256 _vestingScheduleIndex
     );
 
@@ -140,7 +140,7 @@ contract VVVVesting is VVVAuthorizationRegistryChecker {
         @dev reverts if user withdrawable amount for that schedule is less than _tokenAmountToWithdraw
      */
     function withdrawVestedTokens(
-        uint256 _tokenAmountToWithdraw,
+        uint128 _tokenAmountToWithdraw,
         address _tokenDestination,
         uint256 _vestingScheduleIndex
     ) external {
@@ -159,7 +159,7 @@ contract VVVVesting is VVVAuthorizationRegistryChecker {
             revert AmountIsGreaterThanWithdrawable();
         }
 
-        vestingSchedule.tokenAmountWithdrawn += uint128(_tokenAmountToWithdraw);
+        vestingSchedule.tokenAmountWithdrawn += _tokenAmountToWithdraw;
 
         VVVToken.safeTransfer(_tokenDestination, _tokenAmountToWithdraw);
 
@@ -317,24 +317,24 @@ contract VVVVesting is VVVAuthorizationRegistryChecker {
     function setVestingSchedule(
         address _vestedUser,
         uint256 _vestingScheduleIndex,
-        uint256 _tokensToVestAtStart,
-        uint256 _tokensToVestAfterFirstInterval,
-        uint256 _vestingScheduleAmountWithdrawn,
-        uint256 _vestingScheduleStartTime,
-        uint256 _vestingScheduleCliffEndTime,
-        uint256 _vestingScheduleIntervalLength,
-        uint256 _vestingScheduleMaxIntervals,
-        uint256 _vestingScheduleGrowthRateProportion
+        uint88 _tokensToVestAtStart,
+        uint120 _tokensToVestAfterFirstInterval,
+        uint128 _vestingScheduleAmountWithdrawn,
+        uint32 _vestingScheduleStartTime,
+        uint32 _vestingScheduleCliffEndTime,
+        uint32 _vestingScheduleIntervalLength,
+        uint16 _vestingScheduleMaxIntervals,
+        uint64 _vestingScheduleGrowthRateProportion
     ) external onlyAuthorized {
         VestingSchedule memory newSchedule;
-        newSchedule.tokensToVestAtStart = uint88(_tokensToVestAtStart);
-        newSchedule.tokensToVestAfterFirstInterval = uint120(_tokensToVestAfterFirstInterval);
-        newSchedule.tokenAmountWithdrawn = uint128(_vestingScheduleAmountWithdrawn);
-        newSchedule.scheduleStartTime = uint32(_vestingScheduleStartTime);
-        newSchedule.cliffEndTime = uint32(_vestingScheduleCliffEndTime);
-        newSchedule.intervalLength = uint32(_vestingScheduleIntervalLength);
-        newSchedule.maxIntervals = uint16(_vestingScheduleMaxIntervals);
-        newSchedule.growthRateProportion = uint16(_vestingScheduleGrowthRateProportion);
+        newSchedule.tokensToVestAtStart = _tokensToVestAtStart;
+        newSchedule.tokensToVestAfterFirstInterval = _tokensToVestAfterFirstInterval;
+        newSchedule.tokenAmountWithdrawn = _vestingScheduleAmountWithdrawn;
+        newSchedule.scheduleStartTime = _vestingScheduleStartTime;
+        newSchedule.cliffEndTime = _vestingScheduleCliffEndTime;
+        newSchedule.intervalLength = _vestingScheduleIntervalLength;
+        newSchedule.maxIntervals = _vestingScheduleMaxIntervals;
+        newSchedule.growthRateProportion = _vestingScheduleGrowthRateProportion;
 
         SetVestingScheduleParams memory params = SetVestingScheduleParams(
             _vestedUser,
