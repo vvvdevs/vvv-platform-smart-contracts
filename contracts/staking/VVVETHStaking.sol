@@ -34,8 +34,8 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
         @param stakeDuration The duration of the stake
      */
     struct StakeData {
-        uint256 stakedEthAmount;
-        uint256 stakeStartTimestamp;
+        uint224 stakedEthAmount;
+        uint32 stakeStartTimestamp;
         bool stakeIsWithdrawn;
         StakingDuration stakeDuration;
     }
@@ -62,8 +62,8 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
     event Stake(
         address indexed staker,
         uint256 indexed stakeId,
-        uint256 stakedEthAmount,
-        uint256 stakeStartTimestamp,
+        uint224 stakedEthAmount,
+        uint32 stakeStartTimestamp,
         StakingDuration stakeDuration
     );
 
@@ -71,8 +71,8 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
     event Withdraw(
         address indexed staker,
         uint256 indexed stakeId,
-        uint256 stakedEthAmount,
-        uint256 stakeStartTimestamp,
+        uint224 stakedEthAmount,
+        uint32 stakeStartTimestamp,
         StakingDuration stakeDuration
     );
 
@@ -205,7 +205,9 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
         uint256 totalVvvAccrued;
         for (uint256 i = 0; i < stakeIds.length; ++i) {
             StakeData memory stake = userStakes[msg.sender][stakeIds[i]];
-            totalVvvAccrued += calculateAccruedVvvAmount(stake);
+            unchecked {
+                totalVvvAccrued += calculateAccruedVvvAmount(stake);
+            }
         }
 
         return totalVvvAccrued;
@@ -220,15 +222,21 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
     function calculateAccruedVvvAmount(StakeData memory _stake) public view returns (uint256) {
         uint256 stakeDuration = durationToSeconds[_stake.stakeDuration];
         uint256 secondsSinceStakingStarted = block.timestamp - _stake.stakeStartTimestamp;
-        uint256 secondsStaked = secondsSinceStakingStarted >= stakeDuration
-            ? stakeDuration
-            : secondsSinceStakingStarted;
+        uint256 secondsStaked;
+        uint256 nominalAccruedEth;
+        uint256 accruedVvv;
 
-        uint256 nominalAccruedEth = (secondsStaked * _stake.stakedEthAmount) / stakeDuration;
+        unchecked {
+            secondsStaked = secondsSinceStakingStarted >= stakeDuration
+                ? stakeDuration
+                : secondsSinceStakingStarted;
 
-        uint256 accruedVvv = (nominalAccruedEth *
-            ethToVvvExchangeRate() *
-            durationToMultiplier[_stake.stakeDuration]) / DENOMINATOR;
+            nominalAccruedEth = (secondsStaked * _stake.stakedEthAmount) / stakeDuration;
+
+            accruedVvv =
+                (nominalAccruedEth * ethToVvvExchangeRate() * durationToMultiplier[_stake.stakeDuration]) /
+                DENOMINATOR;
+        }
 
         return accruedVvv;
     }
@@ -284,15 +292,21 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
         ++stakeId;
 
         userStakes[msg.sender][stakeId] = StakeData({
-            stakedEthAmount: _stakedEthAmount,
-            stakeStartTimestamp: block.timestamp,
+            stakedEthAmount: uint224(_stakedEthAmount),
+            stakeStartTimestamp: uint32(block.timestamp),
             stakeIsWithdrawn: false,
             stakeDuration: _stakeDuration
         });
 
         _userStakeIds[msg.sender].push(stakeId);
 
-        emit Stake(msg.sender, stakeId, _stakedEthAmount, block.timestamp, _stakeDuration);
+        emit Stake(
+            msg.sender,
+            stakeId,
+            uint224(_stakedEthAmount),
+            uint32(block.timestamp),
+            _stakeDuration
+        );
     }
 
     ///@notice checks permissions for withdrawing a stake based on eth amount, stake start time, and whether the stake has been withdrawn
