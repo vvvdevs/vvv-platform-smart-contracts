@@ -93,11 +93,11 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         (
             uint256 _tokensToVestAtStart,
             uint256 _tokensToVestAfterFirstInterval,
+            uint256 _intervalLength,
+            uint256 _maxIntervals,
             uint256 _tokenAmountWithdrawn,
             uint256 _scheduleStartTime,
             uint256 _cliffEndTime,
-            uint256 _intervalLength,
-            uint256 _maxIntervals,
             uint256 _growthRateProportion
         ) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
 
@@ -142,11 +142,11 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             (
                 uint256 _tokensToVestAtStart,
                 uint256 _tokensToVestAfterFirstInterval,
+                uint256 _intervalLength,
+                uint256 _maxIntervals,
                 uint256 _tokenAmountWithdrawn,
                 uint256 _scheduleStartTime,
                 uint256 _cliffEndTime,
-                uint256 _intervalLength,
-                uint256 _maxIntervals,
                 uint256 _growthRateProportion
             ) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
 
@@ -189,11 +189,11 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             (
                 uint256 _tokensToVestAtStart,
                 uint256 _tokensToVestAfterFirstInterval,
+                uint256 _intervalLength,
+                uint256 _maxIntervals,
                 uint256 _tokenAmountWithdrawn,
                 uint256 _scheduleStartTime,
                 uint256 _cliffEndTime,
-                uint256 _intervalLength,
-                uint256 _maxIntervals,
                 uint256 _growthRateProportion
             ) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
 
@@ -271,11 +271,11 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             (
                 uint256 _tokensToVestAtStart,
                 uint256 _tokensToVestAfterFirstInterval,
+                uint256 _intervalLength,
+                uint256 _maxIntervals,
                 uint256 _tokenAmountWithdrawn,
                 uint256 _scheduleStartTime,
                 uint256 _cliffEndTime,
-                uint256 _intervalLength,
-                uint256 _maxIntervals,
                 uint256 _growthRateProportion
             ) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
 
@@ -294,11 +294,11 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             (
                 uint256 _tokensToVestAtStart2,
                 uint256 _tokensToVestAfterFirstInterval2,
+                uint256 _intervalLength2,
+                uint256 _maxIntervals2,
                 uint256 _tokenAmountWithdrawn2,
                 uint256 _scheduleStartTime2,
                 uint256 _cliffEndTime2,
-                uint256 _intervalLength2,
-                uint256 _maxIntervals2,
                 uint256 _growthRateProportion2
             ) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
 
@@ -398,7 +398,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
 
         withdrawVestedTokensAsUser(sampleUser, vestedAmount, sampleUser, vestingScheduleIndex);
 
-        (, , uint256 _amountWithdrawn2, , , , , ) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
+        (, , , , uint256 _amountWithdrawn2, , , ) = VVVVestingInstance.userVestingSchedules(sampleUser, 0);
         assertTrue(_amountWithdrawn2 == vestedAmount);
 
         uint256 vestingContractBalanceAfterWithdraw = VVVTokenInstance.balanceOf(
@@ -585,11 +585,11 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             (
                 uint256 _tokensToVestAtStart,
                 uint256 _tokensToVestAfterFirstInterval,
+                uint256 _intervalLength,
+                uint256 _maxIntervals,
                 uint256 _tokenAmountWithdrawn,
                 uint256 _scheduleStartTime,
                 uint256 _cliffEndTime,
-                uint256 _intervalLength,
-                uint256 _maxIntervals,
                 uint256 _growthRateProportion
             ) = VVVVestingInstance.userVestingSchedules(setVestingScheduleParams[i].vestedUser, 0);
 
@@ -637,11 +637,11 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             (
                 uint256 _tokensToVestAtStart,
                 uint256 _tokensToVestAfterFirstInterval,
+                uint256 _intervalLength,
+                uint256 _maxIntervals,
                 uint256 _tokenAmountWithdrawn,
                 uint256 _scheduleStartTime,
                 uint256 _cliffEndTime,
-                uint256 _intervalLength,
-                uint256 _maxIntervals,
                 uint256 _growthRateProportion
             ) = VVVVestingInstance.userVestingSchedules(
                     setVestingScheduleParams[i].vestedUser,
@@ -964,7 +964,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
      */
     function testExponentialVestingFuture() public {
         uint256 tokensToVestAfterFirstInterval = 200000.00 ether; //200k tokens
-        uint256 numIntervals = 18; //nice
+        uint256 numIntervals = 18;
         uint256 growthRateProportion = 176505576804629530; //0.17650557680462953 = 176505576804629530/1e18
 
         uint256 vestedTokens = VVVVestingInstance.calculateVestedAmountAtInterval(
@@ -1063,14 +1063,14 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
                 vestedUser: sampleUser,
                 vestingScheduleIndex: i,
                 vestingSchedule: VVVVesting.VestingSchedule({
-                    tokensToVestAtStart: tokensToVestAtStart,
-                    tokensToVestAfterFirstInterval: tokensToVestAfterFirstInterval,
-                    tokenAmountWithdrawn: amountWithdrawn,
-                    scheduleStartTime: scheduleStartTime,
-                    cliffEndTime: cliffEndTime,
-                    intervalLength: intervalLength,
-                    maxIntervals: maxIntervals,
-                    growthRateProportion: growthRateProportion
+                    tokensToVestAtStart: uint88(tokensToVestAtStart),
+                    tokensToVestAfterFirstInterval: uint120(tokensToVestAfterFirstInterval),
+                    tokenAmountWithdrawn: uint128(amountWithdrawn),
+                    scheduleStartTime: uint32(scheduleStartTime),
+                    cliffEndTime: uint32(cliffEndTime),
+                    intervalLength: uint32(intervalLength),
+                    maxIntervals: uint16(maxIntervals),
+                    growthRateProportion: uint16(growthRateProportion)
                 })
             });
         }
