@@ -112,6 +112,46 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
     }
 
     /**
+        @notice Tests investment function call by user with two exchange rates to confirm the invested amount reflects the exchange rate
+     */
+    function testInvestNewExchangeRate() public {
+        VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
+            sampleInvestmentRoundIds[0],
+            investmentRoundSampleLimit,
+            sampleAmountsToInvest[0],
+            userPaymentTokenDefaultAllocation,
+            exchangeRateNumerator,
+            sampleKycAddress
+        );
+        investAsUser(sampleUser, params);
+        uint256 userInvested = LedgerInstance.kycAddressInvestedPerRound(
+            sampleKycAddress,
+            sampleInvestmentRoundIds[0]
+        );
+
+        //double default exchange rate of 1e6, so the stablecoin equivalent for a given amount of payment tokens is halved
+        uint256 newExchangeRateNumerator = 2e6;
+
+        VVVVCInvestmentLedger.InvestParams memory params2 = generateInvestParamsWithSignature(
+            sampleInvestmentRoundIds[0],
+            investmentRoundSampleLimit,
+            sampleAmountsToInvest[0],
+            userPaymentTokenDefaultAllocation,
+            newExchangeRateNumerator,
+            sampleKycAddress
+        );
+        investAsUser(sampleUser, params);
+
+        uint256 userInvested2 = LedgerInstance.kycAddressInvestedPerRound(
+            sampleKycAddress,
+            sampleInvestmentRoundIds[0]
+        );
+
+        //confirm that the stable-equivalent invested amount of the 2nd investment is half that of the first
+        assertTrue(userInvested2 == (userInvested * newExchangeRateNumerator) / exchangeRateNumerator);
+    }
+
+    /**
      * @notice Tests that a user can invest multiple times in a single round within the user and round limits
      * @dev in generateInvestParamsWithSignature, the user is allocated 1000 tokens, and the round limit is 10000 tokens
      * @dev so 10 investments work, but 11 won't
