@@ -27,6 +27,7 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         bytes4 setNewStakesPermittedSelector = EthStakingInstance.setNewStakesPermitted.selector;
         bytes4 setVvvTokenSelector = EthStakingInstance.setVvvToken.selector;
         bytes4 withdrawEthSelector = EthStakingInstance.withdrawEth.selector;
+        bytes4 withdrawVvvSelector = EthStakingInstance.withdrawVvv.selector;
         AuthRegistry.setPermission(
             address(EthStakingInstance),
             setDurationMultipliersSelector,
@@ -45,6 +46,11 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         AuthRegistry.setPermission(
             address(EthStakingInstance),
             withdrawEthSelector,
+            ethStakingManagerRole
+        );
+        AuthRegistry.setPermission(
+            address(EthStakingInstance),
+            withdrawVvvSelector,
             ethStakingManagerRole
         );
 
@@ -778,6 +784,28 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         vm.expectRevert();
         EthStakingInstance.claimVvv(claimableVvv);
 
+        vm.stopPrank();
+    }
+
+    //tests that an admin can withdraw vvv token using 'withdrawVvv'
+    function testAdminWithdrawVvv() public {
+        uint256 contractBalanceBeforeWithdraw = VvvTokenInstance.balanceOf(address(EthStakingInstance));
+
+        vm.startPrank(ethStakingManager, ethStakingManager);
+        EthStakingInstance.withdrawVvv(contractBalanceBeforeWithdraw);
+        vm.stopPrank();
+
+        assertTrue(VvvTokenInstance.balanceOf(ethStakingManager) == contractBalanceBeforeWithdraw);
+        assertTrue(VvvTokenInstance.balanceOf(address(EthStakingInstance)) == 0);
+    }
+
+    //tests that a non-admin cannot withdraw vvv token using 'withdrawVvv'
+    function testNonAdminRevertWithdrawVvv() public {
+        uint256 contractBalanceBeforeWithdraw = VvvTokenInstance.balanceOf(address(EthStakingInstance));
+
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
+        EthStakingInstance.withdrawVvv(contractBalanceBeforeWithdraw);
         vm.stopPrank();
     }
 

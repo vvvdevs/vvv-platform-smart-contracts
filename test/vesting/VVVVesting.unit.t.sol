@@ -25,6 +25,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         bytes4 batchSetVestingScheduleSelector = VVVVestingInstance.batchSetVestingSchedule.selector;
         bytes4 removeVestingScheduleSelector = VVVVestingInstance.removeVestingSchedule.selector;
         bytes4 setVestedTokenSelector = VVVVestingInstance.setVestedToken.selector;
+        bytes4 withdrawVvvSelector = VVVVestingInstance.withdrawVvv.selector;
         AuthRegistry.setPermission(
             address(VVVVestingInstance),
             setVestingScheduleSelector,
@@ -45,7 +46,7 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
             setVestedTokenSelector,
             vestingManagerRole
         );
-
+        AuthRegistry.setPermission(address(VVVVestingInstance), withdrawVvvSelector, vestingManagerRole);
         VVVTokenInstance.mint(address(VVVVestingInstance), 1_000_000 * 1e18); //1M tokens
 
         vm.stopPrank();
@@ -565,6 +566,28 @@ contract VVVVestingUnitTests is VVVVestingTestBase {
         vm.startPrank(sampleUser, sampleUser);
         vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
         VVVVestingInstance.setVestedToken(newVestedTokenAddress);
+        vm.stopPrank();
+    }
+
+    //tests that an admin can withdraw vvv token using 'withdrawVvv'
+    function testAdminWithdrawVvv() public {
+        uint256 contractBalanceBeforeWithdraw = VVVTokenInstance.balanceOf(address(VVVVestingInstance));
+
+        vm.startPrank(vestingManager, vestingManager);
+        VVVVestingInstance.withdrawVvv(contractBalanceBeforeWithdraw);
+        vm.stopPrank();
+
+        assertTrue(VVVTokenInstance.balanceOf(vestingManager) == contractBalanceBeforeWithdraw);
+        assertTrue(VVVTokenInstance.balanceOf(address(VVVVestingInstance)) == 0);
+    }
+
+    //tests that a non-admin cannot withdraw vvv token using 'withdrawVvv'
+    function testNonAdminRevertWithdrawVvv() public {
+        uint256 contractBalanceBeforeWithdraw = VVVTokenInstance.balanceOf(address(VVVVestingInstance));
+
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
+        VVVVestingInstance.withdrawVvv(contractBalanceBeforeWithdraw);
         vm.stopPrank();
     }
 
