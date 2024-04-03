@@ -385,4 +385,11 @@ contract VVVVesting is VVVAuthorizationRegistryChecker {
         VVVToken = IERC20(_vvvtoken);
         emit SetVestedToken(_vvvtoken);
     }
+
+    /**
+        @notice withdraws VVV tokens from the contract
+     */
+    function withdrawVvv(uint256 _amount) external onlyAuthorized {
+        VVVToken.safeTransfer(msg.sender, _amount);
+    }
 }
