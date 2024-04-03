@@ -5,7 +5,7 @@ import { VVVVCTestBase } from "test/vc/VVVVCTestBase.sol";
 import { MockERC20 } from "contracts/mock/MockERC20.sol";
 import { VVVVCInvestmentLedger } from "contracts/vc/VVVVCInvestmentLedger.sol";
 import { VVVAuthorizationRegistry } from "contracts/auth/VVVAuthorizationRegistry.sol";
-
+import { VVVAuthorizationRegistryChecker } from "contracts/auth/VVVAuthorizationRegistryChecker.sol";
 /**
  * @title VVVVCInvestmentLedger Unit Tests
  * @dev use "forge test --match-contract VVVVCInvestmentLedgerUnitTests" to run tests
@@ -30,10 +30,16 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         //add permissions to ledgerManagerRole for withdraw and addInvestmentRecord on the LedgerInstance
         bytes4 withdrawSelector = LedgerInstance.withdraw.selector;
         bytes4 addInvestmentRecordSelector = LedgerInstance.addInvestmentRecord.selector;
+        bytes4 setExchangeRateDenominatorSelector = LedgerInstance.setExchangeRateDenominator.selector;
         AuthRegistry.setPermission(address(LedgerInstance), withdrawSelector, ledgerManagerRole);
         AuthRegistry.setPermission(
             address(LedgerInstance),
             addInvestmentRecordSelector,
+            ledgerManagerRole
+        );
+        AuthRegistry.setPermission(
+            address(LedgerInstance),
+            setExchangeRateDenominatorSelector,
             ledgerManagerRole
         );
 
@@ -140,14 +146,20 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             newExchangeRateNumerator,
             sampleKycAddress
         );
-        investAsUser(sampleUser, params);
+        investAsUser(sampleUser, params2);
         uint256 userInvested2 = LedgerInstance.kycAddressInvestedPerRound(
             sampleKycAddress,
             sampleInvestmentRoundIds[0]
         );
 
         //confirm that the stable-equivalent invested amount of the 2nd investment is half that of the first
-        assertTrue(userInvested2 == (userInvested * newExchangeRateNumerator) / exchangeRateNumerator);
+        //after the 2nd investment, the 2nd investment should account for 1/3rd of total invested
+        assertTrue(
+            userInvested2 ==
+                userInvested +
+                    (userInvested * newExchangeRateNumerator) /
+                    LedgerInstance.exchangeRateDenominator()
+        );
     }
 
     /**
@@ -367,6 +379,31 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         vm.startPrank(sampleUser, sampleUser);
         vm.expectRevert();
         LedgerInstance.addInvestmentRecord(kycAddress, investmentRound, investmentAmount);
+        vm.stopPrank();
+    }
+
+    /**
+        @notice test that admin can set the stablecoin exchange rate denominator
+     */
+    function testSetExchangeRateDenominator() public {
+        uint256 newExchangeRateDenominator = 1e18;
+
+        vm.startPrank(ledgerManager, ledgerManager);
+        LedgerInstance.setExchangeRateDenominator(newExchangeRateDenominator);
+        vm.stopPrank();
+
+        assertTrue(LedgerInstance.exchangeRateDenominator() == newExchangeRateDenominator);
+    }
+
+    /**
+        @notice tests that a non-admin cannot set the stablecoin exchange rate denominator
+     */
+    function testNonAdminSetExchangeRateDenominator() public {
+        uint256 newExchangeRateDenominator = 1e18;
+
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
+        LedgerInstance.setExchangeRateDenominator(newExchangeRateDenominator);
         vm.stopPrank();
     }
 }
