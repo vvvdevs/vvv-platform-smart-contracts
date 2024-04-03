@@ -62,6 +62,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             investmentRoundSampleLimit,
             sampleAmountsToInvest[0],
             userPaymentTokenDefaultAllocation,
+            exchangeRateNumerator,
             sampleKycAddress
         );
         assertTrue(LedgerInstance.isSignatureValid(params));
@@ -77,6 +78,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             investmentRoundSampleLimit,
             sampleAmountsToInvest[0],
             userPaymentTokenDefaultAllocation,
+            exchangeRateNumerator,
             sampleKycAddress
         );
 
@@ -96,6 +98,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             investmentRoundSampleLimit,
             sampleAmountsToInvest[0],
             userPaymentTokenDefaultAllocation,
+            exchangeRateNumerator,
             sampleKycAddress
         );
 
@@ -119,6 +122,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             investmentRoundSampleLimit,
             sampleAmountsToInvest[0],
             userPaymentTokenDefaultAllocation,
+            exchangeRateNumerator,
             sampleKycAddress
         );
 
@@ -145,6 +149,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             investmentRoundSampleLimit,
             sampleAmountsToInvest[0],
             userPaymentTokenDefaultAllocation,
+            exchangeRateNumerator,
             sampleKycAddress
         );
 
@@ -175,6 +180,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             investmentRoundSampleLimit,
             sampleAmountsToInvest[0],
             userPaymentTokenDefaultAllocation,
+            exchangeRateNumerator,
             sampleKycAddress
         );
 
@@ -196,6 +202,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             investmentRoundSampleLimit,
             sampleAmountsToInvest[0],
             userPaymentTokenDefaultAllocation,
+            exchangeRateNumerator,
             sampleKycAddress
         );
 
@@ -228,6 +235,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             investmentRoundSampleLimit,
             sampleAmountsToInvest[0],
             userPaymentTokenDefaultAllocation,
+            exchangeRateNumerator,
             sampleKycAddress
         );
 
@@ -252,6 +260,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             investmentRoundSampleLimit,
             sampleAmountsToInvest[0],
             userPaymentTokenDefaultAllocation,
+            exchangeRateNumerator,
             sampleKycAddress
         );
 
