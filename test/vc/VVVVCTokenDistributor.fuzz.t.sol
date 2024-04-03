@@ -95,6 +95,7 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
                     type(uint256).max, //sample very high round limit to avoid this error
                     testParams.tokenAmountsToInvest[i], // invested amounts
                     type(uint256).max, //sample very high allocation
+                    exchangeRateNumerator,
                     _kycAddress
                 )
             );
@@ -209,6 +210,7 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
                 type(uint256).max, //sample very high round limit to avoid this error
                 investedAmount, // invested amounts
                 type(uint256).max, //sample very high allocation
+                exchangeRateNumerator,
                 _caller
             )
         );

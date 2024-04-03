@@ -24,6 +24,9 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
     /// @notice The address authorized to sign investment transactions
     address public signer;
 
+    /// @notice the denominator used to convert units of payment tokens to units of $STABLE (i.e. USDC/T)
+    uint256 public exchangeRateDenominator = 1e6;
+
     /// @notice stores kyc address amounts invested for each investment round
     mapping(address => mapping(uint256 => uint256)) public kycAddressInvestedPerRound;
 
@@ -39,7 +42,8 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
      * @param paymentTokenAddress The address of the payment token
      * @param kycAddress The address of the kyc address
      * @param kycAddressAllocation The max amount the kyc address can invest
-     * @param amountToInvest The amount to invest
+     * @param amountToInvest The amount of paymentToken to invest
+     * @param exchangeRateNumerator The numerator of the conversion of payment token to stablecoin (i.e. VVV to USDC)
      * @param deadline The deadline for the investment
      * @param signature The signature of the investment
      */
@@ -52,6 +56,7 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
         address kycAddress;
         uint256 kycAddressAllocation;
         uint256 amountToInvest;
+        uint256 exchangeRateNumerator;
         uint256 deadline;
         bytes signature;
     }
@@ -124,28 +129,32 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
         ];
         uint256 totalInvestedThisRound = totalInvestedPerRound[_params.investmentRound];
 
-        // check if kyc address has already invested the max amount for this round,
+        //the stablecoin amount equivalent to the payment token amount supplied at the current exchange rate
+        uint256 stableAmountEquivalent = (_params.amountToInvest * _params.exchangeRateNumerator) /
+            exchangeRateDenominator;
+
+        // check if kyc address has already invested the max stablecoin-equivalent amount for this round,
         // or if the total invested for this round has reached the limit
         if (
-            _params.amountToInvest > _params.kycAddressAllocation - kycAddressInvestedThisRound ||
-            _params.amountToInvest > _params.investmentRoundLimit - totalInvestedThisRound
+            stableAmountEquivalent > _params.kycAddressAllocation - kycAddressInvestedThisRound ||
+            stableAmountEquivalent > _params.investmentRoundLimit - totalInvestedThisRound
         ) {
             revert ExceedsAllocation();
         }
 
-        // update kyc address and total amounts invested for this investment round
-        kycAddressInvestedPerRound[_params.kycAddress][_params.investmentRound] += _params.amountToInvest;
-        totalInvestedPerRound[_params.investmentRound] += _params.amountToInvest;
+        // update kyc address and total amounts invested for this investment round (in stablecoin terms)
+        kycAddressInvestedPerRound[_params.kycAddress][_params.investmentRound] += stableAmountEquivalent;
+        totalInvestedPerRound[_params.investmentRound] += stableAmountEquivalent;
 
-        // transfer tokens from msg.sender to this contract
+        // transfer tokens from msg.sender to this contract (in payment token terms)
         IERC20(_params.paymentTokenAddress).safeTransferFrom(
             msg.sender,
             address(this),
             _params.amountToInvest
         );
 
-        // emit VCInvestment event
-        emit VCInvestment(_params.investmentRound, _params.kycAddress, _params.amountToInvest);
+        // emit VCInvestment event (in stablecoin terms)
+        emit VCInvestment(_params.investmentRound, _params.kycAddress, stableAmountEquivalent);
     }
 
     /**
@@ -168,6 +177,7 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
                         _params.paymentTokenAddress,
                         _params.kycAddress,
                         _params.kycAddressAllocation,
+                        _params.exchangeRateNumerator,
                         _params.deadline,
                         block.chainid
                     )
@@ -201,5 +211,10 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
         kycAddressInvestedPerRound[_kycAddress][_investmentRound] += _amountToInvest;
         totalInvestedPerRound[_investmentRound] += _amountToInvest;
         emit VCInvestment(_investmentRound, _kycAddress, _amountToInvest);
+    }
+
+    ///@notice Allows admin to set the exchange rate denominator
+    function setExchangeRateDenominator(uint256 _exchangeRateDenominator) external onlyAuthorized {
+        exchangeRateDenominator = _exchangeRateDenominator;
     }
 }
