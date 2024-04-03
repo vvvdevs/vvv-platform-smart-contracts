@@ -537,4 +537,18 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         vm.expectRevert(VVVVCInvestmentLedger.InvestmentPaused.selector);
         LedgerInstance.invest(params);
     }
+
+    /// @notice Tests that an admin can pause and unpause investments
+    function testAdminPauseInvestments() public {
+        vm.startPrank(ledgerManager, ledgerManager);
+        LedgerInstance.setInvestmentIsPaused(true);
+        assertTrue(LedgerInstance.investmentIsPaused());
+    }
+
+    /// @notice Tests that a non-admin cannot pause investments
+    function testNonAdminPauseInvestments() public {
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
+        LedgerInstance.setInvestmentIsPaused(true);
+    }
 }
