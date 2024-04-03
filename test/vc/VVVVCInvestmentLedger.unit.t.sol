@@ -141,7 +141,6 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress
         );
         investAsUser(sampleUser, params);
-
         uint256 userInvested2 = LedgerInstance.kycAddressInvestedPerRound(
             sampleKycAddress,
             sampleInvestmentRoundIds[0]
