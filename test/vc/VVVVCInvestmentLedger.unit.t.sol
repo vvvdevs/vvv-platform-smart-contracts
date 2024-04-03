@@ -321,7 +321,10 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         vm.expectEmit(address(LedgerInstance));
         emit VVVVCInvestmentLedger.VCInvestment(
             params.investmentRound,
+            params.paymentTokenAddress,
             params.kycAddress,
+            params.exchangeRateNumerator,
+            LedgerInstance.exchangeRateDenominator(),
             params.amountToInvest
         );
         LedgerInstance.invest(params);
@@ -330,6 +333,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
 
     /**
      * @notice Tests emission of VCInvestment event upon admin investment
+     * @dev address(0) and 0 are used as placeholders because there is no payment token transferred, only ledger stablecoin-equivalent entries are updated
      */
     function testEmitVCInvestmentAdmin() public {
         vm.startPrank(ledgerManager, ledgerManager);
@@ -338,7 +342,14 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         uint256 investmentRoundId = sampleInvestmentRoundIds[0];
 
         vm.expectEmit(address(LedgerInstance));
-        emit VVVVCInvestmentLedger.VCInvestment(investmentRoundId, sampleKycAddress, amountToInvest);
+        emit VVVVCInvestmentLedger.VCInvestment(
+            investmentRoundId,
+            address(0),
+            sampleKycAddress,
+            0,
+            0,
+            amountToInvest
+        );
         LedgerInstance.addInvestmentRecord(sampleKycAddress, investmentRoundId, amountToInvest);
         vm.stopPrank();
     }
