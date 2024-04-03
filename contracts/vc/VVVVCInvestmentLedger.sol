@@ -24,6 +24,9 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
     /// @notice The address authorized to sign investment transactions
     address public signer;
 
+    /// @notice flag to pause investments
+    bool public investmentIsPaused;
+
     /// @notice the denominator used to convert units of payment tokens to units of $STABLE (i.e. USDC/T)
     uint256 public exchangeRateDenominator = 1e6;
 
@@ -100,6 +103,9 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
     /// @notice Error thrown when the signer address is not recovered from the provided signature
     error InvalidSignature();
 
+    /// @notice Error thrown when an attempt to invest is made while investment is paused
+    error InvestmentPaused();
+
     /**
         @notice stores the signer address and initializes the EIP-712 domain separator
         @param _signer The address authorized to sign investment transactions
@@ -128,6 +134,9 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
      * @param _params An InvestParams struct containing the investment parameters
      */
     function invest(InvestParams memory _params) external {
+        //check if investments are paused
+        if (investmentIsPaused) revert InvestmentPaused();
+
         // check if signature is valid
         if (!_isSignatureValid(_params)) {
             revert InvalidSignature();
@@ -262,5 +271,10 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
             _refundTokenAmount,
             _stablecoinEquivalent
         );
+    }
+
+    /// @notice admin function to pause investment
+    function setInvestmentIsPaused(bool _isPaused) external onlyAuthorized {
+        investmentIsPaused = _isPaused;
     }
 }
