@@ -32,6 +32,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         bytes4 addInvestmentRecordSelector = LedgerInstance.addInvestmentRecord.selector;
         bytes4 setExchangeRateDenominatorSelector = LedgerInstance.setExchangeRateDenominator.selector;
         bytes4 refundSelector = LedgerInstance.refundUserInvestment.selector;
+        bytes4 setInvestmentPausedSelector = LedgerInstance.setInvestmentIsPaused.selector;
         AuthRegistry.setPermission(address(LedgerInstance), withdrawSelector, ledgerManagerRole);
         AuthRegistry.setPermission(
             address(LedgerInstance),
@@ -44,6 +45,11 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             ledgerManagerRole
         );
         AuthRegistry.setPermission(address(LedgerInstance), refundSelector, ledgerManagerRole);
+        AuthRegistry.setPermission(
+            address(LedgerInstance),
+            setInvestmentPausedSelector,
+            ledgerManagerRole
+        );
 
         ledgerDomainSeparator = LedgerInstance.DOMAIN_SEPARATOR();
         investmentTypehash = LedgerInstance.INVESTMENT_TYPEHASH();
@@ -505,5 +511,30 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             amountToInvest
         );
         vm.stopPrank();
+    }
+
+    /**
+        @notice tests that a user cannot invest when investment is paused
+     */
+    function testInvestAttemptWhilePaused() public {
+        //invest when not paused
+        VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
+            sampleInvestmentRoundIds[0],
+            investmentRoundSampleLimit,
+            sampleAmountsToInvest[0],
+            userPaymentTokenDefaultAllocation,
+            exchangeRateNumerator,
+            sampleKycAddress
+        );
+        investAsUser(sampleUser, params);
+
+        //attempt to invest when paused
+        vm.startPrank(ledgerManager, ledgerManager);
+        LedgerInstance.setInvestmentIsPaused(true);
+
+        vm.startPrank(sampleUser, sampleUser);
+        PaymentTokenInstance.approve(address(LedgerInstance), params.amountToInvest);
+        vm.expectRevert(VVVVCInvestmentLedger.InvestmentPaused.selector);
+        LedgerInstance.invest(params);
     }
 }
