@@ -286,6 +286,11 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
         if (!success) revert WithdrawFailed();
     }
 
+    ///@notice withdraws VVV tokens from the contract
+    function withdrawVvv(uint256 _amount) external onlyAuthorized {
+        vvvToken.safeTransfer(msg.sender, _amount);
+    }
+
     ///@notice Private function to stake ETH, used by both stakeEth and restakeEth
     function _stakeEth(StakingDuration _stakeDuration, uint256 _stakedEthAmount) private {
         if (_stakedEthAmount == 0) revert CantStakeZeroEth();
