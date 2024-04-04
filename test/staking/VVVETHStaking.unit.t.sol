@@ -575,8 +575,8 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
 
     // These are tested in the above tests as well, but I'm adding them here for showing explicit testing of these functions by name
 
-    // Tests the calculation of the accrued / claimable $VVV amount
-    function testCalculateClaimableVvvAmount() public {
+    // Tests the calculation of the accrued $VVV amount
+    function testCalculateAccruedVvvAmount() public {
         vm.startPrank(sampleUser, sampleUser);
         uint256 stakingDurationDivisor = 2;
         uint256 stakeEthAmount = 1 ether;
@@ -590,7 +590,7 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
                 stakingDurationDivisor) + 1
         );
 
-        uint256 accruedVvv = EthStakingInstance.calculateClaimableVvvAmount(stakeId);
+        uint256 accruedVvv = EthStakingInstance.calculateAccruedVvvAmount(stakeId);
 
         uint256 expectedAccruedVvv = (stakeEthAmount *
             EthStakingInstance.ethToVvvExchangeRate() *
