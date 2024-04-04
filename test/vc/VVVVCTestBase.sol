@@ -53,6 +53,7 @@ abstract contract VVVVCTestBase is Test {
     //ledger contract-specific values
     bytes32 ledgerManagerRole = keccak256("LEDGER_MANAGER_ROLE");
     uint48 defaultAdminTransferDelay = 1 days;
+    uint256 exchangeRateNumerator = 1e6;
 
     //claim contract-specific values
     uint256 projectTokenAmountToProxyWallet = 1_000_000 * 1e18; //1 million tokens
@@ -139,6 +140,7 @@ abstract contract VVVVCTestBase is Test {
                         _params.paymentTokenAddress,
                         _params.kycAddress,
                         _params.kycAddressAllocation,
+                        _params.exchangeRateNumerator,
                         _params.deadline,
                         chainId
                     )
@@ -157,6 +159,7 @@ abstract contract VVVVCTestBase is Test {
         uint256 _investmentRoundLimit,
         uint256 _investmentAmount,
         uint256 _investmentAllocation,
+        uint256 _exchangeRateNumerator,
         address _kycAddress
     ) public view returns (VVVVCInvestmentLedger.InvestParams memory) {
         VVVVCInvestmentLedger.InvestParams memory params = VVVVCInvestmentLedger.InvestParams({
@@ -168,6 +171,7 @@ abstract contract VVVVCTestBase is Test {
             kycAddress: _kycAddress,
             kycAddressAllocation: _investmentAllocation,
             amountToInvest: _investmentAmount,
+            exchangeRateNumerator: _exchangeRateNumerator,
             deadline: block.timestamp + 1 hours,
             signature: bytes("placeholder")
         });
@@ -198,6 +202,7 @@ abstract contract VVVVCTestBase is Test {
                 investmentRoundSampleLimit,
                 _amountsToInvest[i],
                 userPaymentTokenDefaultAllocation,
+                exchangeRateNumerator,
                 sampleKycAddress
             );
             investAsUser(_investor, investParams);
