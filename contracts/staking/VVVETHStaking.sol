@@ -244,9 +244,9 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
 
     ///@notice calculates total accrued $VVV for a stake (sum of claimed and unclaimed)
     function calculateAccruedVvvAmount(uint256 _stakeId) public view returns (uint256) {
-        StakeData memory _stake = stakes[_stakeId];
-        uint256 stakeDuration = durationToSeconds[_stake.stakeDuration];
-        uint256 secondsSinceStakingStarted = block.timestamp - _stake.stakeStartTimestamp;
+        StakeData memory stake = stakes[_stakeId];
+        uint256 stakeDuration = durationToSeconds[stake.stakeDuration];
+        uint256 secondsSinceStakingStarted = block.timestamp - stake.stakeStartTimestamp;
         uint256 secondsStaked = secondsSinceStakingStarted >= stakeDuration
             ? stakeDuration
             : secondsSinceStakingStarted;
