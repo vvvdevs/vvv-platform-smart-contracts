@@ -152,8 +152,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleInvestmentRoundIds[0]
         );
 
-        //confirm that the stable-equivalent invested amount of the 2nd investment is half that of the first
-        //after the 2nd investment, the 2nd investment should account for 1/3rd of total invested
+        //confirm that the stable-equivalent invested amount of the 2nd investment is double that of the first
+        //after the 2nd investment, the 1st investment should account for 1/3rd of total invested
         assertTrue(
             userInvested2 ==
                 userInvested +
