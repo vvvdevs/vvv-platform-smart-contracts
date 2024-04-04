@@ -80,8 +80,8 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
     ///@notice emitted when a user who is not a stake owner attemps to operate on the stake
     error CallerIsNotStakeOwner();
 
-    ///@notice thrown when a user tries to claim 0 $VVV
-    error CantClaimZeroVvv();
+    ///@notice thrown when a user tries to claim $VVV on a stake with 0 unclaimed seconds
+    error ZeroUnclaimedSeconds();
 
     ///@notice thrown when a user tries to stake 0 eth
     error CantStakeZeroEth();
@@ -183,7 +183,7 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
         if (stake.staker != msg.sender) revert CallerIsNotStakeOwner();
 
         uint256 unclaimedSeconds = _calculateUnclaimedSeconds(stake);
-        if (unclaimedSeconds == 0) revert CantClaimZeroVvv();
+        if (unclaimedSeconds == 0) revert ZeroUnclaimedSeconds();
 
         uint256 claimableVvv = _calculateClaimableVvvAmount(stake, unclaimedSeconds);
 
@@ -194,6 +194,7 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
         emit VvvClaim(msg.sender, claimableVvv);
     }
 
+    ///@notice Returns the total amount of $VVV claimable for a single stake
     function _calculateUnclaimedSeconds(StakeData memory _stake) private view returns (uint256) {
         uint256 stakeDuration = durationToSeconds[_stake.stakeDuration];
         uint256 secondsSinceStakingStarted;
@@ -214,8 +215,6 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
     /**
         @notice Returns the total amount of $VVV claimable by a single stake for a given amount of unclaimed seconds
         @dev considers the "nominalClaimableEth" and multiplies by the exchange rate and duration multiplier to obtain the total $VVV claimable
-        @param _stake A StakeData struct representing the stake for which the claimable $VVV is to be calculated
-        @return $VVV claimable
      */
     function _calculateClaimableVvvAmount(
         StakeData memory _stake,
@@ -237,14 +236,14 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
         return claimableVvv;
     }
 
-    ///@dev allows private versions to avoid repeated reads of stakes[] internally
+    ///@dev public view function for _calculateClaimableVvvAmount, avoids internal repeated reads of stakes
     function calculateClaimableVvvAmount(uint256 _stakeId) public view returns (uint256) {
-        return
-            _calculateClaimableVvvAmount(stakes[_stakeId], _calculateUnclaimedSeconds(stakes[_stakeId]));
+        StakeData memory stake = stakes[_stakeId];
+        return _calculateClaimableVvvAmount(stake, _calculateUnclaimedSeconds(stake));
     }
 
     ///@notice calculates total accrued $VVV for a stake (sum of claimed and unclaimed)
-    function calculateAccruedVvvAmount(uint256 _stakeId) external view returns (uint256) {
+    function calculateAccruedVvvAmount(uint256 _stakeId) public view returns (uint256) {
         StakeData memory _stake = stakes[_stakeId];
         uint256 stakeDuration = durationToSeconds[_stake.stakeDuration];
         uint256 secondsSinceStakingStarted = block.timestamp - _stake.stakeStartTimestamp;
@@ -305,13 +304,7 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
             stakeDuration: _stakeDuration
         });
 
-        emit Stake(
-            msg.sender,
-            stakeId,
-            uint224(_stakedEthAmount),
-            uint32(block.timestamp),
-            _stakeDuration
-        );
+        emit Stake(msg.sender, stakeId, _stakedEthAmount, uint32(block.timestamp), _stakeDuration);
     }
 
     ///@notice checks permissions for withdrawing a stake based on stake owner, eth amount, stake start time, and whether the stake has been withdrawn
