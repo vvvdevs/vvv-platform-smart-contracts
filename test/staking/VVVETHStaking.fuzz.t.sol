@@ -61,7 +61,7 @@ contract VVVETHStakingUnitFuzzTests is VVVETHStakingTestBase {
     }
 
     // Test that contract correctly stores the StakeData and stakeIds for any valid input combination
-    function testFuzz_stakeEth(uint256 _callerKey, uint224 _stakeAmount, uint32 _duration) public {
+    function testFuzz_stakeEth(uint256 _callerKey, uint192 _stakeAmount, uint32 _duration) public {
         uint256 callerKey = bound(_callerKey, 1, 100000);
         address caller = vm.addr(callerKey);
         uint8 duration = uint8(bound(_duration, 0, 2));
@@ -76,7 +76,7 @@ contract VVVETHStakingUnitFuzzTests is VVVETHStakingTestBase {
 
         (
             address staker,
-            uint224 stakedEthAmount,
+            uint192 stakedEthAmount,
             uint32 stakedTimestamp,
             uint256 secondsClaimed,
             bool stakeIsWithdrawn,
@@ -96,7 +96,7 @@ contract VVVETHStakingUnitFuzzTests is VVVETHStakingTestBase {
     // test that contract correctly stores the StakeData and stakeIds for any restake
     function testFuzz_restakeEth(
         uint256 _callerKey,
-        uint224 _stakeAmount,
+        uint192 _stakeAmount,
         uint8 _duration,
         uint8 _newDuration
     ) public {
@@ -123,7 +123,7 @@ contract VVVETHStakingUnitFuzzTests is VVVETHStakingTestBase {
         // Verify the restake
         (
             ,
-            uint224 restakedEthAmount,
+            uint192 restakedEthAmount,
             uint32 restakedTimestamp,
             uint256 secondsClaimed,
             bool restakeIsWithdrawn,
@@ -140,7 +140,7 @@ contract VVVETHStakingUnitFuzzTests is VVVETHStakingTestBase {
     }
 
     // Test that any valid stake is withdrawable
-    function testFuzz_withdrawStake(uint256 _callerKey, uint224 _stakeAmount, uint8 _duration) public {
+    function testFuzz_withdrawStake(uint256 _callerKey, uint192 _stakeAmount, uint8 _duration) public {
         uint256 callerKey = bound(_callerKey, 1, 100000);
         address payable caller = payable(vm.addr(callerKey));
         uint8 duration = uint8(bound(_duration, 0, 2));
@@ -165,7 +165,7 @@ contract VVVETHStakingUnitFuzzTests is VVVETHStakingTestBase {
 
     // Test that any amount < claimableVvv is claimable by the user after the stake duration elapses
     // also tests that the claimed + remaining claimable add up to originally claimable amount
-    function testFuzz_claimVvv(uint256 _callerKey, uint224 _stakeAmount, uint8 _stakeDuration) public {
+    function testFuzz_claimVvv(uint256 _callerKey, uint192 _stakeAmount, uint8 _stakeDuration) public {
         uint256 callerKey = bound(_callerKey, 1, 100000);
         address caller = vm.addr(callerKey);
         uint8 stakeDuration = uint8(bound(_stakeDuration, 0, 2));

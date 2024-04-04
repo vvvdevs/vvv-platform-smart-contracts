@@ -37,9 +37,9 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
      */
     struct StakeData {
         address staker;
-        uint224 stakedEthAmount;
+        uint192 stakedEthAmount;
         uint32 stakeStartTimestamp;
-        uint256 secondsClaimed;
+        uint32 secondsClaimed;
         bool stakeIsWithdrawn;
         StakingDuration stakeDuration;
     }
@@ -60,7 +60,7 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
     event Stake(
         address indexed staker,
         uint256 indexed stakeId,
-        uint224 stakedEthAmount,
+        uint192 stakedEthAmount,
         uint32 stakeStartTimestamp,
         StakingDuration stakeDuration
     );
@@ -69,7 +69,7 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
     event Withdraw(
         address indexed staker,
         uint256 indexed stakeId,
-        uint224 stakedEthAmount,
+        uint192 stakedEthAmount,
         uint32 stakeStartTimestamp,
         StakingDuration stakeDuration
     );
@@ -133,7 +133,7 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
     function stakeEth(
         StakingDuration _stakeDuration
     ) external payable whenStakingIsPermitted returns (uint256) {
-        _stakeEth(_stakeDuration, uint224(msg.value));
+        _stakeEth(_stakeDuration, uint192(msg.value));
         return stakeId;
     }
 
@@ -182,7 +182,7 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
         StakeData storage stake = stakes[_stakeId];
         if (stake.staker != msg.sender) revert CallerIsNotStakeOwner();
 
-        uint256 unclaimedSeconds = _calculateUnclaimedSeconds(stake);
+        uint32 unclaimedSeconds = _calculateUnclaimedSeconds(stake);
         if (unclaimedSeconds == 0) revert ZeroUnclaimedSeconds();
 
         uint256 claimableVvv = _calculateClaimableVvvAmount(stake, unclaimedSeconds);
@@ -195,14 +195,14 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
     }
 
     ///@notice Returns the total amount of $VVV claimable for a single stake
-    function _calculateUnclaimedSeconds(StakeData memory _stake) private view returns (uint256) {
-        uint256 stakeDuration = durationToSeconds[_stake.stakeDuration];
-        uint256 secondsSinceStakingStarted;
-        uint256 secondsStaked;
-        uint256 unclaimedSeconds;
+    function _calculateUnclaimedSeconds(StakeData memory _stake) private view returns (uint32) {
+        uint32 stakeDuration = uint32(durationToSeconds[_stake.stakeDuration]);
+        uint32 secondsSinceStakingStarted;
+        uint32 secondsStaked;
+        uint32 unclaimedSeconds;
 
         unchecked {
-            secondsSinceStakingStarted = block.timestamp - _stake.stakeStartTimestamp;
+            secondsSinceStakingStarted = uint32(block.timestamp) - _stake.stakeStartTimestamp;
             secondsStaked = secondsSinceStakingStarted >= stakeDuration
                 ? stakeDuration
                 : secondsSinceStakingStarted;
@@ -291,7 +291,7 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
     }
 
     ///@notice Private function to stake ETH, used by both stakeEth and restakeEth
-    function _stakeEth(StakingDuration _stakeDuration, uint224 _stakedEthAmount) private {
+    function _stakeEth(StakingDuration _stakeDuration, uint192 _stakedEthAmount) private {
         if (_stakedEthAmount == 0) revert CantStakeZeroEth();
         ++stakeId;
 
