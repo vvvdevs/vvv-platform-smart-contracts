@@ -30,6 +30,8 @@ abstract contract VVVETHStakingTestBase is Test {
     bytes32 ethStakingManagerRole = keccak256("ETH_STAKING_MANAGER_ROLE");
     uint48 defaultAdminTransferDelay = 1 days;
 
+    uint256 errorMarginProportion = 1_000_000_000;
+
     function advanceBlockNumberAndTimestampInBlocks(uint256 blocks) public {
         blockNumber += blocks;
         blockTimestamp += blocks * 12; //seconds per block
