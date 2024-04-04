@@ -110,6 +110,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
                 investmentRoundSampleLimit,
                 sampleAmountsToInvest[0],
                 userPaymentTokenDefaultAllocation,
+                exchangeRateNumerator,
                 sampleKycAddress
             )
         );
@@ -143,6 +144,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
                 investmentRoundSampleLimit,
                 sampleAmountsToInvest[0],
                 userPaymentTokenDefaultAllocation,
+                exchangeRateNumerator,
                 sampleKycAddress
             )
         );
@@ -195,6 +197,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
                 investmentRoundSampleLimit,
                 sampleAmountsToInvest[0],
                 userPaymentTokenDefaultAllocation,
+                exchangeRateNumerator,
                 sampleKycAddress
             )
         );
@@ -256,6 +259,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
                 investmentRoundSampleLimit,
                 sampleAmountsToInvest[0],
                 userPaymentTokenDefaultAllocation,
+                exchangeRateNumerator,
                 sampleKycAddress
             )
         );
@@ -299,6 +303,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
                 investmentRoundSampleLimit,
                 sampleAmountsToInvest[0],
                 userPaymentTokenDefaultAllocation,
+                exchangeRateNumerator,
                 sampleKycAddress
             )
         );
@@ -353,6 +358,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
                     type(uint256).max, //ensuring no ExceedsAllocation error for this test
                     sampleAmountsToInvest[paymentTokenAmountIndex],
                     userPaymentTokenDefaultAllocation,
+                    exchangeRateNumerator,
                     thisInvestor
                 )
             );
@@ -400,6 +406,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
                 investmentRoundSampleLimit,
                 investmentAmount,
                 userPaymentTokenDefaultAllocation,
+                exchangeRateNumerator,
                 sampleKycAddress
             )
         );
