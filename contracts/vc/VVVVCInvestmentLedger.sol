@@ -67,12 +67,18 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
     /**
      * @notice Event emitted when a VC investment is made
      * @param investmentRound The round of the investment
+     * @param paymentTokenAddress The address of the payment token
      * @param kycAddress The address of the kyc address
-     * @param investmentAmount The amount invested
+     * @param exchangeRateNumerator The numerator of the conversion of payment token to stablecoin
+     * @param exchangeRateDenominator The denominator of the conversion of payment token to stablecoin
+     * @param investmentAmount The amount invested in stablecoin terms
      */
     event VCInvestment(
         uint256 indexed investmentRound,
+        address indexed paymentTokenAddress,
         address indexed kycAddress,
+        uint256 exchangeRateNumerator,
+        uint256 exchangeRateDenominator,
         uint256 investmentAmount
     );
 
@@ -181,7 +187,14 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
         );
 
         // emit VCInvestment event (in stablecoin terms)
-        emit VCInvestment(_params.investmentRound, _params.kycAddress, stableAmountEquivalent);
+        emit VCInvestment(
+            _params.investmentRound,
+            _params.paymentTokenAddress,
+            _params.kycAddress,
+            _params.exchangeRateNumerator,
+            exchangeRateDenominator,
+            stableAmountEquivalent
+        );
     }
 
     /**
@@ -229,7 +242,10 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
         IERC20(_tokenAddress).safeTransfer(_to, _amount);
     }
 
-    ///@notice Allows admin to add an investment record to the ledger
+    /** 
+        @notice Allows admin to add an investment record to the ledger
+        @dev does not account for a nominal payment token / exchange rate - only modifies stablecoin equivalent invested
+     */
     function addInvestmentRecord(
         address _kycAddress,
         uint256 _investmentRound,
@@ -237,7 +253,7 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
     ) external onlyAuthorized {
         kycAddressInvestedPerRound[_kycAddress][_investmentRound] += _amountToInvest;
         totalInvestedPerRound[_investmentRound] += _amountToInvest;
-        emit VCInvestment(_investmentRound, _kycAddress, _amountToInvest);
+        emit VCInvestment(_investmentRound, address(0), _kycAddress, 0, 0, _amountToInvest);
     }
 
     ///@notice Allows admin to set the exchange rate denominator
