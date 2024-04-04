@@ -89,9 +89,6 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
     ///@notice thrown when a user tries to withdraw before the stake duration has elapsed
     error CantWithdrawBeforeStakeDuration();
 
-    ///@notice thrown when a user tries to claim more $VVV than they have accrued
-    error InsufficientClaimableVvv();
-
     ///@notice thrown when a user tries to withdraw a stake that hasn't been initialized
     error InvalidStakeId();
 
@@ -216,32 +213,46 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
 
     /**
         @notice Returns the total amount of $VVV claimable by a single stake for a given amount of unclaimed seconds
-        @dev considers the "nominalAccruedEth" and multiplies by the exchange rate and duration multiplier to obtain the total $VVV accrued
-        @param _stake A StakeData struct representing the stake for which the accrued $VVV is to be calculated
-        @return $VVV accrued
+        @dev considers the "nominalClaimableEth" and multiplies by the exchange rate and duration multiplier to obtain the total $VVV claimable
+        @param _stake A StakeData struct representing the stake for which the claimable $VVV is to be calculated
+        @return $VVV claimable
      */
     function _calculateClaimableVvvAmount(
         StakeData memory _stake,
         uint256 _unclaimedSeconds
     ) private view returns (uint256) {
         uint256 stakeDuration = durationToSeconds[_stake.stakeDuration];
-        uint256 nominalAccruedEth;
-        uint256 accruedVvv;
+        uint256 nominalClaimableEth;
+        uint256 claimableVvv;
 
         unchecked {
-            nominalAccruedEth = (_unclaimedSeconds * _stake.stakedEthAmount) / stakeDuration;
-            accruedVvv =
-                (nominalAccruedEth * ethToVvvExchangeRate() * durationToMultiplier[_stake.stakeDuration]) /
+            nominalClaimableEth = (_unclaimedSeconds * _stake.stakedEthAmount) / stakeDuration;
+            claimableVvv =
+                (nominalClaimableEth *
+                    ethToVvvExchangeRate() *
+                    durationToMultiplier[_stake.stakeDuration]) /
                 DENOMINATOR;
         }
 
-        return accruedVvv;
+        return claimableVvv;
     }
 
     ///@dev allows private versions to avoid repeated reads of stakes[] internally
     function calculateClaimableVvvAmount(uint256 _stakeId) public view returns (uint256) {
         return
             _calculateClaimableVvvAmount(stakes[_stakeId], _calculateUnclaimedSeconds(stakes[_stakeId]));
+    }
+
+    ///@notice calculates total accrued $VVV for a stake (sum of claimed and unclaimed)
+    function calculateAccruedVvvAmount(uint256 _stakeId) external view returns (uint256) {
+        StakeData memory _stake = stakes[_stakeId];
+        uint256 stakeDuration = durationToSeconds[_stake.stakeDuration];
+        uint256 secondsSinceStakingStarted = block.timestamp - _stake.stakeStartTimestamp;
+        uint256 secondsStaked = secondsSinceStakingStarted >= stakeDuration
+            ? stakeDuration
+            : secondsSinceStakingStarted;
+
+        return _calculateClaimableVvvAmount(stakes[_stakeId], secondsStaked);
     }
 
     ///@notice Returns the exchange rate of ETH to $VVV for staking reward accrual
