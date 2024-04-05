@@ -6,6 +6,7 @@ import { MockERC20 } from "contracts/mock/MockERC20.sol";
 import { VVVVCInvestmentLedger } from "contracts/vc/VVVVCInvestmentLedger.sol";
 import { VVVVCTokenDistributor } from "contracts/vc/VVVVCTokenDistributor.sol";
 import { VVVAuthorizationRegistry } from "contracts/auth/VVVAuthorizationRegistry.sol";
+import { VVVVCReadOnlyInvestmentLedger } from "contracts/vc/VVVVCReadOnlyInvestmentLedger.sol";
 
 /**
     @title VVVVC Test Base
@@ -16,13 +17,16 @@ abstract contract VVVVCTestBase is Test {
     MockERC20 PaymentTokenInstance;
     MockERC20 ProjectTokenInstance;
     VVVVCTokenDistributor TokenDistributorInstance;
+    VVVVCReadOnlyInvestmentLedger ReadOnlyLedgerInstance;
 
     //placeholders for eip712 variables before they are defined
     //by reading the token distributor contract
     bytes32 ledgerDomainSeparator;
     bytes32 distributorDomainSeparator;
+    bytes32 readOnlyLedgerDomainSeparator;
     bytes32 investmentTypehash;
     bytes32 claimTypehash;
+    bytes32 setInvestmentRoundRootsTypehash;
 
     //wallet setup
     uint256 deployerKey = 1234;
@@ -277,5 +281,37 @@ abstract contract VVVVCTestBase is Test {
             ProjectTokenInstance.approve(address(TokenDistributorInstance), amount);
             vm.stopPrank();
         }
+    }
+
+    //generating root update signatures for VVVVCReadOnlyInvestmentLedger
+    function getEIP712SignatureForSetInvestmentRoundRoots(
+        bytes32 _domainSeparator,
+        bytes32 _setInvestmentRoundRootsTypehash,
+        address _sender,
+        bytes32 _kycAddressInvestedRoot,
+        bytes32 _totalInvestedRoot,
+        uint256 _deadline
+    ) public view returns (bytes memory) {
+        bytes32 digest = keccak256(
+            abi.encodePacked(
+                "\x19\x01",
+                _domainSeparator,
+                keccak256(
+                    abi.encode(
+                        _setInvestmentRoundRootsTypehash,
+                        _sender,
+                        _kycAddressInvestedRoot,
+                        _totalInvestedRoot,
+                        _deadline,
+                        chainId
+                    )
+                )
+            )
+        );
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(testSignerKey, digest);
+        bytes memory signature = toBytesConcat(r, s, v);
+
+        return signature;
     }
 }
