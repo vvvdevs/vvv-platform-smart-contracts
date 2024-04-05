@@ -28,16 +28,16 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
 
     /**
         @notice The data stored for each stake
-        @param staker The address of the staker
         @param stakedEthAmount The amount of ETH staked
+        @param staker The address of the staker
         @param stakeStartTimestamp The timestamp when the stake was made
         @param secondsClaimed The number of seconds claimed
         @param stakeIsWithdrawn Whether the stake has been withdrawn
         @param stakeDuration The duration of the stake
      */
     struct StakeData {
+        uint256 stakedEthAmount;
         address staker;
-        uint192 stakedEthAmount;
         uint32 stakeStartTimestamp;
         uint32 secondsClaimed;
         bool stakeIsWithdrawn;
@@ -45,7 +45,7 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
     }
 
     ///@notice maps the duration enum entry to the number of seconds in that duration
-    mapping(StakingDuration => uint256) public durationToSeconds;
+    mapping(StakingDuration => uint32) public durationToSeconds;
 
     ///@notice maps the duration enum entry to the $VVV accrual multiplier for that duration
     mapping(StakingDuration => uint256) public durationToMultiplier;
@@ -60,7 +60,7 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
     event Stake(
         address indexed staker,
         uint256 indexed stakeId,
-        uint192 stakedEthAmount,
+        uint256 stakedEthAmount,
         uint32 stakeStartTimestamp,
         StakingDuration stakeDuration
     );
@@ -69,7 +69,7 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
     event Withdraw(
         address indexed staker,
         uint256 indexed stakeId,
-        uint192 stakedEthAmount,
+        uint256 stakedEthAmount,
         uint32 stakeStartTimestamp,
         StakingDuration stakeDuration
     );
@@ -105,9 +105,9 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
     constructor(
         address _authorizationRegistryAddress
     ) VVVAuthorizationRegistryChecker(_authorizationRegistryAddress) {
-        durationToSeconds[StakingDuration.ThreeMonths] = 90 days;
-        durationToSeconds[StakingDuration.SixMonths] = 180 days;
-        durationToSeconds[StakingDuration.OneYear] = 360 days;
+        durationToSeconds[StakingDuration.ThreeMonths] = uint32(90 days);
+        durationToSeconds[StakingDuration.SixMonths] = uint32(180 days);
+        durationToSeconds[StakingDuration.OneYear] = uint32(360 days);
 
         durationToMultiplier[StakingDuration.ThreeMonths] = 10_000;
         durationToMultiplier[StakingDuration.SixMonths] = 15_000;
@@ -133,7 +133,7 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
     function stakeEth(
         StakingDuration _stakeDuration
     ) external payable whenStakingIsPermitted returns (uint256) {
-        _stakeEth(_stakeDuration, uint192(msg.value));
+        _stakeEth(_stakeDuration, msg.value);
         return stakeId;
     }
 
@@ -291,13 +291,13 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
     }
 
     ///@notice Private function to stake ETH, used by both stakeEth and restakeEth
-    function _stakeEth(StakingDuration _stakeDuration, uint192 _stakedEthAmount) private {
+    function _stakeEth(StakingDuration _stakeDuration, uint256 _stakedEthAmount) private {
         if (_stakedEthAmount == 0) revert CantStakeZeroEth();
         ++stakeId;
 
         stakes[stakeId] = StakeData({
-            staker: msg.sender,
             stakedEthAmount: _stakedEthAmount,
+            staker: msg.sender,
             stakeStartTimestamp: uint32(block.timestamp),
             secondsClaimed: 0,
             stakeIsWithdrawn: false,
