@@ -245,13 +245,8 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
     ///@notice calculates total accrued $VVV for a stake (sum of claimed and unclaimed)
     function calculateAccruedVvvAmount(uint256 _stakeId) public view returns (uint256) {
         StakeData memory stake = stakes[_stakeId];
-        uint256 stakeDuration = durationToSeconds[stake.stakeDuration];
-        uint256 secondsSinceStakingStarted = block.timestamp - stake.stakeStartTimestamp;
-        uint256 secondsStaked = secondsSinceStakingStarted >= stakeDuration
-            ? stakeDuration
-            : secondsSinceStakingStarted;
-
-        return _calculateClaimableVvvAmount(stakes[_stakeId], secondsStaked);
+        uint32 accruedSeconds = _calculateUnclaimedSeconds(stake) + stake.secondsClaimed;
+        return _calculateClaimableVvvAmount(stakes[_stakeId], accruedSeconds);
     }
 
     ///@notice Returns the exchange rate of ETH to $VVV for staking reward accrual
