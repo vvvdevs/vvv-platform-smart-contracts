@@ -97,8 +97,8 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         uint256 stakeIdAfter = EthStakingInstance.stakeId();
 
         (
-            address staker,
             uint256 stakedEthAmount,
+            address staker,
             uint256 stakedTimestamp,
             uint256 secondsClaimed,
             bool stakeIsWithdrawn,
@@ -137,8 +137,8 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
 
         for (uint256 i = 0; i < stakeIdAfter; i++) {
             (
-                address staker,
                 uint256 stakedEthAmount,
+                address staker,
                 uint256 stakedTimestamp,
                 uint256 secondsClaimed,
                 bool stakeIsWithdrawn,
@@ -206,11 +206,11 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         uint256 restakeId = EthStakingInstance.restakeEth(stakeId, restakeDuration);
         vm.stopPrank();
 
-        (, uint256 stakedEthAmount, , uint256 claimedSeconds, bool stakeIsWithdrawn, ) = EthStakingInstance
+        (uint256 stakedEthAmount, , , uint256 claimedSeconds, bool stakeIsWithdrawn, ) = EthStakingInstance
             .stakes(stakeId);
         (
-            address restaker,
             uint256 restakedEthAmount,
+            address restaker,
             uint256 restakeStartTimestamp,
             ,
             bool restakeIsWithdrawn,
@@ -608,7 +608,7 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         uint256 stakeId = EthStakingInstance.stakeEth{ value: stakeEthAmount }(
             VVVETHStaking.StakingDuration.ThreeMonths
         );
-        (, uint256 stakedEthAmount, , , , ) = EthStakingInstance.stakes(stakeId);
+        (uint256 stakedEthAmount, , , , , ) = EthStakingInstance.stakes(stakeId);
 
         //forward staking duration + 1
         advanceBlockNumberAndTimestampInSeconds(
@@ -836,7 +836,7 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         emit VVVETHStaking.Stake(
             sampleUser,
             stakeId,
-            uint192(stakedEthAmount),
+            stakedEthAmount,
             uint32(stakeStartTimestamp),
             stakedDuration
         );
@@ -863,7 +863,7 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         emit VVVETHStaking.Stake(
             sampleUser,
             restakeId,
-            uint192(stakedEthAmount),
+            stakedEthAmount,
             uint32(restakeStartTimestamp),
             stakeDuration
         );
@@ -891,7 +891,7 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         emit VVVETHStaking.Withdraw(
             sampleUser,
             stakeId,
-            uint192(stakedEthAmount),
+            stakedEthAmount,
             uint32(stakeStartTimestamp),
             VVVETHStaking.StakingDuration.ThreeMonths
         );
