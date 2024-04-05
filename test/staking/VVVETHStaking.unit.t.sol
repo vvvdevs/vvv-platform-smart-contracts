@@ -542,17 +542,18 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         //forward staking duration / stakingDurationDivisor
         advanceBlockNumberAndTimestampInSeconds(
             EthStakingInstance.durationToSeconds(VVVETHStaking.StakingDuration.ThreeMonths) /
-                stakingDurationDivisor
+                stakingDurationDivisor +
+                1
         );
 
         uint256 vvvBalanceBefore = VvvTokenInstance.balanceOf(sampleUser);
 
         EthStakingInstance.claimVvv(stakeId);
 
-        //forward (staking duration / stakingDurationDivisor)  + 1 to release stake
+        //forward (staking duration / stakingDurationDivisor) to release stake
         advanceBlockNumberAndTimestampInSeconds(
             (EthStakingInstance.durationToSeconds(VVVETHStaking.StakingDuration.ThreeMonths) /
-                stakingDurationDivisor) + 1
+                stakingDurationDivisor)
         );
 
         EthStakingInstance.withdrawStake(stakeId);
@@ -566,10 +567,11 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
             EthStakingInstance.durationToMultiplier(VVVETHStaking.StakingDuration.ThreeMonths)) /
             EthStakingInstance.DENOMINATOR();
 
-        assertTrue(
-            vvvBalanceAfter >
-                vvvBalanceBefore + expectedClaimedVvv - (expectedClaimedVvv / errorMarginProportion)
-        );
+        emit log_named_uint("vvvBalanceAfter", vvvBalanceAfter);
+        emit log_named_uint("vvvBalanceBefore", vvvBalanceBefore);
+        emit log_named_uint("expectedClaimedVvv", expectedClaimedVvv);
+
+        assertEq(vvvBalanceAfter, vvvBalanceBefore + expectedClaimedVvv);
         vm.stopPrank();
     }
 
@@ -637,7 +639,7 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
     // Tests that the claimable $VVV amount is calculated correctly
     function testCalculateClaimableVvvAmountAfterPriorClaim() public {
         vm.startPrank(sampleUser, sampleUser);
-        uint256 stakingDurationDivisor = 3;
+        uint256 stakingDurationDivisor = 2;
         uint256 stakeEthAmount = 1 ether;
         uint256 stakeId = EthStakingInstance.stakeEth{ value: stakeEthAmount }(
             VVVETHStaking.StakingDuration.OneYear
@@ -665,11 +667,7 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
             EthStakingInstance.durationToMultiplier(VVVETHStaking.StakingDuration.OneYear)) /
             EthStakingInstance.DENOMINATOR();
 
-        //allowing for a small margin of error due to calculating tokens in terms of seconds
-        assertTrue(
-            claimableVvv + claimableVvv2 >
-                expectedClaimableVvv - (expectedClaimableVvv / errorMarginProportion)
-        );
+        assertEq(claimableVvv + claimableVvv2, expectedClaimableVvv);
         vm.stopPrank();
     }
 
