@@ -61,10 +61,66 @@ contract VVVVCReadOnlyInvestmentLedgerUnitTests is VVVVCTestBase {
     }
 
     //Tests that an admin without a valid signature cannot set the roots for an investment round
-    function testAdminWithoutValidSignatureCannotSetInvestmentRoundRoots() public {}
+    function testAdminWithoutValidSignatureCannotSetInvestmentRoundRoots() public {
+        //sample roots and deadline for investment round
+        uint256 investmentRound = 1;
+        bytes32 kycAddressInvestedRoot = keccak256(abi.encodePacked(uint256(1)));
+        bytes32 totalInvestedRoot = keccak256(abi.encodePacked(uint256(2)));
+        uint256 deadline = block.timestamp + 1000;
+
+        //Generate signature for the round roots with altered deadline
+        bytes memory setRootsSignature = getEIP712SignatureForSetInvestmentRoundRoots(
+            readOnlyLedgerDomainSeparator,
+            setInvestmentRoundRootsTypehash,
+            deployer,
+            kycAddressInvestedRoot,
+            totalInvestedRoot,
+            deadline - 1
+        );
+
+        //Attempt to set the roots for the investment round as deployer, reverts via InvalidSignature
+        vm.startPrank(deployer, deployer);
+        vm.expectRevert(VVVVCReadOnlyInvestmentLedger.InvalidSignature.selector);
+        ReadOnlyLedgerInstance.setInvestmentRoundRoots(
+            investmentRound,
+            kycAddressInvestedRoot,
+            totalInvestedRoot,
+            setRootsSignature,
+            deadline
+        );
+        vm.stopPrank();
+    }
 
     //Tests that a non-admin cannot set the roots for an investment round
-    function testNonAdminCannotSetInvestmentRoundRoots() public {}
+    function testNonAdminCannotSetInvestmentRoundRoots() public {
+        //sample roots and deadline for investment round
+        uint256 investmentRound = 1;
+        bytes32 kycAddressInvestedRoot = keccak256(abi.encodePacked(uint256(1)));
+        bytes32 totalInvestedRoot = keccak256(abi.encodePacked(uint256(2)));
+        uint256 deadline = block.timestamp + 1000;
+
+        //Generate signature for the round roots
+        bytes memory setRootsSignature = getEIP712SignatureForSetInvestmentRoundRoots(
+            readOnlyLedgerDomainSeparator,
+            setInvestmentRoundRootsTypehash,
+            deployer,
+            kycAddressInvestedRoot,
+            totalInvestedRoot,
+            deadline
+        );
+
+        //Attempt to set the roots for the investment round as sampleUser, reverts via AccessControl
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert();
+        ReadOnlyLedgerInstance.setInvestmentRoundRoots(
+            investmentRound,
+            kycAddressInvestedRoot,
+            totalInvestedRoot,
+            setRootsSignature,
+            deadline
+        );
+        vm.stopPrank();
+    }
 
     //Tests that the RoundStateSet event is emitted when the roots for an investment round are set
     function testEmitRoundStateSetEvent() public {
@@ -86,7 +142,7 @@ contract VVVVCReadOnlyInvestmentLedgerUnitTests is VVVVCTestBase {
             deadline
         );
 
-        //expect the RoundStateSet event to be emitted as defined with the above values
+        //Verify the RoundStateSet event is emitted as defined with the above values
         vm.startPrank(deployer, deployer);
         vm.expectEmit();
         emit VVVVCReadOnlyInvestmentLedger.RoundStateSet(
@@ -126,7 +182,7 @@ contract VVVVCReadOnlyInvestmentLedgerUnitTests is VVVVCTestBase {
         //new signer address
         address newSigner = address(0x1234);
 
-        //attempt to set signer as sampleUser
+        //attempt to set signer as sampleUser, reverts via AccessControl
         vm.startPrank(sampleUser, sampleUser);
         vm.expectRevert();
         ReadOnlyLedgerInstance.setSigner(newSigner);
