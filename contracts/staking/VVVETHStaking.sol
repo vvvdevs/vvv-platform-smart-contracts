@@ -196,7 +196,7 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
 
     ///@notice Returns the total amount of $VVV claimable for a single stake
     function _calculateUnclaimedSeconds(StakeData memory _stake) private view returns (uint32) {
-        uint32 stakeDuration = uint32(durationToSeconds[_stake.stakeDuration]);
+        uint32 stakeDuration = durationToSeconds[_stake.stakeDuration];
         uint32 secondsSinceStakingStarted;
         uint32 secondsStaked;
         uint32 unclaimedSeconds;
