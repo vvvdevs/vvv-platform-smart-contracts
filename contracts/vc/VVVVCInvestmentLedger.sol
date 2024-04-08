@@ -24,6 +24,9 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
     /// @notice The address authorized to sign investment transactions
     address public signer;
 
+    /// @notice flag to pause investments
+    bool public investmentIsPaused;
+
     /// @notice the denominator used to convert units of payment tokens to units of $STABLE (i.e. USDC/T)
     uint256 public exchangeRateDenominator = 1e6;
 
@@ -79,6 +82,24 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
         uint256 investmentAmount
     );
 
+    /**
+     * @notice Event emitted when a VC investment is refunded
+     * @param userKycAddress The kyc address of the user to refund
+     * @param tokenDestination The address to which to send the refund token
+     * @param investmentRound The round of the investment to refund
+     * @param refundTokenAddress The address of the token to refund
+     * @param refundTokenAmount The amount of the token to refund
+     * @param stablecoinEquivalent The equivalent amount of stablecoin to the token amount refunded
+     */
+    event VCRefund(
+        address userKycAddress,
+        address tokenDestination,
+        uint256 investmentRound,
+        address refundTokenAddress,
+        uint256 refundTokenAmount,
+        uint256 stablecoinEquivalent
+    );
+
     /// @notice Error thrown when the caller or investment round allocation has been exceeded
     error ExceedsAllocation();
 
@@ -87,6 +108,9 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
 
     /// @notice Error thrown when the signer address is not recovered from the provided signature
     error InvalidSignature();
+
+    /// @notice Error thrown when an attempt to invest is made while investment is paused
+    error InvestmentPaused();
 
     /**
         @notice stores the signer address and initializes the EIP-712 domain separator
@@ -116,6 +140,9 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
      * @param _params An InvestParams struct containing the investment parameters
      */
     function invest(InvestParams memory _params) external {
+        //check if investments are paused
+        if (investmentIsPaused) revert InvestmentPaused();
+
         // check if signature is valid
         if (!_isSignatureValid(_params)) {
             revert InvalidSignature();
@@ -232,5 +259,38 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
     ///@notice Allows admin to set the exchange rate denominator
     function setExchangeRateDenominator(uint256 _exchangeRateDenominator) external onlyAuthorized {
         exchangeRateDenominator = _exchangeRateDenominator;
+    }
+
+    /**
+        @notice refunds a user's investment in units of the specified ERC20 token
+        @dev ex. to refund user 1 $VVV which was invested at $10 per VVV, _refundTokenAmount = 1, _stablecoinEquivalent = 10
+        @dev allows erasing manually added investment records
+     */
+    function refundUserInvestment(
+        address _userKycAddress,
+        address _tokenDestination,
+        uint256 _investmentRound,
+        address _refundTokenAddress,
+        uint256 _refundTokenAmount,
+        uint256 _stablecoinEquivalent
+    ) external onlyAuthorized {
+        kycAddressInvestedPerRound[_userKycAddress][_investmentRound] -= _stablecoinEquivalent;
+        totalInvestedPerRound[_investmentRound] -= _stablecoinEquivalent;
+
+        IERC20(_refundTokenAddress).safeTransfer(_tokenDestination, _refundTokenAmount);
+
+        emit VCRefund(
+            _userKycAddress,
+            _tokenDestination,
+            _investmentRound,
+            _refundTokenAddress,
+            _refundTokenAmount,
+            _stablecoinEquivalent
+        );
+    }
+
+    /// @notice admin function to pause investment
+    function setInvestmentIsPaused(bool _isPaused) external onlyAuthorized {
+        investmentIsPaused = _isPaused;
     }
 }
