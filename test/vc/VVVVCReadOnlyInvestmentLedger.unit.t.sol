@@ -14,7 +14,9 @@ contract VVVVCReadOnlyInvestmentLedgerUnitTests is VVVVCTestBase {
         vm.startPrank(deployer, deployer);
 
         // deploy the read-only investment ledger
-        ReadOnlyLedgerInstance = new VVVVCReadOnlyInvestmentLedger(testSigner, environmentTag);
+        address[] memory signers = new address[](1);
+        signers[0] = testSigner;
+        ReadOnlyLedgerInstance = new VVVVCReadOnlyInvestmentLedger(signers, environmentTag);
         readOnlyLedgerDomainSeparator = ReadOnlyLedgerInstance.DOMAIN_SEPARATOR();
         setInvestmentRoundStateTypehash = ReadOnlyLedgerInstance.SET_STATE_TYPEHASH();
 
@@ -26,8 +28,8 @@ contract VVVVCReadOnlyInvestmentLedgerUnitTests is VVVVCTestBase {
         assertTrue(address(ReadOnlyLedgerInstance) != address(0));
     }
 
-    //Tests that an admin can set the state for an investment round
-    function testAdminSetInvestmentRoundState() public {
+    //Tests that the state for an investment round can be set with authorized signer and valid signature
+    function testSetInvestmentRoundState() public {
         //sample roots and deadline for investment round
         uint256 investmentRound = 1;
         bytes32 kycAddressInvestedRoot = keccak256(abi.encodePacked(uint256(1)));
@@ -38,7 +40,7 @@ contract VVVVCReadOnlyInvestmentLedgerUnitTests is VVVVCTestBase {
         bytes memory setStateSignature = getEIP712SignatureForSetInvestmentRoundState(
             readOnlyLedgerDomainSeparator,
             setInvestmentRoundStateTypehash,
-            deployer,
+            testSigner,
             kycAddressInvestedRoot,
             totalInvested,
             deadline
@@ -50,6 +52,7 @@ contract VVVVCReadOnlyInvestmentLedgerUnitTests is VVVVCTestBase {
             investmentRound,
             kycAddressInvestedRoot,
             totalInvested,
+            testSigner,
             setStateSignature,
             deadline
         );
@@ -60,7 +63,7 @@ contract VVVVCReadOnlyInvestmentLedgerUnitTests is VVVVCTestBase {
         assertEq(ReadOnlyLedgerInstance.totalInvested(investmentRound), totalInvested);
     }
 
-    //Tests that an admin without a valid signature cannot set the state for an investment round
+    //Tests that an invalid signature will cause a revert with the InvalidSignature error
     function testAdminWithoutValidSignatureCannotSetInvestmentRoundState() public {
         //sample roots and deadline for investment round
         uint256 investmentRound = 1;
@@ -72,7 +75,7 @@ contract VVVVCReadOnlyInvestmentLedgerUnitTests is VVVVCTestBase {
         bytes memory setStateSignature = getEIP712SignatureForSetInvestmentRoundState(
             readOnlyLedgerDomainSeparator,
             setInvestmentRoundStateTypehash,
-            deployer,
+            testSigner,
             kycAddressInvestedRoot,
             totalInvested,
             deadline - 1
@@ -85,21 +88,22 @@ contract VVVVCReadOnlyInvestmentLedgerUnitTests is VVVVCTestBase {
             investmentRound,
             kycAddressInvestedRoot,
             totalInvested,
+            testSigner,
             setStateSignature,
             deadline
         );
         vm.stopPrank();
     }
 
-    //Tests that a non-admin cannot set the state for an investment round
-    function testNonAdminCannotSetInvestmentRoundState() public {
+    //Tests that a call to setInvestmentRoundState with an unauthorized signer reverts even with a valid signature
+    function testSetInvestmentRoundStateUnauthorizedSigner() public {
         //sample state and deadline for investment round
         uint256 investmentRound = 1;
         bytes32 kycAddressInvestedRoot = keccak256(abi.encodePacked(uint256(1)));
         uint256 totalInvested = 2;
         uint256 deadline = block.timestamp + 1000;
 
-        //Generate signature for the round state
+        //Generate correct signature for the round state with deployer as signer (would be a valid signature)
         bytes memory setStateSignature = getEIP712SignatureForSetInvestmentRoundState(
             readOnlyLedgerDomainSeparator,
             setInvestmentRoundStateTypehash,
@@ -109,13 +113,14 @@ contract VVVVCReadOnlyInvestmentLedgerUnitTests is VVVVCTestBase {
             deadline
         );
 
-        //Attempt to set the state for the investment round as sampleUser, reverts via AccessControl
+        //Attempt to set the state, reverts as UnauthorizedSigner because deployer is supplied as signer
         vm.startPrank(sampleUser, sampleUser);
-        vm.expectRevert();
+        vm.expectRevert(VVVVCReadOnlyInvestmentLedger.UnauthorizedSigner.selector);
         ReadOnlyLedgerInstance.setInvestmentRoundState(
             investmentRound,
             kycAddressInvestedRoot,
             totalInvested,
+            deployer,
             setStateSignature,
             deadline
         );
@@ -136,7 +141,7 @@ contract VVVVCReadOnlyInvestmentLedgerUnitTests is VVVVCTestBase {
         bytes memory setRootsSignature = getEIP712SignatureForSetInvestmentRoundState(
             readOnlyLedgerDomainSeparator,
             setInvestmentRoundStateTypehash,
-            deployer,
+            testSigner,
             kycAddressInvestedRoot,
             totalInvested,
             deadline
@@ -157,35 +162,10 @@ contract VVVVCReadOnlyInvestmentLedgerUnitTests is VVVVCTestBase {
             investmentRound,
             kycAddressInvestedRoot,
             totalInvested,
+            testSigner,
             setRootsSignature,
             deadline
         );
-        vm.stopPrank();
-    }
-
-    //Tests that an admin can set the signer address
-    function testAdminCanSetSignerAddress() public {
-        //new signer address
-        address newSigner = address(0x1234);
-
-        //set the new signer address
-        vm.startPrank(deployer, deployer);
-        ReadOnlyLedgerInstance.setSigner(newSigner);
-        vm.stopPrank();
-
-        //verify that the signer address was set
-        assertEq(ReadOnlyLedgerInstance.signer(), newSigner);
-    }
-
-    //Tests that a non-admin cannot set the signer address
-    function testNonAdminCannotSetSignerAddress() public {
-        //new signer address
-        address newSigner = address(0x1234);
-
-        //attempt to set signer as sampleUser, reverts via AccessControl
-        vm.startPrank(sampleUser, sampleUser);
-        vm.expectRevert();
-        ReadOnlyLedgerInstance.setSigner(newSigner);
         vm.stopPrank();
     }
 }
