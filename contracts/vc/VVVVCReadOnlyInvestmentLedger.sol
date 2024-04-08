@@ -16,10 +16,7 @@ contract VVVVCReadOnlyInvestmentLedger is AccessControl {
         );
     bytes32 public immutable DOMAIN_SEPARATOR;
 
-    bytes32 public constant ROOT_SETTER_ROLE = keccak256("ROOT_SETTER_ROLE");
-
-    /// @notice The address authorized to sign investment transactions
-    address public signer;
+    bytes32 public constant SIGNER_ROLE = keccak256("SIGNER_ROLE");
 
     /// @notice nonce for all combined round state updates
     uint256 public totalNonce;
@@ -46,9 +43,10 @@ contract VVVVCReadOnlyInvestmentLedger is AccessControl {
     /// @notice thrown when a signature is invalid
     error InvalidSignature();
 
-    constructor(address _signer, string memory _environmentTag) {
-        signer = _signer;
+    /// @notice thrown when the signer input argument does not hold SIGNER_ROLE
+    error UnauthorizedSigner();
 
+    constructor(address[] memory _signers, string memory _environmentTag) {
         // EIP-712 domain separator
         DOMAIN_SEPARATOR = keccak256(
             abi.encode(
@@ -60,25 +58,33 @@ contract VVVVCReadOnlyInvestmentLedger is AccessControl {
         );
 
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(ROOT_SETTER_ROLE, msg.sender);
+        for (uint256 i = 0; i < _signers.length; i++) {
+            _grantRole(SIGNER_ROLE, _signers[i]);
+        }
     }
 
     /**
      * @notice Sets the root for the kyc address invested amounts + the total invested amount for a given round
-     * @dev
      */
     function setInvestmentRoundState(
         uint256 _investmentRound,
         bytes32 _kycAddressInvestedRoot,
         uint256 _totalInvested,
+        address _signer,
         bytes calldata _signature,
         uint256 _deadline
-    ) external onlyRole(ROOT_SETTER_ROLE) {
-        if (!_isSignatureValid(_kycAddressInvestedRoot, _totalInvested, _signature, _deadline))
+    ) external {
+        if (!hasRole(SIGNER_ROLE, _signer)) {
+            revert UnauthorizedSigner();
+        }
+
+        if (!_isSignatureValid(_kycAddressInvestedRoot, _totalInvested, _signer, _signature, _deadline)) {
             revert InvalidSignature();
+        }
 
         kycAddressInvestedRoots[_investmentRound] = _kycAddressInvestedRoot;
         totalInvested[_investmentRound] = _totalInvested;
+
         ++roundNonces[_investmentRound];
         ++totalNonce;
 
@@ -92,11 +98,6 @@ contract VVVVCReadOnlyInvestmentLedger is AccessControl {
         );
     }
 
-    ///@notice allows admin to set the signer address
-    function setSigner(address _signer) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        signer = _signer;
-    }
-
     /**
      * @notice Checks if the provided signature is valid
      * @return true if the signer address is recovered from the signature, false otherwise
@@ -104,6 +105,7 @@ contract VVVVCReadOnlyInvestmentLedger is AccessControl {
     function _isSignatureValid(
         bytes32 _kycAddressInvestedRoot,
         uint256 _totalInvested,
+        address _signer,
         bytes calldata _signature,
         uint256 _deadline
     ) internal view returns (bool) {
@@ -114,7 +116,6 @@ contract VVVVCReadOnlyInvestmentLedger is AccessControl {
                 keccak256(
                     abi.encode(
                         SET_STATE_TYPEHASH,
-                        msg.sender,
                         _kycAddressInvestedRoot,
                         _totalInvested,
                         _deadline,
@@ -125,7 +126,7 @@ contract VVVVCReadOnlyInvestmentLedger is AccessControl {
         );
 
         address recoveredAddress = ECDSA.recover(digest, _signature);
-        bool isSigner = recoveredAddress == signer;
+        bool isSigner = recoveredAddress == _signer;
         bool isExpired = block.timestamp > _deadline;
 
         return isSigner && !isExpired;

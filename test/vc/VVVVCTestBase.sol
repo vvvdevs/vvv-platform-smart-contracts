@@ -287,7 +287,7 @@ abstract contract VVVVCTestBase is Test {
     function getEIP712SignatureForSetInvestmentRoundState(
         bytes32 _domainSeparator,
         bytes32 _setInvestmentRoundStateTypehash,
-        address _sender,
+        address _signer,
         bytes32 _kycAddressInvestedRoot,
         uint256 _totalInvested,
         uint256 _deadline
@@ -299,7 +299,6 @@ abstract contract VVVVCTestBase is Test {
                 keccak256(
                     abi.encode(
                         _setInvestmentRoundStateTypehash,
-                        _sender,
                         _kycAddressInvestedRoot,
                         _totalInvested,
                         _deadline,
