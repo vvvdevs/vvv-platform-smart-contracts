@@ -26,7 +26,7 @@ abstract contract VVVVCTestBase is Test {
     bytes32 readOnlyLedgerDomainSeparator;
     bytes32 investmentTypehash;
     bytes32 claimTypehash;
-    bytes32 setInvestmentRoundRootsTypehash;
+    bytes32 setInvestmentRoundStateTypehash;
 
     //wallet setup
     uint256 deployerKey = 1234;
@@ -283,13 +283,13 @@ abstract contract VVVVCTestBase is Test {
         }
     }
 
-    //generating root update signatures for VVVVCReadOnlyInvestmentLedger
-    function getEIP712SignatureForSetInvestmentRoundRoots(
+    //generating state update signatures for VVVVCReadOnlyInvestmentLedger
+    function getEIP712SignatureForSetInvestmentRoundState(
         bytes32 _domainSeparator,
-        bytes32 _setInvestmentRoundRootsTypehash,
+        bytes32 _setInvestmentRoundStateTypehash,
         address _sender,
         bytes32 _kycAddressInvestedRoot,
-        bytes32 _totalInvestedRoot,
+        uint256 _totalInvested,
         uint256 _deadline
     ) public view returns (bytes memory) {
         bytes32 digest = keccak256(
@@ -298,10 +298,10 @@ abstract contract VVVVCTestBase is Test {
                 _domainSeparator,
                 keccak256(
                     abi.encode(
-                        _setInvestmentRoundRootsTypehash,
+                        _setInvestmentRoundStateTypehash,
                         _sender,
                         _kycAddressInvestedRoot,
-                        _totalInvestedRoot,
+                        _totalInvested,
                         _deadline,
                         chainId
                     )

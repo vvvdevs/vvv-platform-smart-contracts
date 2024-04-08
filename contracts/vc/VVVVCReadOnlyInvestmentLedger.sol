@@ -8,10 +8,10 @@ contract VVVVCReadOnlyInvestmentLedger is AccessControl {
     /// @notice EIP-712 standard definitions
     bytes32 public constant DOMAIN_TYPEHASH =
         keccak256(bytes("EIP712Domain(string name,uint256 chainId,address verifyingContract)"));
-    bytes32 public constant SET_ROOTS_TYPEHASH =
+    bytes32 public constant SET_STATE_TYPEHASH =
         keccak256(
             bytes(
-                "RoundStateSet(uint256 investmentRound, bytes32 kycAddressInvestedRoot, bytes32 totalInvestedRoot, uint256 timestamp, uint256 roundNonce, uint256 totalNonce)"
+                "RoundStateSet(uint256 investmentRound, bytes32 kycAddressInvestedRoot, uint256 totalInvested, uint256 timestamp, uint256 roundNonce, uint256 totalNonce)"
             )
         );
     bytes32 public immutable DOMAIN_SEPARATOR;
@@ -27,8 +27,8 @@ contract VVVVCReadOnlyInvestmentLedger is AccessControl {
     /// @notice root for each round which validates kyc address amounts invested
     mapping(uint256 => bytes32) public kycAddressInvestedRoots;
 
-    /// @notice root for each round which validates total amounts invested
-    mapping(uint256 => bytes32) public totalRoots;
+    /// @notice stable-equivalent invested for each round
+    mapping(uint256 => uint256) public totalInvested;
 
     /// @notice nonce for each round's state
     mapping(uint256 => uint256) public roundNonces;
@@ -37,7 +37,7 @@ contract VVVVCReadOnlyInvestmentLedger is AccessControl {
     event RoundStateSet(
         uint256 investmentRound,
         bytes32 kycAddressInvestedRoot,
-        bytes32 totalInvestedRoot,
+        uint256 totalInvested,
         uint256 timestamp,
         uint256 roundNonce,
         uint256 totalNonce
@@ -59,33 +59,33 @@ contract VVVVCReadOnlyInvestmentLedger is AccessControl {
             )
         );
 
-        _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
-        _grantRole(ROOT_SETTER_ROLE, _msgSender());
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(ROOT_SETTER_ROLE, msg.sender);
     }
 
     /**
-     * @notice Sets the roots for the kyc address invested amounts and total invested amounts for a given round
+     * @notice Sets the root for the kyc address invested amounts + the total invested amount for a given round
      * @dev
      */
-    function setInvestmentRoundRoots(
+    function setInvestmentRoundState(
         uint256 _investmentRound,
         bytes32 _kycAddressInvestedRoot,
-        bytes32 _totalInvestedRoot,
+        uint256 _totalInvested,
         bytes calldata _signature,
         uint256 _deadline
     ) external onlyRole(ROOT_SETTER_ROLE) {
-        if (!_isSignatureValid(_kycAddressInvestedRoot, _totalInvestedRoot, _signature, _deadline))
+        if (!_isSignatureValid(_kycAddressInvestedRoot, _totalInvested, _signature, _deadline))
             revert InvalidSignature();
 
         kycAddressInvestedRoots[_investmentRound] = _kycAddressInvestedRoot;
-        totalRoots[_investmentRound] = _totalInvestedRoot;
+        totalInvested[_investmentRound] = _totalInvested;
         ++roundNonces[_investmentRound];
         ++totalNonce;
 
         emit RoundStateSet(
             _investmentRound,
             _kycAddressInvestedRoot,
-            _totalInvestedRoot,
+            _totalInvested,
             block.timestamp,
             roundNonces[_investmentRound],
             totalNonce
@@ -103,7 +103,7 @@ contract VVVVCReadOnlyInvestmentLedger is AccessControl {
      */
     function _isSignatureValid(
         bytes32 _kycAddressInvestedRoot,
-        bytes32 _totalInvestedRoot,
+        uint256 _totalInvested,
         bytes calldata _signature,
         uint256 _deadline
     ) internal view returns (bool) {
@@ -113,10 +113,10 @@ contract VVVVCReadOnlyInvestmentLedger is AccessControl {
                 DOMAIN_SEPARATOR,
                 keccak256(
                     abi.encode(
-                        SET_ROOTS_TYPEHASH,
+                        SET_STATE_TYPEHASH,
                         msg.sender,
                         _kycAddressInvestedRoot,
-                        _totalInvestedRoot,
+                        _totalInvested,
                         _deadline,
                         block.chainid
                     )
