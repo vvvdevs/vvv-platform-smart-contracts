@@ -567,7 +567,6 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
             EthStakingInstance.durationToMultiplier(VVVETHStaking.StakingDuration.ThreeMonths)) /
             EthStakingInstance.DENOMINATOR();
 
-
         assertEq(vvvBalanceAfter, vvvBalanceBefore + expectedClaimedVvv);
         vm.stopPrank();
     }
