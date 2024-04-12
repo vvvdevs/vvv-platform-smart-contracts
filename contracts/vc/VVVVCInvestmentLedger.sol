@@ -17,7 +17,9 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
         keccak256(bytes("EIP712Domain(string name,uint256 chainId,address verifyingContract)"));
     bytes32 public constant INVESTMENT_TYPEHASH =
         keccak256(
-            bytes("VCInvestment(uint256 investmentRound,address kycAddress,uint256 investmentAmount)")
+            bytes(
+                "VCInvestment(uint256 investmentRound,address paymentTokenAddress,address kycAddress,uint256 exchangeRateNumerator,uint256 exchangeRateDenominator,uint256 investmentAmount)"
+            )
         );
     bytes32 public immutable DOMAIN_SEPARATOR;
 
