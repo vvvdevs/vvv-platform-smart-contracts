@@ -134,7 +134,6 @@ contract VVVVCReadOnlyInvestmentLedgerUnitTests is VVVVCTestBase {
         bytes32 kycAddressInvestedRoot = keccak256(abi.encodePacked(uint256(1)));
         uint256 totalInvested = 2;
         uint256 deadline = block.timestamp + 1000;
-        uint256 roundNonce = 1;
         uint256 totalNonce = 1;
 
         //Generate signature for the round state
@@ -155,7 +154,6 @@ contract VVVVCReadOnlyInvestmentLedgerUnitTests is VVVVCTestBase {
             kycAddressInvestedRoot,
             totalInvested,
             block.timestamp,
-            roundNonce,
             totalNonce
         );
         ReadOnlyLedgerInstance.setInvestmentRoundState(

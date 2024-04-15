@@ -11,7 +11,7 @@ contract VVVVCReadOnlyInvestmentLedger is AccessControl {
     bytes32 public constant SET_STATE_TYPEHASH =
         keccak256(
             bytes(
-                "RoundStateSet(uint256 investmentRound, bytes32 kycAddressInvestedRoot, uint256 totalInvested, uint256 timestamp, uint256 roundNonce, uint256 totalNonce)"
+                "RoundStateSet(uint256 investmentRound,bytes32 kycAddressInvestedRoot,uint256 totalInvested,uint256 timestamp,uint256 totalNonce)"
             )
         );
     bytes32 public immutable DOMAIN_SEPARATOR;
@@ -27,16 +27,12 @@ contract VVVVCReadOnlyInvestmentLedger is AccessControl {
     /// @notice stable-equivalent invested for each round
     mapping(uint256 => uint256) public totalInvested;
 
-    /// @notice nonce for each round's state
-    mapping(uint256 => uint256) public roundNonces;
-
     /// @notice emitted when a round's state is set (for both per-user and total invested amounts)
     event RoundStateSet(
         uint256 investmentRound,
         bytes32 kycAddressInvestedRoot,
         uint256 totalInvested,
         uint256 timestamp,
-        uint256 roundNonce,
         uint256 totalNonce
     );
 
@@ -85,7 +81,6 @@ contract VVVVCReadOnlyInvestmentLedger is AccessControl {
         kycAddressInvestedRoots[_investmentRound] = _kycAddressInvestedRoot;
         totalInvested[_investmentRound] = _totalInvested;
 
-        ++roundNonces[_investmentRound];
         ++totalNonce;
 
         emit RoundStateSet(
@@ -93,7 +88,6 @@ contract VVVVCReadOnlyInvestmentLedger is AccessControl {
             _kycAddressInvestedRoot,
             _totalInvested,
             block.timestamp,
-            roundNonces[_investmentRound],
             totalNonce
         );
     }
