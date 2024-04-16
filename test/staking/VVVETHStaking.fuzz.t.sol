@@ -61,7 +61,7 @@ contract VVVETHStakingUnitFuzzTests is VVVETHStakingTestBase {
     }
 
     // Test that contract correctly stores the StakeData and stakeIds for any valid input combination
-    function testFuzz_stakeEth(uint256 _callerKey, uint224 _stakeAmount, uint32 _duration) public {
+    function testFuzz_stakeEth(uint256 _callerKey, uint256 _stakeAmount, uint32 _duration) public {
         uint256 callerKey = bound(_callerKey, 1, 100000);
         address caller = vm.addr(callerKey);
         uint8 duration = uint8(bound(_duration, 0, 2));
@@ -75,14 +75,18 @@ contract VVVETHStakingUnitFuzzTests is VVVETHStakingTestBase {
         uint256 stakeId = EthStakingInstance.stakeEth{ value: _stakeAmount }(stakeDuration);
 
         (
-            uint224 stakedEthAmount,
+            uint256 stakedEthAmount,
+            address staker,
             uint32 stakedTimestamp,
+            uint256 secondsClaimed,
             bool stakeIsWithdrawn,
             VVVETHStaking.StakingDuration stakedDuration
-        ) = EthStakingInstance.userStakes(caller, stakeId);
+        ) = EthStakingInstance.stakes(stakeId);
 
+        assert(staker == caller);
         assert(stakedEthAmount == _stakeAmount);
         assert(stakedTimestamp == block.timestamp);
+        assert(secondsClaimed == 0);
         assert(stakeIsWithdrawn == false);
         assert(stakedDuration == stakeDuration);
 
@@ -92,7 +96,7 @@ contract VVVETHStakingUnitFuzzTests is VVVETHStakingTestBase {
     // test that contract correctly stores the StakeData and stakeIds for any restake
     function testFuzz_restakeEth(
         uint256 _callerKey,
-        uint224 _stakeAmount,
+        uint256 _stakeAmount,
         uint8 _duration,
         uint8 _newDuration
     ) public {
@@ -118,14 +122,17 @@ contract VVVETHStakingUnitFuzzTests is VVVETHStakingTestBase {
 
         // Verify the restake
         (
-            uint224 restakedEthAmount,
+            uint256 restakedEthAmount,
+            ,
             uint32 restakedTimestamp,
+            uint256 secondsClaimed,
             bool restakeIsWithdrawn,
             VVVETHStaking.StakingDuration restakedDuration
-        ) = EthStakingInstance.userStakes(caller, newStakeId);
+        ) = EthStakingInstance.stakes(newStakeId);
 
         assert(restakedEthAmount == _stakeAmount);
         assert(restakedTimestamp >= block.timestamp);
+        assert(secondsClaimed == 0);
         assert(restakeIsWithdrawn == false);
         assert(restakedDuration == newStakeDuration);
 
@@ -133,7 +140,7 @@ contract VVVETHStakingUnitFuzzTests is VVVETHStakingTestBase {
     }
 
     // Test that any valid stake is withdrawable
-    function testFuzz_withdrawStake(uint256 _callerKey, uint224 _stakeAmount, uint8 _duration) public {
+    function testFuzz_withdrawStake(uint256 _callerKey, uint256 _stakeAmount, uint8 _duration) public {
         uint256 callerKey = bound(_callerKey, 1, 100000);
         address payable caller = payable(vm.addr(callerKey));
         uint8 duration = uint8(bound(_duration, 0, 2));
@@ -149,7 +156,7 @@ contract VVVETHStakingUnitFuzzTests is VVVETHStakingTestBase {
 
         EthStakingInstance.withdrawStake(stakeId);
 
-        (, , bool stakeIsWithdrawn, ) = EthStakingInstance.userStakes(caller, stakeId);
+        (, , , , bool stakeIsWithdrawn, ) = EthStakingInstance.stakes(stakeId);
 
         assert(stakeIsWithdrawn == true);
 
@@ -158,43 +165,33 @@ contract VVVETHStakingUnitFuzzTests is VVVETHStakingTestBase {
 
     // Test that any amount < claimableVvv is claimable by the user after the stake duration elapses
     // also tests that the claimed + remaining claimable add up to originally claimable amount
-    function testFuzz_claimVvv(
-        uint256 _callerKey,
-        uint224 _stakeAmount,
-        uint8 _stakeDuration,
-        uint256 _claimAmount
-    ) public {
+    function testFuzz_claimVvv(uint256 _callerKey, uint256 _stakeAmount, uint8 _stakeDuration) public {
         uint256 callerKey = bound(_callerKey, 1, 100000);
         address caller = vm.addr(callerKey);
         uint8 stakeDuration = uint8(bound(_stakeDuration, 0, 2));
         vm.assume(caller != address(0));
         vm.assume(_stakeAmount != 0);
-        vm.assume(_claimAmount != 0);
         uint256 stakeAmount = bound(_stakeAmount, 1, 100 ether);
 
         vm.deal(caller, _stakeAmount);
         vm.startPrank(caller, caller);
 
         VVVETHStaking.StakingDuration stakeDurationEnum = VVVETHStaking.StakingDuration(stakeDuration);
-        EthStakingInstance.stakeEth{ value: stakeAmount }(stakeDurationEnum);
+        uint256 stakeId = EthStakingInstance.stakeEth{ value: stakeAmount }(stakeDurationEnum);
 
         advanceBlockNumberAndTimestampInSeconds(
             EthStakingInstance.durationToSeconds(stakeDurationEnum) + 1
         );
 
-        uint256 claimableVvv = EthStakingInstance.calculateClaimableVvvAmount();
-
-        // Ensure the claim amount is not more than what's available
-        vm.assume(_claimAmount <= claimableVvv);
+        uint256 claimableVvv = EthStakingInstance.calculateClaimableVvvAmount(stakeId);
 
         uint256 vvvBalanceBefore = VvvTokenInstance.balanceOf(caller);
-        EthStakingInstance.claimVvv(_claimAmount);
+        EthStakingInstance.claimVvv(stakeId);
         uint256 vvvBalanceAfter = VvvTokenInstance.balanceOf(caller);
 
-        uint256 claimableVvv2 = EthStakingInstance.calculateClaimableVvvAmount();
+        uint256 claimableVvv2 = EthStakingInstance.calculateClaimableVvvAmount(stakeId);
 
-        assertTrue(vvvBalanceAfter == vvvBalanceBefore + _claimAmount);
-        assertTrue(claimableVvv2 == claimableVvv - _claimAmount);
+        assertTrue(vvvBalanceAfter == vvvBalanceBefore + claimableVvv + claimableVvv2);
 
         vm.stopPrank();
     }
