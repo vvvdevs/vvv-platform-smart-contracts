@@ -8,10 +8,10 @@ contract VVVVCReadOnlyInvestmentLedger is AccessControl {
     /// @notice EIP-712 standard definitions
     bytes32 public constant DOMAIN_TYPEHASH =
         keccak256(bytes("EIP712Domain(string name,uint256 chainId,address verifyingContract)"));
-    bytes32 public constant SET_STATE_TYPEHASH =
+    bytes32 public constant STATE_TYPEHASH =
         keccak256(
             bytes(
-                "RoundStateSet(uint256 investmentRound,bytes32 kycAddressInvestedRoot,uint256 totalInvested,uint256 timestamp,uint256 totalNonce)"
+                "RoundState(uint256 investmentRound,bytes32 kycAddressInvestedRoot,uint256 totalInvested,uint256 deadline,uint256 nonce)"
             )
         );
     bytes32 public immutable DOMAIN_SEPARATOR;
@@ -19,7 +19,7 @@ contract VVVVCReadOnlyInvestmentLedger is AccessControl {
     bytes32 public constant SIGNER_ROLE = keccak256("SIGNER_ROLE");
 
     /// @notice nonce for all combined round state updates
-    uint256 public totalNonce;
+    uint256 public nonce;
 
     /// @notice root for each round which validates kyc address amounts invested
     mapping(uint256 => bytes32) public kycAddressInvestedRoots;
@@ -32,8 +32,7 @@ contract VVVVCReadOnlyInvestmentLedger is AccessControl {
         uint256 investmentRound,
         bytes32 kycAddressInvestedRoot,
         uint256 totalInvested,
-        uint256 timestamp,
-        uint256 totalNonce
+        uint256 nonce
     );
 
     /// @notice thrown when a signature is invalid
@@ -74,22 +73,25 @@ contract VVVVCReadOnlyInvestmentLedger is AccessControl {
             revert UnauthorizedSigner();
         }
 
-        if (!_isSignatureValid(_kycAddressInvestedRoot, _totalInvested, _signer, _signature, _deadline)) {
+        if (
+            !_isSignatureValid(
+                _investmentRound,
+                _kycAddressInvestedRoot,
+                _totalInvested,
+                _signer,
+                _signature,
+                _deadline
+            )
+        ) {
             revert InvalidSignature();
         }
 
         kycAddressInvestedRoots[_investmentRound] = _kycAddressInvestedRoot;
         totalInvested[_investmentRound] = _totalInvested;
 
-        ++totalNonce;
+        ++nonce;
 
-        emit RoundStateSet(
-            _investmentRound,
-            _kycAddressInvestedRoot,
-            _totalInvested,
-            block.timestamp,
-            totalNonce
-        );
+        emit RoundStateSet(_investmentRound, _kycAddressInvestedRoot, _totalInvested, nonce);
     }
 
     /**
@@ -97,6 +99,7 @@ contract VVVVCReadOnlyInvestmentLedger is AccessControl {
      * @return true if the signer address is recovered from the signature, false otherwise
      */
     function _isSignatureValid(
+        uint256 _investmentRound,
         bytes32 _kycAddressInvestedRoot,
         uint256 _totalInvested,
         address _signer,
@@ -109,11 +112,12 @@ contract VVVVCReadOnlyInvestmentLedger is AccessControl {
                 DOMAIN_SEPARATOR,
                 keccak256(
                     abi.encode(
-                        SET_STATE_TYPEHASH,
+                        STATE_TYPEHASH,
+                        _investmentRound,
                         _kycAddressInvestedRoot,
                         _totalInvested,
                         _deadline,
-                        block.chainid
+                        nonce
                     )
                 )
             )
