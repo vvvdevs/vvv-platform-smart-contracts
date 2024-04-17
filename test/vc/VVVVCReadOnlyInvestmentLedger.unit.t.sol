@@ -18,7 +18,7 @@ contract VVVVCReadOnlyInvestmentLedgerUnitTests is VVVVCTestBase {
         signers[0] = testSigner;
         ReadOnlyLedgerInstance = new VVVVCReadOnlyInvestmentLedger(signers, environmentTag);
         readOnlyLedgerDomainSeparator = ReadOnlyLedgerInstance.DOMAIN_SEPARATOR();
-        setInvestmentRoundStateTypehash = ReadOnlyLedgerInstance.SET_STATE_TYPEHASH();
+        setInvestmentRoundStateTypehash = ReadOnlyLedgerInstance.STATE_TYPEHASH();
 
         vm.stopPrank();
     }
@@ -40,7 +40,7 @@ contract VVVVCReadOnlyInvestmentLedgerUnitTests is VVVVCTestBase {
         bytes memory setStateSignature = getEIP712SignatureForSetInvestmentRoundState(
             readOnlyLedgerDomainSeparator,
             setInvestmentRoundStateTypehash,
-            testSigner,
+            investmentRound,
             kycAddressInvestedRoot,
             totalInvested,
             deadline
@@ -75,7 +75,7 @@ contract VVVVCReadOnlyInvestmentLedgerUnitTests is VVVVCTestBase {
         bytes memory setStateSignature = getEIP712SignatureForSetInvestmentRoundState(
             readOnlyLedgerDomainSeparator,
             setInvestmentRoundStateTypehash,
-            testSigner,
+            investmentRound,
             kycAddressInvestedRoot,
             totalInvested,
             deadline - 1
@@ -103,11 +103,11 @@ contract VVVVCReadOnlyInvestmentLedgerUnitTests is VVVVCTestBase {
         uint256 totalInvested = 2;
         uint256 deadline = block.timestamp + 1000;
 
-        //Generate correct signature for the round state with deployer as signer (would be a valid signature)
+        //Generate correct signature for the round state
         bytes memory setStateSignature = getEIP712SignatureForSetInvestmentRoundState(
             readOnlyLedgerDomainSeparator,
             setInvestmentRoundStateTypehash,
-            deployer,
+            investmentRound,
             kycAddressInvestedRoot,
             totalInvested,
             deadline
@@ -127,6 +127,48 @@ contract VVVVCReadOnlyInvestmentLedgerUnitTests is VVVVCTestBase {
         vm.stopPrank();
     }
 
+    //tests that replay attacks are not possible via nonce update
+    function testSetInvestmentRoundStateReplayAttack() public {
+        //sample roots and deadline for investment round
+        uint256 investmentRound = 1;
+        bytes32 kycAddressInvestedRoot = keccak256(abi.encodePacked(uint256(1)));
+        uint256 totalInvested = 2;
+        uint256 deadline = block.timestamp + 1000;
+
+        //Generate signature for the round state
+        bytes memory setStateSignature = getEIP712SignatureForSetInvestmentRoundState(
+            readOnlyLedgerDomainSeparator,
+            setInvestmentRoundStateTypehash,
+            investmentRound,
+            kycAddressInvestedRoot,
+            totalInvested,
+            deadline
+        );
+
+        //Set the state for the investment round
+        vm.startPrank(deployer, deployer);
+        ReadOnlyLedgerInstance.setInvestmentRoundState(
+            investmentRound,
+            kycAddressInvestedRoot,
+            totalInvested,
+            testSigner,
+            setStateSignature,
+            deadline
+        );
+
+        //Attempt to replay w/ same signature, reverts with InvalidSignature()
+        vm.expectRevert(VVVVCReadOnlyInvestmentLedger.InvalidSignature.selector);
+        ReadOnlyLedgerInstance.setInvestmentRoundState(
+            investmentRound,
+            kycAddressInvestedRoot,
+            totalInvested,
+            testSigner,
+            setStateSignature,
+            deadline
+        );
+        vm.stopPrank();
+    }
+
     //Tests that the RoundStateSet event is emitted when the state for an investment round is set
     function testEmitRoundStateSetEvent() public {
         //sample values
@@ -134,13 +176,13 @@ contract VVVVCReadOnlyInvestmentLedgerUnitTests is VVVVCTestBase {
         bytes32 kycAddressInvestedRoot = keccak256(abi.encodePacked(uint256(1)));
         uint256 totalInvested = 2;
         uint256 deadline = block.timestamp + 1000;
-        uint256 totalNonce = 1;
+        uint256 nonce = 1;
 
         //Generate signature for the round state
         bytes memory setRootsSignature = getEIP712SignatureForSetInvestmentRoundState(
             readOnlyLedgerDomainSeparator,
             setInvestmentRoundStateTypehash,
-            testSigner,
+            investmentRound,
             kycAddressInvestedRoot,
             totalInvested,
             deadline
@@ -153,8 +195,7 @@ contract VVVVCReadOnlyInvestmentLedgerUnitTests is VVVVCTestBase {
             investmentRound,
             kycAddressInvestedRoot,
             totalInvested,
-            block.timestamp,
-            totalNonce
+            nonce
         );
         ReadOnlyLedgerInstance.setInvestmentRoundState(
             investmentRound,
