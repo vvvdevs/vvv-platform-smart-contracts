@@ -46,7 +46,6 @@ abstract contract VVVVCTestBase is Test {
 
     uint256 blockNumber;
     uint256 blockTimestamp;
-    uint256 chainId = 31337; //test chain id - leave this alone
 
     string environmentTag = "development";
 
@@ -141,8 +140,7 @@ abstract contract VVVVCTestBase is Test {
                         _params.kycAddress,
                         _params.kycAddressAllocation,
                         _params.exchangeRateNumerator,
-                        _params.deadline,
-                        chainId
+                        _params.deadline
                     )
                 )
             )
@@ -226,8 +224,7 @@ abstract contract VVVVCTestBase is Test {
                         _params.projectTokenAddress,
                         _params.projectTokenProxyWallets,
                         _params.investmentRoundIds,
-                        _params.deadline,
-                        chainId
+                        _params.deadline
                     )
                 )
             )
