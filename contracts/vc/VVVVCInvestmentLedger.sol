@@ -220,8 +220,7 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
                         _params.kycAddress,
                         _params.kycAddressAllocation,
                         _params.exchangeRateNumerator,
-                        _params.deadline,
-                        block.chainid
+                        _params.deadline
                     )
                 )
             )

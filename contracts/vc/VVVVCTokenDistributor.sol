@@ -201,8 +201,7 @@ contract VVVVCTokenDistributor {
                         _params.projectTokenAddress,
                         _params.projectTokenProxyWallets,
                         _params.investmentRoundIds,
-                        _params.deadline,
-                        block.chainid
+                        _params.deadline
                     )
                 )
             )
