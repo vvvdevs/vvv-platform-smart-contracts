@@ -17,7 +17,7 @@ contract VVVVCTokenDistributor {
     bytes32 public constant CLAIM_TYPEHASH =
         keccak256(
             bytes(
-                "VCClaim(address userKycAddress, address callerAddress, address projectTokenAddress, address[] projectTokenProxyWallets, uint256 claimedTokenAmount)"
+                "ClaimParams(address callerAddress,address userKycAddress,address projectTokenAddress,address[] projectTokenProxyWallets,uint256[] investmentRoundIds,uint256 tokenAmountToClaim,uint256 deadline)"
             )
         );
     bytes32 public immutable DOMAIN_SEPARATOR;
