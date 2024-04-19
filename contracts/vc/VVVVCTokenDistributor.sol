@@ -149,6 +149,27 @@ contract VVVVCTokenDistributor {
         );
     }
 
+    /// @notice external wrapper for _calculateBaseClaimableProjectTokens
+    function calculateBaseClaimableProjectTokens(
+        address _userKycAddress,
+        address _projectTokenAddress,
+        address _proxyWalletAddress,
+        uint256 _investmentRoundId
+    ) external view returns (uint256) {
+        return
+            _calculateBaseClaimableProjectTokens(
+                _userKycAddress,
+                _projectTokenAddress,
+                _proxyWalletAddress,
+                _investmentRoundId
+            );
+    }
+
+    /// @notice external wrapper for _isSignatureValid
+    function isSignatureValid(ClaimParams memory _params) external view returns (bool) {
+        return _isSignatureValid(_params);
+    }
+
     /**
         @notice Reads the VVVVCInvestmentLedger contract to calculate the base claimable token amount, which does not consider the amount already claimed by the KYC address
         @dev uses fraction of invested funds to determine fraction of claimable tokens
@@ -163,7 +184,7 @@ contract VVVVCTokenDistributor {
         address _projectTokenAddress,
         address _proxyWalletAddress,
         uint256 _investmentRoundId
-    ) internal view returns (uint256) {
+    ) private view returns (uint256) {
         uint256 userInvestedPaymentTokens = ledger.kycAddressInvestedPerRound(
             _userKycAddress,
             _investmentRoundId
@@ -188,7 +209,7 @@ contract VVVVCTokenDistributor {
      * @param _params A ClaimParams struct containing the investment parameters
      * @return true if the signer address is recovered from the signature, false otherwise
      */
-    function _isSignatureValid(ClaimParams memory _params) internal view returns (bool) {
+    function _isSignatureValid(ClaimParams memory _params) private view returns (bool) {
         bytes32 digest = keccak256(
             abi.encodePacked(
                 "\x19\x01",
@@ -212,26 +233,5 @@ contract VVVVCTokenDistributor {
         bool isSigner = recoveredAddress == signer;
         bool isExpired = block.timestamp > _params.deadline;
         return isSigner && !isExpired;
-    }
-
-    /// @notice external wrapper for _calculateBaseClaimableProjectTokens
-    function calculateBaseClaimableProjectTokens(
-        address _userKycAddress,
-        address _projectTokenAddress,
-        address _proxyWalletAddress,
-        uint256 _investmentRoundId
-    ) external view returns (uint256) {
-        return
-            _calculateBaseClaimableProjectTokens(
-                _userKycAddress,
-                _projectTokenAddress,
-                _proxyWalletAddress,
-                _investmentRoundId
-            );
-    }
-
-    /// @notice external wrapper for _isSignatureValid
-    function isSignatureValid(ClaimParams memory _params) external view returns (bool) {
-        return _isSignatureValid(_params);
     }
 }
