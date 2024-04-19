@@ -1,19 +1,23 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
+import { CompleteMerkle } from "lib/murky/src/CompleteMerkle.sol";
 import { Test } from "lib/forge-std/src/Test.sol";
 import { MockERC20 } from "contracts/mock/MockERC20.sol";
 import { VVVVCInvestmentLedger } from "contracts/vc/VVVVCInvestmentLedger.sol";
 import { VVVVCTokenDistributor } from "contracts/vc/VVVVCTokenDistributor.sol";
 import { VVVAuthorizationRegistry } from "contracts/auth/VVVAuthorizationRegistry.sol";
 import { VVVVCReadOnlyInvestmentLedger } from "contracts/vc/VVVVCReadOnlyInvestmentLedger.sol";
+import { VVVVCAlternateTokenDistributor } from "contracts/vc/VVVVCAlternateTokenDistributor.sol";
 
 /**
     @title VVVVC Test Base
  */
 abstract contract VVVVCTestBase is Test {
+    VVVVCAlternateTokenDistributor AlternateTokenDistributorInstance;
     VVVAuthorizationRegistry AuthRegistry;
     VVVVCInvestmentLedger LedgerInstance;
+    CompleteMerkle m;
     MockERC20 PaymentTokenInstance;
     MockERC20 ProjectTokenInstance;
     VVVVCTokenDistributor TokenDistributorInstance;
@@ -24,9 +28,11 @@ abstract contract VVVVCTestBase is Test {
     bytes32 ledgerDomainSeparator;
     bytes32 distributorDomainSeparator;
     bytes32 readOnlyLedgerDomainSeparator;
+    bytes32 alternateTokenDistributorDomainSeparator;
     bytes32 investmentTypehash;
     bytes32 claimTypehash;
     bytes32 setInvestmentRoundStateTypehash;
+    bytes32 alternateClaimTypehash;
 
     //wallet setup
     uint256 deployerKey = 1234;
@@ -39,6 +45,7 @@ abstract contract VVVVCTestBase is Test {
     address deployer = vm.addr(deployerKey);
     address ledgerManager = vm.addr(ledgerManagerKey);
     address testSigner = vm.addr(testSignerKey);
+    address[] testSignerArray = [testSigner];
     address sampleUser = vm.addr(sampleUserKey);
     address sampleKycAddress = vm.addr(sampleKycAddressKey);
     address[] projectTokenProxyWallets = [
@@ -310,5 +317,116 @@ abstract contract VVVVCTestBase is Test {
         bytes memory signature = toBytesConcat(r, s, v);
 
         return signature;
+    }
+
+    //Alternate claim helpers
+    //Obtains merkle leaf and proof from array of addresses and amounts for a given address index
+    //following: https://github.com/dmfxyz/murky as recommended by foundry docs
+    function getMerkleRootLeafProof(
+        address[] memory _addresses,
+        uint256[] memory _amounts,
+        uint256 _index
+    ) public returns (bytes32, bytes32, bytes32[] memory) {
+        bytes32[] memory leaves = new bytes32[](_addresses.length);
+        for (uint256 i = 0; i < _addresses.length; i++) {
+            leaves[i] = keccak256(abi.encode(_addresses[i], _amounts[i]));
+        }
+        bytes32 root = m.getRoot(leaves);
+        bytes32[] memory proof = m.getProof(leaves, _index);
+        assertTrue(m.verifyProof(root, proof, leaves[_index]));
+        return (root, leaves[_index], proof);
+    }
+
+    //creates arrays of roots, leaves, and proofs for a set of investment rounds, described by the length of _userIndices
+    function getMerkleRootLeafProofArrays(
+        address[] memory _addresses,
+        uint256[] memory _amounts,
+        uint256[] memory _userIndices
+    ) public returns (bytes32[] memory, bytes32[] memory, bytes32[][] memory) {
+        bytes32[] memory roots = new bytes32[](_userIndices.length);
+        bytes32[] memory leaves = new bytes32[](_userIndices.length);
+        bytes32[][] memory proofs = new bytes32[][](_userIndices.length);
+
+        for (uint256 i = 0; i < _userIndices.length; i++) {
+            (bytes32 root, bytes32 leaf, bytes32[] memory proof) = getMerkleRootLeafProof(
+                _addresses,
+                _amounts,
+                _userIndices[i]
+            );
+            roots[i] = root;
+            leaves[i] = leaf;
+            proofs[i] = proof;
+        }
+
+        return (roots, leaves, proofs);
+    }
+
+    //generates signature for VVVVCAlternateTokenDistributor.claim()
+    function getEIP712SignatureForAlternateClaim(
+        bytes32 _domainSeparator,
+        bytes32 _alternateClaimTypehash,
+        VVVVCAlternateTokenDistributor.ClaimParams memory _params
+    ) public view returns (bytes memory) {
+        bytes32 digest = keccak256(
+            abi.encodePacked(
+                "\x19\x01",
+                _domainSeparator,
+                keccak256(
+                    abi.encode(
+                        _alternateClaimTypehash,
+                        _params.callerAddress,
+                        _params.userKycAddress,
+                        _params.projectTokenAddress,
+                        _params.projectTokenProxyWallets,
+                        _params.investmentRoundIds,
+                        _params.deadline,
+                        _params.investmentLeaves,
+                        _params.investmentProofs
+                    )
+                )
+            )
+        );
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(testSignerKey, digest);
+        bytes memory signature = toBytesConcat(r, s, v);
+
+        return signature;
+    }
+
+    //generates params for VVVVCAlternateTokenDistributor.claim() to keep tests a bit cleaner
+    function generateAlternateClaimParamsWithSignature(
+        address _callerAddress,
+        address _kycAddress,
+        address[] memory _projectTokenProxyWallets,
+        uint256[] memory _investmentRoundIds,
+        uint256 _tokenAmountToClaim,
+        uint256[] memory _investedPerRound,
+        bytes32[] memory _investmentLeaves,
+        bytes32[][] memory _investmentProofs
+    ) public view returns (VVVVCAlternateTokenDistributor.ClaimParams memory) {
+        VVVVCAlternateTokenDistributor.ClaimParams memory params = VVVVCAlternateTokenDistributor
+            .ClaimParams({
+                callerAddress: _callerAddress,
+                userKycAddress: _kycAddress,
+                projectTokenAddress: address(ProjectTokenInstance),
+                projectTokenProxyWallets: _projectTokenProxyWallets,
+                investmentRoundIds: _investmentRoundIds,
+                tokenAmountToClaim: _tokenAmountToClaim,
+                deadline: block.timestamp + 1 hours,
+                signature: bytes("placeholder"),
+                investedPerRound: _investedPerRound,
+                investmentLeaves: _investmentLeaves,
+                investmentProofs: _investmentProofs
+            });
+
+        bytes memory sig = getEIP712SignatureForAlternateClaim(
+            distributorDomainSeparator,
+            alternateClaimTypehash,
+            params
+        );
+
+        params.signature = sig;
+
+        return params;
     }
 }

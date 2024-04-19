@@ -102,21 +102,57 @@ contract VVVVCAlternateTokenDistributor {
 
     /**
         @notice Allows any address which is an alias of a KYC address to claim tokens across multiple rounds which provide that token
-        @param _params A ClaimParams struct describing the desired claim(s)
+        @param _params A ClaimParams struct describing the desired claim(s) and associated merkle proof(s) for amount(s) invested
      */
     function claim(ClaimParams memory _params) public {
         //ensure caller (msg.sender) is an alias of the KYC address
         _params.callerAddress = msg.sender;
 
+        if (!_areMerkleProofsValid(_params)) {
+            revert InvalidMerkleProof();
+        }
+
         if (!_isSignatureValid(_params)) {
             revert InvalidSignature();
         }
 
-        if (!_isMerkleProofValid(_params)) {
-            revert InvalidMerkleProof();
+        IERC20 projectToken = IERC20(_params.projectTokenAddress);
+
+        //transfer the full claimable amount per round to the caller, unless
+        //the remainder of the target claim amount is less than the claimable amount
+        uint256 remainingAmountToClaim = _params.tokenAmountToClaim;
+        for (uint256 i = 0; i < _params.investmentRoundIds.length; i++) {
+            address thisProxyWallet = _params.projectTokenProxyWallets[i];
+            uint256 thisInvestmentRoundId = _params.investmentRoundIds[i];
+
+            uint256 baseClaimableFromWallet = _calculateBaseClaimableProjectTokens(
+                _params.projectTokenAddress,
+                thisProxyWallet,
+                thisInvestmentRoundId,
+                _params.investedPerRound[i]
+            );
+            uint256 claimableFromWallet = baseClaimableFromWallet -
+                userClaimedTokensForRound[_params.userKycAddress][thisInvestmentRoundId];
+
+            uint256 amountToClaim = claimableFromWallet > remainingAmountToClaim
+                ? remainingAmountToClaim
+                : claimableFromWallet;
+
+            userClaimedTokensForRound[_params.userKycAddress][thisInvestmentRoundId] += amountToClaim;
+            totalClaimedTokensForRound[thisInvestmentRoundId] += amountToClaim;
+            remainingAmountToClaim -= amountToClaim;
+
+            projectToken.safeTransferFrom(thisProxyWallet, _params.callerAddress, amountToClaim);
+
+            if (remainingAmountToClaim == 0) {
+                break;
+            }
         }
 
-        IERC20 projectToken = IERC20(_params.projectTokenAddress);
+        //if an amount is remaining, the caller is attempting to exceed their allocation
+        if (remainingAmountToClaim != 0) {
+            revert ExceedsAllocation();
+        }
 
         emit VCClaim(
             _params.userKycAddress,
@@ -127,25 +163,64 @@ contract VVVVCAlternateTokenDistributor {
         );
     }
 
-    /// @notice external wrapper for _calculateBaseClaimableProjectTokens
+    /**
+        @notice external wrapper for _calculateBaseClaimableProjectTokens
+        @dev does not validate the invested amount, assumes it is validated in the call to claim()
+     */
     function calculateBaseClaimableProjectTokens(
-        address _userKycAddress,
         address _projectTokenAddress,
         address _proxyWalletAddress,
-        uint256 _investmentRoundId
-    ) external view returns (uint256) {}
+        uint256 _investmentRoundId,
+        uint256 _userInvestedPaymentTokens
+    ) external view returns (uint256) {
+        return
+            _calculateBaseClaimableProjectTokens(
+                _projectTokenAddress,
+                _proxyWalletAddress,
+                _investmentRoundId,
+                _userInvestedPaymentTokens
+            );
+    }
 
     /// @notice external wrapper for _isSignatureValid
     function isSignatureValid(ClaimParams memory _params) external view returns (bool) {
         return _isSignatureValid(_params);
     }
 
+    /// @notice external wrapper for _areMerkleProofsValid
+    function areMerkleProofsValid(ClaimParams memory _params) external view returns (bool) {
+        return _areMerkleProofsValid(_params);
+    }
+
+    /**
+        @notice Reads the VVVVCInvestmentLedger contract to calculate the base claimable token amount, which does not consider the amount already claimed by the KYC address
+        @dev uses fraction of invested funds to determine fraction of claimable tokens
+        @dev ensure _proxyWalletAddress corresponds to the _investmentRoundId
+        @param _projectTokenAddress Address of the project token to be claimed
+        @param _proxyWalletAddress Address of the wallet from which the project token is to be claimed
+        @param _investmentRoundId Investment round ID for which to calculate claimable tokens
+        @param _userInvestedPaymentTokens Amount of payment tokens the user has invested in this round, assumed to be validated in the call to claim() via Merkle proof
+     */
     function _calculateBaseClaimableProjectTokens(
-        address _userKycAddress,
         address _projectTokenAddress,
         address _proxyWalletAddress,
-        uint256 _investmentRoundId
-    ) private view returns (uint256) {}
+        uint256 _investmentRoundId,
+        uint256 _userInvestedPaymentTokens
+    ) private view returns (uint256) {
+        if (_userInvestedPaymentTokens == 0) return 0;
+
+        uint256 totalInvestedPaymentTokens = readOnlyLedger.totalInvestedPerRound(_investmentRoundId);
+
+        //total pool of claimable tokens is balance of proxy wallets + total claimed for this token address
+        uint256 totalProjectTokensDepositedToProxyWallet = IERC20(_projectTokenAddress).balanceOf(
+            _proxyWalletAddress
+        ) + totalClaimedTokensForRound[_investmentRoundId];
+
+        //return fraction of total pool of claimable tokens, based on fraction of invested funds
+        return
+            (_userInvestedPaymentTokens * totalProjectTokensDepositedToProxyWallet) /
+            totalInvestedPaymentTokens;
+    }
 
     /**
      * @notice Checks if the provided signature is valid
@@ -180,8 +255,8 @@ contract VVVVCAlternateTokenDistributor {
         return isSigner && !isExpired;
     }
 
-    ///@notice verifies user investment assertions at time of claim with merkle proof
-    function _isMerkleProofValid(ClaimParams memory _params) private view returns (bool) {
+    ///@notice verifies user investment assertions at time of claim with merkle proofs. returns false if any of the proofs are invalid
+    function _areMerkleProofsValid(ClaimParams memory _params) private view returns (bool) {
         bytes32[] memory investmentRoots = readOnlyLedger.getInvestmentRoots(_params.investmentRoundIds);
 
         for (uint256 i = 0; i < _params.investmentRoundIds.length; i++) {
