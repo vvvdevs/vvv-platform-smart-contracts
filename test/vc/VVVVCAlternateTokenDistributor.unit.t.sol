@@ -23,7 +23,7 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
 
         //placeholder address(0) for VVVAuthorizationRegistry
         ReadOnlyLedgerInstance = new VVVVCReadOnlyInvestmentLedger(testSignerArray, environmentTag);
-        ledgerDomainSeparator = ReadOnlyLedgerInstance.DOMAIN_SEPARATOR();
+        readOnlyLedgerDomainSeparator = ReadOnlyLedgerInstance.DOMAIN_SEPARATOR();
         setInvestmentRoundStateTypehash = ReadOnlyLedgerInstance.STATE_TYPEHASH();
 
         AlternateTokenDistributorInstance = new VVVVCAlternateTokenDistributor(
@@ -59,27 +59,15 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
     // function testInvalidSignature() public {}
 
     // tests flow of validating a merkle proof. creates trees, sets roots on read-only ledger, creates merkle proofs for the given user indices (position in that investment round's array of investor kyc addresses), creates valid signature for that user, verifies merkle proofs via VVVVCAlternateTokenDistributor
-    //just container to avoid stack-too-deep
-    struct InvestmentDetails {
-        uint256[] investedAmounts;
-        uint256[] userIndices;
-        uint256[] investmentRoundIds;
-        uint256 totalInvested;
-        uint256 investmentRounds;
-        uint256 deadline;
-        uint256 userIndex;
-        address selectedUser;
-        //TODO: need to be better defined?
-        uint256 tokenAmountToClaim;
-    }
-    function testValidateMerkleProof() public {
-        uint256[] memory placeholderArray;
-        InvestmentDetails memory details = InvestmentDetails({
-            investedAmounts: placeholderArray,
+    function testValidateMerkleProofViaDistributor() public {
+        uint256[] memory investedAmountsArray = new uint256[](users.length);
+        uint256[] memory placeholderArray = new uint256[](10);
+        AlternateDistributorInvestmentDetails memory details = AlternateDistributorInvestmentDetails({
+            investedAmounts: investedAmountsArray,
             userIndices: placeholderArray,
             investmentRoundIds: placeholderArray,
             totalInvested: 0,
-            investmentRounds: 10,
+            investmentRounds: placeholderArray.length,
             deadline: block.timestamp + 1000,
             userIndex: 1,
             selectedUser: users[1],
@@ -95,7 +83,7 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
         //the user whose investments are being proven occupies an index for each round. user is assumed to occupy same index for all rounds, so that same address of users[i] is obtained for all rounds
         for (uint256 i = 0; i < details.investmentRounds; ++i) {
             details.userIndices[i] = details.userIndex;
-            details.investmentRoundIds[i] = i;
+            details.investmentRoundIds[i] = i + 1;
         }
 
         //output root, leaf, and proof for each investment round
@@ -117,6 +105,13 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
                 details.totalInvested,
                 details.deadline
             );
+
+            emit log_named_uint("investmentRoundId", details.investmentRoundIds[i]);
+            emit log_named_bytes32("root", roots[i]);
+            emit log_named_uint("totalInvested", details.totalInvested);
+            emit log_named_address("signer", testSigner);
+            emit log_named_bytes("signature", setStateSignature);
+            emit log_named_uint("deadline", details.deadline);
 
             ReadOnlyLedgerInstance.setInvestmentRoundState(
                 details.investmentRoundIds[i],
@@ -142,7 +137,7 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
                 proofs
             );
 
-        //finally, verify merkle proofs for the user for which the proofs are to be generated
+        //finally, verify merkle proofs for the user for which the proofs are to be generated via the distributor contract
         assertTrue(AlternateTokenDistributorInstance.areMerkleProofsValid(params));
     }
 

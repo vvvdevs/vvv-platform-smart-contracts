@@ -86,6 +86,20 @@ abstract contract VVVVCTestBase is Test {
         uint256 claimAmount;
     }
 
+    //used in VVVVCAlternateTokenDistributor Tests involving merkle proofs of prior investment, to avoid stack-too-deep
+    struct AlternateDistributorInvestmentDetails {
+        uint256[] investedAmounts;
+        uint256[] userIndices;
+        uint256[] investmentRoundIds;
+        uint256 totalInvested;
+        uint256 investmentRounds;
+        uint256 deadline;
+        uint256 userIndex;
+        address selectedUser;
+        //TODO: need to be better defined?
+        uint256 tokenAmountToClaim;
+    }
+
     // generate list of random addresses and deal them payment tokens and ETH
     function generateUserAddressListAndDealEtherAndToken(MockERC20 _token) public {
         for (uint256 i = 0; i < users.length; i++) {
@@ -295,7 +309,7 @@ abstract contract VVVVCTestBase is Test {
         bytes32 _kycAddressInvestedRoot,
         uint256 _totalInvested,
         uint256 _deadline
-    ) public view returns (bytes memory) {
+    ) public returns (bytes memory) {
         bytes32 digest = keccak256(
             abi.encodePacked(
                 "\x19\x01",
