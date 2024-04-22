@@ -309,7 +309,7 @@ abstract contract VVVVCTestBase is Test {
         bytes32 _kycAddressInvestedRoot,
         uint256 _totalInvested,
         uint256 _deadline
-    ) public returns (bytes memory) {
+    ) public view returns (bytes memory) {
         bytes32 digest = keccak256(
             abi.encodePacked(
                 "\x19\x01",
@@ -434,7 +434,7 @@ abstract contract VVVVCTestBase is Test {
             });
 
         bytes memory sig = getEIP712SignatureForAlternateClaim(
-            distributorDomainSeparator,
+            alternateTokenDistributorDomainSeparator,
             alternateClaimTypehash,
             params
         );
