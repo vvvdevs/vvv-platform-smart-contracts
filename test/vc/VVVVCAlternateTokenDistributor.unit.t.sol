@@ -49,17 +49,63 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
             );
             vm.stopPrank();
         }
+
+        //generate user list, deal ether (placeholder token)
+        generateUserAddressListAndDealEtherAndToken(new MockERC20(18));
     }
 
     function testDeployment() public {
         assertTrue(address(AlternateTokenDistributorInstance) != address(0));
     }
 
-    // function testValidateSignature() public {}
-    // function testInvalidSignature() public {}
+    //validates the claim signature for claiming tokens
+    function testValidateSignature() public {
+        VVVVCAlternateTokenDistributor.ClaimParams
+            memory params = prepareAlternateDistributorClaimParams();
 
-    // tests flow of validating a merkle proof. creates trees, sets roots on read-only ledger, creates merkle proofs for the given user indices (position in that investment round's array of investor kyc addresses), creates valid signature for that user, verifies merkle proofs via VVVVCAlternateTokenDistributor
+        //verify the claim signature for the user
+        assertTrue(AlternateTokenDistributorInstance.isSignatureValid(params));
+    }
+
+    //test that signature is marked invalid if some parameter is altered
+    function testInvalidSignature() public {
+        VVVVCAlternateTokenDistributor.ClaimParams
+            memory params = prepareAlternateDistributorClaimParams();
+        params.deadline += 1;
+
+        //ensure invalid signature
+        assertFalse(AlternateTokenDistributorInstance.isSignatureValid(params));
+    }
+
+    //tests flow of validating a merkle proof involved in claiming tokens
     function testValidateMerkleProofViaDistributor() public {
+        VVVVCAlternateTokenDistributor.ClaimParams
+            memory params = prepareAlternateDistributorClaimParams();
+
+        //verify merkle proofs for the user for which the proofs are to be generated via the distributor contract
+        assertTrue(AlternateTokenDistributorInstance.areMerkleProofsValid(params));
+    }
+
+    //tests that altered merkle proof will not pass as valid
+    function testInvalidMerkleProof() public {
+        VVVVCAlternateTokenDistributor.ClaimParams
+            memory params = prepareAlternateDistributorClaimParams();
+        params.investmentLeaves[0] = keccak256(abi.encodePacked(params.investmentLeaves[0], uint256(1)));
+
+        //ensure invalid merkle proof
+        assertFalse(AlternateTokenDistributorInstance.areMerkleProofsValid(params));
+    }
+
+    // function testClaimWithKycAddress() public {}
+    // function testClaimWithAlias() public {}
+    // function testClaimMultipleRound() public {}
+    // function testClaimFullAllocation() public {}
+
+    //function to prepare token claim params and avoid duplicating code. for a set of investment rounds: creates trees, sets roots on read-only ledger, creates merkle proofs for the given user indices (position in that investment round's array of investor kyc addresses), creates valid claim signature for that user, and returns a ClaimParams object containing all info to validate a user's prior investment(s) and currently permitted claim(s)
+    function prepareAlternateDistributorClaimParams()
+        public
+        returns (VVVVCAlternateTokenDistributor.ClaimParams memory)
+    {
         uint256[] memory investedAmountsArray = new uint256[](users.length);
         uint256[] memory placeholderArray = new uint256[](10);
         AlternateDistributorInvestmentDetails memory details = AlternateDistributorInvestmentDetails({
@@ -106,13 +152,6 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
                 details.deadline
             );
 
-            emit log_named_uint("investmentRoundId", details.investmentRoundIds[i]);
-            emit log_named_bytes32("root", roots[i]);
-            emit log_named_uint("totalInvested", details.totalInvested);
-            emit log_named_address("signer", testSigner);
-            emit log_named_bytes("signature", setStateSignature);
-            emit log_named_uint("deadline", details.deadline);
-
             ReadOnlyLedgerInstance.setInvestmentRoundState(
                 details.investmentRoundIds[i],
                 roots[i],
@@ -137,14 +176,6 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
                 proofs
             );
 
-        //finally, verify merkle proofs for the user for which the proofs are to be generated via the distributor contract
-        assertTrue(AlternateTokenDistributorInstance.areMerkleProofsValid(params));
+        return params;
     }
-
-    // function testInvalidMerkleProof() public {}
-
-    // function testClaimWithKycAddress() public {}
-    // function testClaimWithAlias() public {}
-    // function testClaimMultipleRound() public {}
-    // function testClaimFullAllocation() public {}
 }
