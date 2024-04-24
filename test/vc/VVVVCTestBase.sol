@@ -79,6 +79,9 @@ abstract contract VVVVCTestBase is Test {
     uint256 userPaymentTokenDefaultAllocation = 10_000 * 1e6;
     uint256 investmentRoundSampleLimit = 1_000_000 * 1e6;
 
+    //alternate distributor test values
+    address altDistributorTestKycAddress;
+
     struct TestParams {
         uint256[] investmentRoundIds;
         uint256[] tokenAmountsToInvest;
@@ -440,6 +443,91 @@ abstract contract VVVVCTestBase is Test {
         );
 
         params.signature = sig;
+
+        return params;
+    }
+
+    //function to prepare token claim params and avoid duplicating code. for a set of investment rounds: creates trees, sets roots on read-only ledger, creates merkle proofs for the given user indices (position in that investment round's array of investor kyc addresses), creates valid claim signature for that user, and returns a ClaimParams object containing all info to validate a user's prior investment(s) and currently permitted claim(s)
+    function prepareAlternateDistributorClaimParams(
+        address _caller
+    ) public returns (VVVVCAlternateTokenDistributor.ClaimParams memory) {
+        uint256[] memory investedAmountsArray = new uint256[](users.length);
+        uint256[] memory placeholderArray = new uint256[](projectTokenProxyWallets.length);
+        uint256[] memory userInvestedAmount = new uint256[](projectTokenProxyWallets.length);
+
+        //by now this is defined, not address(0)
+        altDistributorTestKycAddress = users[1];
+
+        AlternateDistributorInvestmentDetails memory details = AlternateDistributorInvestmentDetails({
+            investedAmounts: investedAmountsArray, //all users in users array, not just selected user
+            userIndices: placeholderArray,
+            investmentRoundIds: placeholderArray,
+            totalInvested: 0,
+            investmentRounds: placeholderArray.length,
+            deadline: block.timestamp + 1000,
+            userIndex: 1,
+            selectedUser: altDistributorTestKycAddress,
+            tokenAmountToClaim: 1e18 // test amount
+        });
+
+        //give each user in users a sample invested amount, applies to all rounds
+        for (uint256 i = 0; i < users.length; ++i) {
+            details.investedAmounts[i] = i * 1e18;
+            details.totalInvested += i * 1e18;
+        }
+
+        //the user whose investments are being proven occupies an index for each round. user is assumed to occupy same index for all rounds, so that same address of users[i] is obtained for all rounds
+        for (uint256 i = 0; i < details.investmentRounds; ++i) {
+            details.userIndices[i] = details.userIndex;
+            details.investmentRoundIds[i] = i + 1;
+        }
+
+        //output root, leaf, and proof for each investment round
+        (
+            bytes32[] memory roots,
+            bytes32[] memory leaves,
+            bytes32[][] memory proofs
+        ) = getMerkleRootLeafProofArrays(users, details.investedAmounts, details.userIndices);
+
+        //set merkle roots on read-only ledger for all rounds
+        vm.startPrank(deployer, deployer);
+        for (uint256 i = 0; i < details.investmentRounds; i++) {
+            //Generate signature for the round state
+            bytes memory setStateSignature = getEIP712SignatureForSetInvestmentRoundState(
+                readOnlyLedgerDomainSeparator,
+                setInvestmentRoundStateTypehash,
+                details.investmentRoundIds[i],
+                roots[i],
+                details.totalInvested,
+                details.deadline
+            );
+
+            ReadOnlyLedgerInstance.setInvestmentRoundState(
+                details.investmentRoundIds[i],
+                roots[i],
+                details.totalInvested,
+                testSigner,
+                setStateSignature,
+                details.deadline
+            );
+
+            //users[1] is selected user, so add the amount that user has invested
+            userInvestedAmount[i] = details.investedAmounts[1];
+        }
+        vm.stopPrank();
+
+        //create ClaimParams for VVVVCAlternateTokenDistributor.areMerkleProofsValid()
+        VVVVCAlternateTokenDistributor.ClaimParams
+            memory params = generateAlternateClaimParamsWithSignature(
+                _caller,
+                details.selectedUser,
+                projectTokenProxyWallets,
+                details.investmentRoundIds,
+                details.tokenAmountToClaim,
+                userInvestedAmount,
+                leaves,
+                proofs
+            );
 
         return params;
     }

@@ -52,6 +52,9 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
 
         //generate user list, deal ether (placeholder token)
         generateUserAddressListAndDealEtherAndToken(new MockERC20(18));
+
+        //defines alternate caller address for this test set, within thet users array rather than separately defined as is the case for "sampleUser", etc.
+        altDistributorTestKycAddress = users[1];
     }
 
     function testDeployment() public {
@@ -60,8 +63,9 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
 
     //validates the claim signature for claiming tokens
     function testValidateSignature() public {
-        VVVVCAlternateTokenDistributor.ClaimParams
-            memory params = prepareAlternateDistributorClaimParams();
+        VVVVCAlternateTokenDistributor.ClaimParams memory params = prepareAlternateDistributorClaimParams(
+            altDistributorTestKycAddress
+        );
 
         //verify the claim signature for the user
         assertTrue(AlternateTokenDistributorInstance.isSignatureValid(params));
@@ -69,8 +73,9 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
 
     //test that signature is marked invalid if some parameter is altered
     function testInvalidSignature() public {
-        VVVVCAlternateTokenDistributor.ClaimParams
-            memory params = prepareAlternateDistributorClaimParams();
+        VVVVCAlternateTokenDistributor.ClaimParams memory params = prepareAlternateDistributorClaimParams(
+            altDistributorTestKycAddress
+        );
         params.deadline += 1;
 
         //ensure invalid signature
@@ -79,8 +84,9 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
 
     //tests flow of validating a merkle proof involved in claiming tokens
     function testValidateMerkleProofViaDistributor() public {
-        VVVVCAlternateTokenDistributor.ClaimParams
-            memory params = prepareAlternateDistributorClaimParams();
+        VVVVCAlternateTokenDistributor.ClaimParams memory params = prepareAlternateDistributorClaimParams(
+            altDistributorTestKycAddress
+        );
 
         //verify merkle proofs for the user for which the proofs are to be generated via the distributor contract
         assertTrue(AlternateTokenDistributorInstance.areMerkleProofsValid(params));
@@ -88,94 +94,76 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
 
     //tests that altered merkle proof will not pass as valid
     function testInvalidMerkleProof() public {
-        VVVVCAlternateTokenDistributor.ClaimParams
-            memory params = prepareAlternateDistributorClaimParams();
+        VVVVCAlternateTokenDistributor.ClaimParams memory params = prepareAlternateDistributorClaimParams(
+            altDistributorTestKycAddress
+        );
         params.investmentLeaves[0] = keccak256(abi.encodePacked(params.investmentLeaves[0], uint256(1)));
 
         //ensure invalid merkle proof
         assertFalse(AlternateTokenDistributorInstance.areMerkleProofsValid(params));
     }
 
-    // function testClaimWithKycAddress() public {}
-    // function testClaimWithAlias() public {}
-    // function testClaimMultipleRound() public {}
-    // function testClaimFullAllocation() public {}
+    //test that the kyc address can claim tokens on its own behalf
+    function testClaimWithKycAddress() public {
+        uint256 totalUserClaimableTokens;
 
-    //function to prepare token claim params and avoid duplicating code. for a set of investment rounds: creates trees, sets roots on read-only ledger, creates merkle proofs for the given user indices (position in that investment round's array of investor kyc addresses), creates valid claim signature for that user, and returns a ClaimParams object containing all info to validate a user's prior investment(s) and currently permitted claim(s)
-    function prepareAlternateDistributorClaimParams()
-        public
-        returns (VVVVCAlternateTokenDistributor.ClaimParams memory)
-    {
-        uint256[] memory investedAmountsArray = new uint256[](users.length);
-        uint256[] memory placeholderArray = new uint256[](10);
-        AlternateDistributorInvestmentDetails memory details = AlternateDistributorInvestmentDetails({
-            investedAmounts: investedAmountsArray,
-            userIndices: placeholderArray,
-            investmentRoundIds: placeholderArray,
-            totalInvested: 0,
-            investmentRounds: placeholderArray.length,
-            deadline: block.timestamp + 1000,
-            userIndex: 1,
-            selectedUser: users[1],
-            tokenAmountToClaim: 1e18
-        });
+        VVVVCAlternateTokenDistributor.ClaimParams memory params = prepareAlternateDistributorClaimParams(
+            altDistributorTestKycAddress
+        );
 
-        //give each user in users a sample invested amount, applies to all rounds
-        for (uint256 i = 0; i < users.length; ++i) {
-            details.investedAmounts[i] = i * 1e18;
-            details.totalInvested += details.investedAmounts[i];
+        //find claimable amount of tokens
+        for (uint256 i = 0; i < params.projectTokenProxyWallets.length; i++) {
+            totalUserClaimableTokens += AlternateTokenDistributorInstance
+                .calculateBaseClaimableProjectTokens(
+                    params.projectTokenAddress,
+                    params.projectTokenProxyWallets[i],
+                    params.investmentRoundIds[i],
+                    params.investedPerRound[i]
+                );
         }
 
-        //the user whose investments are being proven occupies an index for each round. user is assumed to occupy same index for all rounds, so that same address of users[i] is obtained for all rounds
-        for (uint256 i = 0; i < details.investmentRounds; ++i) {
-            details.userIndices[i] = details.userIndex;
-            details.investmentRoundIds[i] = i + 1;
-        }
-
-        //output root, leaf, and proof for each investment round
-        (
-            bytes32[] memory roots,
-            bytes32[] memory leaves,
-            bytes32[][] memory proofs
-        ) = getMerkleRootLeafProofArrays(users, details.investedAmounts, details.userIndices);
-
-        //set merkle roots on read-only ledger for all rounds
-        vm.startPrank(deployer, deployer);
-        for (uint256 i = 0; i < details.investmentRounds; i++) {
-            //Generate signature for the round state
-            bytes memory setStateSignature = getEIP712SignatureForSetInvestmentRoundState(
-                readOnlyLedgerDomainSeparator,
-                setInvestmentRoundStateTypehash,
-                details.investmentRoundIds[i],
-                roots[i],
-                details.totalInvested,
-                details.deadline
-            );
-
-            ReadOnlyLedgerInstance.setInvestmentRoundState(
-                details.investmentRoundIds[i],
-                roots[i],
-                details.totalInvested,
-                testSigner,
-                setStateSignature,
-                details.deadline
-            );
-        }
+        //altDistributorTestKycAddress is used because prepareAlternateDistributorClaimParams() uses the 'users' array to create the merkle tree, so it's convenient to have the caller be a member of the tree
+        vm.startPrank(altDistributorTestKycAddress, altDistributorTestKycAddress);
+        AlternateTokenDistributorInstance.claim(params);
         vm.stopPrank();
 
-        //create ClaimParams for VVVVCAlternateTokenDistributor.areMerkleProofsValid()
-        VVVVCAlternateTokenDistributor.ClaimParams
-            memory params = generateAlternateClaimParamsWithSignature(
-                details.selectedUser,
-                details.selectedUser,
-                projectTokenProxyWallets,
-                details.investmentRoundIds,
-                details.tokenAmountToClaim,
-                details.investedAmounts,
-                leaves,
-                proofs
-            );
-
-        return params;
+        assertTrue(
+            ProjectTokenInstance.balanceOf(altDistributorTestKycAddress) == params.tokenAmountToClaim
+        );
     }
+
+    //test that an alias of the kyc address can claim tokens on behalf of the kyc address
+    function testClaimWithAlias() public {
+        uint256 totalUserClaimableTokens;
+
+        VVVVCAlternateTokenDistributor.ClaimParams memory params = prepareAlternateDistributorClaimParams(
+            sampleUser
+        );
+
+        //find claimable amount of tokens
+        for (uint256 i = 0; i < params.projectTokenProxyWallets.length; i++) {
+            totalUserClaimableTokens += AlternateTokenDistributorInstance
+                .calculateBaseClaimableProjectTokens(
+                    params.projectTokenAddress,
+                    params.projectTokenProxyWallets[i],
+                    params.investmentRoundIds[i],
+                    params.investedPerRound[i]
+                );
+        }
+
+        //altDistributorTestKycAddress is used because prepareAlternateDistributorClaimParams() uses the 'users' array to create the merkle tree, so it's convenient to have the caller be a member of the tree
+        vm.startPrank(sampleUser, sampleUser);
+        AlternateTokenDistributorInstance.claim(params);
+        vm.stopPrank();
+
+        assertTrue(ProjectTokenInstance.balanceOf(sampleUser) == params.tokenAmountToClaim);
+    }
+
+    // function testClaimMultipleRound() public {}
+    // function testClaimFullAllocation() public {}
+    // function testClaimWithInvalidSignature() public {}
+    // function testClaimMoreThanAllocation() public {}
+    // function testClaimAfterClaimingFullAllocation() public {}
+    // function testCalculateBaseClaimableProjectTokens() public {}
+    // function testEmitVCClaim() public {}
 }
