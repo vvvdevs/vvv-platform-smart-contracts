@@ -22,6 +22,7 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
     ///@notice The options for staking duration
     enum StakingDuration {
         ThreeMonths,
+        OneMinute,
         SixMonths,
         OneYear
     }
@@ -109,6 +110,7 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
         address _authorizationRegistryAddress
     ) VVVAuthorizationRegistryChecker(_authorizationRegistryAddress) {
         durationToSeconds[StakingDuration.ThreeMonths] = uint32(90 days);
+        durationToSeconds[StakingDuration.OneMinute] = uint32(3600);
         durationToSeconds[StakingDuration.SixMonths] = uint32(180 days);
         durationToSeconds[StakingDuration.OneYear] = uint32(360 days);
 
