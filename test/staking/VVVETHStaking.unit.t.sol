@@ -801,6 +801,8 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         uint256 userBalanceBefore = address(ethStakingManager).balance;
 
         vm.startPrank(ethStakingManager, ethStakingManager);
+        vm.expectEmit(address(EthStakingInstance));
+        emit VVVETHStaking.EtherWithdrawn();
         EthStakingInstance.withdrawEth(stakeEthAmount);
         vm.stopPrank();
 
