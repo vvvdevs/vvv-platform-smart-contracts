@@ -22,4 +22,15 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         vm.stopPrank();
         assertEq(NodesInstance.balanceOf(sampleUser), 1);
     }
+
+    //tests setting tokenURI for a tokenId
+    function testSetTokenURI() public {
+        vm.startPrank(deployer, deployer);
+        NodesInstance.mint(deployer);
+        vm.stopPrank();
+        vm.startPrank(deployer, deployer);
+        NodesInstance.setTokenURI(1, "https://example.com/token/1");
+        vm.stopPrank();
+        assertEq(NodesInstance.tokenURI(1), "https://example.com/token/1");
+    }
 }

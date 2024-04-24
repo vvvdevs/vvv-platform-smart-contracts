@@ -24,6 +24,11 @@ contract VVVNodes is ERC721, ERC721URIStorage {
         _mint(_recipient, tokenId);
     }
 
+    ///@notice sets token URI for token of tokenId
+    function setTokenURI(uint256 _tokenId, string calldata _tokenURI) public {
+        _setTokenURI(_tokenId, _tokenURI);
+    }
+
     ///@notice Returns the tokenURI for the given tokenId, required override
     function tokenURI(
         uint256 _tokenId
