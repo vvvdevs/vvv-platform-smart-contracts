@@ -802,7 +802,11 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
 
         vm.startPrank(ethStakingManager, ethStakingManager);
         vm.expectEmit(address(EthStakingInstance));
-        emit VVVETHStaking.EtherWithdrawn();
+        emit VVVETHStaking.EtherWithdrawn(
+            address(EthStakingInstance),
+            ethStakingManager,
+            stakeEthAmount
+        );
         EthStakingInstance.withdrawEth(stakeEthAmount);
         vm.stopPrank();
 
