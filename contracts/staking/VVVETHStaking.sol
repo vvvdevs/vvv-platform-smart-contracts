@@ -56,6 +56,9 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
     ///@notice emitted when ETH is received
     event EtherReceived();
 
+    ///@notice emitted when admin withdraws ETH
+    event EtherWithdrawn();
+
     ///@notice emitted when a user stakes
     event Stake(
         address indexed staker,
@@ -278,6 +281,7 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
     function withdrawEth(uint256 _amount) external onlyAuthorized {
         (bool success, ) = payable(msg.sender).call{ value: _amount }("");
         if (!success) revert WithdrawFailed();
+        emit EtherWithdrawn();
     }
 
     ///@notice withdraws VVV tokens from the contract
