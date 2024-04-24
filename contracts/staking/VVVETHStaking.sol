@@ -58,11 +58,7 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
 
     ///@notice emitted when admin withdraws ETH. Contains subset of internal transaction data
     // to make internal transaction lookups not necessary.
-    event EtherWithdrawn(
-        address indexed from,
-        address indexed to,
-        uint256 amount
-    );
+    event EtherWithdrawn(address indexed from, address indexed to, uint256 amount);
 
     ///@notice emitted when a user stakes
     event Stake(
@@ -155,8 +151,17 @@ contract VVVETHStaking is VVVAuthorizationRegistryChecker {
         StakingDuration _stakeDuration
     ) external whenStakingIsPermitted returns (uint256) {
         StakeData storage stake = stakes[_stakeId];
+
         _withdrawChecks(stake);
         stake.stakeIsWithdrawn = true;
+        emit Withdraw(
+            msg.sender,
+            _stakeId,
+            stake.stakedEthAmount,
+            stake.stakeStartTimestamp,
+            stake.stakeDuration
+        );
+
         _stakeEth(_stakeDuration, stake.stakedEthAmount);
         return stakeId;
     }
