@@ -801,6 +801,8 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         uint256 userBalanceBefore = address(ethStakingManager).balance;
 
         vm.startPrank(ethStakingManager, ethStakingManager);
+        vm.expectEmit(address(EthStakingInstance));
+        emit VVVETHStaking.EtherWithdrawn(address(EthStakingInstance), ethStakingManager, stakeEthAmount);
         EthStakingInstance.withdrawEth(stakeEthAmount);
         vm.stopPrank();
 
@@ -838,12 +840,13 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         vm.stopPrank();
     }
 
-    // Tests that the Stake event is emitted correctly on restakes
-    function testEmitStakeRestake() public {
+    // Tests that the Withdrawn and Stake event is emitted correctly on restakes
+    function testEmitWithdrawAndStakeRestake() public {
         vm.startPrank(sampleUser, sampleUser);
         uint256 stakeId = 1;
         uint256 restakeId = stakeId + 1;
         uint256 stakedEthAmount = 1 ether;
+        uint256 stakeStartTimestamp = block.timestamp;
         VVVETHStaking.StakingDuration stakeDuration = VVVETHStaking.StakingDuration.ThreeMonths;
         EthStakingInstance.stakeEth{ value: 1 ether }(stakeDuration);
 
@@ -854,6 +857,13 @@ contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
         uint256 restakeStartTimestamp = block.timestamp;
 
         vm.expectEmit(address(EthStakingInstance));
+        emit VVVETHStaking.Withdraw(
+            sampleUser,
+            stakeId,
+            stakedEthAmount,
+            uint32(stakeStartTimestamp),
+            stakeDuration
+        );
         emit VVVETHStaking.Stake(
             sampleUser,
             restakeId,
