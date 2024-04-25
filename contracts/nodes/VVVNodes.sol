@@ -3,8 +3,12 @@ pragma solidity ^0.8.23;
 
 import { ERC721 } from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import { ERC721URIStorage } from "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract VVVNodes is ERC721, ERC721URIStorage {
+    using SafeERC20 for IERC20;
+
     ///@notice Additional data for each token
     struct TokenData {
         //Remaining tokens to be vested, starts at 60% of $VVV initially locked in each node
@@ -23,14 +27,22 @@ contract VVVNodes is ERC721, ERC721URIStorage {
     ///@notice The timestamp assigned to signify that vesting is paused for a node
     uint256 public constant VESTING_INACTIVE_TIMESTAMP = type(uint32).max;
 
+    IERC20 public vvvToken;
+
     ///@notice The current tokenId
     uint256 public tokenId;
 
     ///@notice Maps a TokenData struct to each tokenId
     mapping(uint256 => TokenData) public tokenData;
 
+    ///@notice Thrown when the caller is not the owner of the token
+    error CallerIsNotTokenOwner();
+
     ///@notice Thrown when a mint is attempted past the total supply
     error MaxSupplyReached();
+
+    ///@notice Thrown when there are no claimable tokens for a node
+    error NoClaimableTokens();
 
     constructor() ERC721("Multi-token Nodes", "NODES") {}
 
@@ -40,6 +52,17 @@ contract VVVNodes is ERC721, ERC721URIStorage {
         if (tokenId > TOTAL_SUPPLY) revert MaxSupplyReached();
 
         _mint(_recipient, tokenId);
+    }
+
+    ///@notice Allows a node owner to claim accrued yield
+    function claim(uint256 _tokenId) public {
+        if (msg.sender != ownerOf(_tokenId)) revert CallerIsNotTokenOwner();
+        TokenData storage token = tokenData[_tokenId];
+        _updateClaimableFromVesting(token);
+        uint256 amountToClaim = token.claimableAmount;
+        if (amountToClaim == 0) revert NoClaimableTokens();
+        token.claimableAmount = 0;
+        vvvToken.safeTransfer(msg.sender, amountToClaim);
     }
 
     ///@notice Sets token URI for token of tokenId (placeholder)
