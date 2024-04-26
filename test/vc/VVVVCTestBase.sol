@@ -447,9 +447,16 @@ abstract contract VVVVCTestBase is Test {
         return params;
     }
 
-    //function to prepare token claim params and avoid duplicating code. for a set of investment rounds: creates trees, sets roots on read-only ledger, creates merkle proofs for the given user indices (position in that investment round's array of investor kyc addresses), creates valid claim signature for that user, and returns a ClaimParams object containing all info to validate a user's prior investment(s) and currently permitted claim(s)
+    //functions to prepare token claim params and avoid duplicating code. for a set of investment rounds: creates trees, sets roots on read-only ledger, creates merkle proofs for the given user indices (position in that investment round's array of investor kyc addresses), creates valid claim signature for that user, and returns a ClaimParams object containing all info to validate a user's prior investment(s) and currently permitted claim(s)
     function prepareAlternateDistributorClaimParams(
         address _caller
+    ) public returns (VVVVCAlternateTokenDistributor.ClaimParams memory) {
+        return prepareAlternateDistributorClaimParams(_caller, 1);
+    }
+
+    function prepareAlternateDistributorClaimParams(
+        address _caller,
+        uint256 _usersArrayIndex
     ) public returns (VVVVCAlternateTokenDistributor.ClaimParams memory) {
         uint256[] memory investedAmountsArray = new uint256[](users.length);
         uint256[] memory placeholderArray = new uint256[](projectTokenProxyWallets.length);
@@ -511,8 +518,8 @@ abstract contract VVVVCTestBase is Test {
                 details.deadline
             );
 
-            //users[1] is selected user, so add the amount that user has invested
-            userInvestedAmount[i] = details.investedAmounts[1];
+            //add the amount that user has invested based on _usersArrayIndex
+            userInvestedAmount[i] = details.investedAmounts[_usersArrayIndex];
         }
         vm.stopPrank();
 
