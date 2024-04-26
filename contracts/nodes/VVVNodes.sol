@@ -87,7 +87,7 @@ contract VVVNodes is ERC721, ERC721URIStorage {
         uint256 vestingSince = _tokenData.vestingSince;
 
         //if node is inactive, return 0 (no vesting will occur between time of deactivation and time at which this function is called while the node is still inactive)
-        if (vestingSince == VESTING_INACTIVE_TIMESTAMP) return 0;
+        if (vestingSince == VESTING_INACTIVE_TIMESTAMP || vestingSince == 0) return 0;
 
         uint256 unvestedAmount = _tokenData.unvestedAmount;
         uint256 amountToVestPerSecond = _tokenData.amountToVestPerSecond;
