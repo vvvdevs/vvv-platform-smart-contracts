@@ -72,14 +72,14 @@ contract VVVNodes is ERC721, ERC721URIStorage {
         if (msg.sender != ownerOf(_tokenId)) revert CallerIsNotTokenOwner();
         TokenData storage token = tokenData[_tokenId];
 
-        //update vestingSince to the current timestamp to maintain correct vesting calculations
-        token.vestingSince = block.timestamp;
-
         _updateClaimableFromVesting(token);
         uint256 amountToClaim = token.claimableAmount;
 
         if (amountToClaim == 0) revert NoClaimableTokens();
         token.claimableAmount = 0;
+
+        //update vestingSince to the current timestamp to maintain correct vesting calculations
+        token.vestingSince = block.timestamp;
 
         vvvToken.safeTransfer(msg.sender, amountToClaim);
     }
