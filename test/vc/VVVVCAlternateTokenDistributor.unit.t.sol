@@ -105,6 +105,42 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
 
     //test that the kyc address can claim tokens on its own behalf
     function testClaimWithKycAddress() public {
+        VVVVCAlternateTokenDistributor.ClaimParams memory params = prepareAlternateDistributorClaimParams(
+            altDistributorTestKycAddress
+        );
+
+        //altDistributorTestKycAddress is used because prepareAlternateDistributorClaimParams() uses the 'users' array to create the merkle tree, so it's convenient to have the caller be a member of the tree
+        vm.startPrank(altDistributorTestKycAddress, altDistributorTestKycAddress);
+        AlternateTokenDistributorInstance.claim(params);
+        vm.stopPrank();
+
+        assertTrue(
+            ProjectTokenInstance.balanceOf(altDistributorTestKycAddress) == params.tokenAmountToClaim
+        );
+    }
+
+    //test that an alias of the kyc address can claim tokens on behalf of the kyc address
+    function testClaimWithAlias() public {
+        VVVVCAlternateTokenDistributor.ClaimParams memory params = prepareAlternateDistributorClaimParams(
+            sampleUser
+        );
+
+        //altDistributorTestKycAddress is used because prepareAlternateDistributorClaimParams() uses the 'users' array to create the merkle tree, so it's convenient to have the caller be a member of the tree
+        vm.startPrank(sampleUser, sampleUser);
+        AlternateTokenDistributorInstance.claim(params);
+        vm.stopPrank();
+
+        assertTrue(ProjectTokenInstance.balanceOf(sampleUser) == params.tokenAmountToClaim);
+    }
+
+    //tests that the distributor can claim tokens for multiple rounds. already passes based on logic in above tests (claim params are generated for multiple rounds by default in VVVVCTestBase:prepareAlternateDistributorClaimParams), so including just for parity with tests in VVVVCTokenDistributor.unit.t.sol
+    function testClaimMultipleRound() public {
+        testClaimWithKycAddress();
+        testClaimWithAlias();
+    }
+
+    // test claiming the exact full allocation in a single round
+    function testClaimFullAllocation() public {
         uint256 totalUserClaimableTokens;
 
         VVVVCAlternateTokenDistributor.ClaimParams memory params = prepareAlternateDistributorClaimParams(
@@ -122,22 +158,57 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
                 );
         }
 
+        params.tokenAmountToClaim = totalUserClaimableTokens;
+
         //altDistributorTestKycAddress is used because prepareAlternateDistributorClaimParams() uses the 'users' array to create the merkle tree, so it's convenient to have the caller be a member of the tree
         vm.startPrank(altDistributorTestKycAddress, altDistributorTestKycAddress);
         AlternateTokenDistributorInstance.claim(params);
         vm.stopPrank();
 
         assertTrue(
-            ProjectTokenInstance.balanceOf(altDistributorTestKycAddress) == params.tokenAmountToClaim
+            ProjectTokenInstance.balanceOf(altDistributorTestKycAddress) == params.tokenAmountToClaim &&
+                ProjectTokenInstance.balanceOf(altDistributorTestKycAddress) == totalUserClaimableTokens
         );
     }
 
-    //test that an alias of the kyc address can claim tokens on behalf of the kyc address
-    function testClaimWithAlias() public {
+    // tests any claim that includes a parameter value that invalidates the signature
+    function testClaimWithInvalidSignature() public {
+        VVVVCAlternateTokenDistributor.ClaimParams memory params = prepareAlternateDistributorClaimParams(
+            altDistributorTestKycAddress
+        );
+
+        //this should invalidate the signature
+        params.deadline += 1;
+
+        //altDistributorTestKycAddress is used because prepareAlternateDistributorClaimParams() uses the 'users' array to create the merkle tree, so it's convenient to have the caller be a member of the tree
+        vm.startPrank(altDistributorTestKycAddress, altDistributorTestKycAddress);
+        vm.expectRevert(VVVVCAlternateTokenDistributor.InvalidSignature.selector);
+        AlternateTokenDistributorInstance.claim(params);
+        vm.stopPrank();
+    }
+
+    // tests that user cannot claim more than their total allocation based on their investment
+    function testClaimMoreThanAllocation() public {
+        VVVVCAlternateTokenDistributor.ClaimParams memory params = prepareAlternateDistributorClaimParams(
+            altDistributorTestKycAddress
+        );
+
+        //claim more than the user allocation
+        params.tokenAmountToClaim = type(uint256).max;
+
+        //altDistributorTestKycAddress is used because prepareAlternateDistributorClaimParams() uses the 'users' array to create the merkle tree, so it's convenient to have the caller be a member of the tree
+        vm.startPrank(altDistributorTestKycAddress, altDistributorTestKycAddress);
+        vm.expectRevert(VVVVCAlternateTokenDistributor.ExceedsAllocation.selector);
+        AlternateTokenDistributorInstance.claim(params);
+        vm.stopPrank();
+    }
+
+    //test that user cannot claim again after claiming their full allocation
+    function testClaimAfterClaimingFullAllocation() public {
         uint256 totalUserClaimableTokens;
 
         VVVVCAlternateTokenDistributor.ClaimParams memory params = prepareAlternateDistributorClaimParams(
-            sampleUser
+            altDistributorTestKycAddress
         );
 
         //find claimable amount of tokens
@@ -151,19 +222,87 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
                 );
         }
 
-        //altDistributorTestKycAddress is used because prepareAlternateDistributorClaimParams() uses the 'users' array to create the merkle tree, so it's convenient to have the caller be a member of the tree
-        vm.startPrank(sampleUser, sampleUser);
-        AlternateTokenDistributorInstance.claim(params);
-        vm.stopPrank();
+        params.tokenAmountToClaim = totalUserClaimableTokens;
 
-        assertTrue(ProjectTokenInstance.balanceOf(sampleUser) == params.tokenAmountToClaim);
+        //altDistributorTestKycAddress is used because prepareAlternateDistributorClaimParams() uses the 'users' array to create the merkle tree, so it's convenient to have the caller be a member of the tree
+        vm.startPrank(altDistributorTestKycAddress, altDistributorTestKycAddress);
+        AlternateTokenDistributorInstance.claim(params);
+
+        //claim an additional one token
+        params.tokenAmountToClaim = 1;
+        vm.expectRevert(VVVVCAlternateTokenDistributor.ExceedsAllocation.selector);
+        AlternateTokenDistributorInstance.claim(params);
+
+        vm.stopPrank();
     }
 
-    // function testClaimMultipleRound() public {}
-    // function testClaimFullAllocation() public {}
-    // function testClaimWithInvalidSignature() public {}
-    // function testClaimMoreThanAllocation() public {}
-    // function testClaimAfterClaimingFullAllocation() public {}
-    // function testCalculateBaseClaimableProjectTokens() public {}
-    // function testEmitVCClaim() public {}
+    // Test that calculateBaseClaimableProjectTokens returns the correct amount
+    // adds claimable tokens from one round for all members of `users` array and checks that this sum is equal to the balance of the corresponding proxy wallet holding the project tokens
+    function testCalculateBaseClaimableProjectTokens() public {
+        uint256 sumOfInvestedAmounts;
+        uint256 sumOfClaimAmounts;
+        uint256 proxyWalletBalance = ProjectTokenInstance.balanceOf(projectTokenProxyWallets[0]);
+        uint256 usersLength = users.length;
+
+        for (uint256 i = 0; i < usersLength; i++) {
+            //obtain this user's investment info
+            VVVVCAlternateTokenDistributor.ClaimParams
+                memory params = prepareAlternateDistributorClaimParams(users[i], i);
+
+            //add this user's investment amount to the sum of all users' investment amounts
+            sumOfInvestedAmounts += params.investedPerRound[0];
+        }
+
+        for (uint256 i = 0; i < usersLength; i++) {
+            //obtain this user's investment info
+            VVVVCAlternateTokenDistributor.ClaimParams
+                memory params = prepareAlternateDistributorClaimParams(users[i], i);
+
+            //calculate the claimable amount of tokens for this user, add to sum of all users' claimable amounts
+            uint256 userClaimableTokens = AlternateTokenDistributorInstance
+                .calculateBaseClaimableProjectTokens(
+                    params.projectTokenAddress,
+                    params.projectTokenProxyWallets[0],
+                    params.investmentRoundIds[0],
+                    params.investedPerRound[0]
+                );
+
+            //additional reference calculation of claimable amount for the same user
+            uint256 referenceUserClaimableTokens = (params.investedPerRound[0] * proxyWalletBalance) /
+                sumOfInvestedAmounts;
+
+            //assert that the two calculations are equal
+            assertEq(userClaimableTokens, referenceUserClaimableTokens);
+
+            sumOfClaimAmounts += userClaimableTokens;
+        }
+
+        /**
+            assumes that truncation errors are less than 1/1e18 of the proxy wallet balance.
+            this is arbitrary based on observing the truncation that happens, and assumed negligible
+         */
+        assertTrue(sumOfClaimAmounts > proxyWalletBalance - (proxyWalletBalance / 1e18));
+        assertTrue(sumOfClaimAmounts <= proxyWalletBalance);
+    }
+
+    // Test that VCClaim is correctly emitted when project tokens are claimed
+    function testEmitVCClaim() public {
+        VVVVCAlternateTokenDistributor.ClaimParams memory params = prepareAlternateDistributorClaimParams(
+            altDistributorTestKycAddress
+        );
+        uint256 tokenAmountToClaim = 1;
+        params.tokenAmountToClaim = tokenAmountToClaim;
+
+        vm.startPrank(altDistributorTestKycAddress, altDistributorTestKycAddress);
+        vm.expectEmit(address(AlternateTokenDistributorInstance));
+        emit VVVVCAlternateTokenDistributor.VCClaim(
+            altDistributorTestKycAddress,
+            altDistributorTestKycAddress,
+            params.projectTokenAddress,
+            params.projectTokenProxyWallets,
+            params.tokenAmountToClaim
+        );
+        AlternateTokenDistributorInstance.claim(params);
+        vm.stopPrank();
+    }
 }
