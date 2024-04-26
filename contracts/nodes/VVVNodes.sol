@@ -44,14 +44,27 @@ contract VVVNodes is ERC721, ERC721URIStorage {
     ///@notice Thrown when there are no claimable tokens for a node
     error NoClaimableTokens();
 
-    constructor() ERC721("Multi-token Nodes", "NODES") {}
+    constructor(address _vvvToken) ERC721("Multi-token Nodes", "NODES") {
+        vvvToken = IERC20(_vvvToken);
+    }
 
     ///@notice Mints a node to the recipient (placeholder)
     function mint(address _recipient) public {
         ++tokenId;
         if (tokenId > TOTAL_SUPPLY) revert MaxSupplyReached();
 
+        //set user token data (testing!)
+        TokenData storage token = tokenData[tokenId];
+        token.unvestedAmount = 60_000 * 1e18;
+        token.amountToVestPerSecond = 1e18;
+
         _mint(_recipient, tokenId);
+    }
+
+    ///@notice Allows a user to activate a node by locking $VVV
+    function activateNode(uint256 _tokenId) public {
+        if (msg.sender != ownerOf(_tokenId)) revert CallerIsNotTokenOwner();
+        _activateNode(_tokenId);
     }
 
     ///@notice Allows a node owner to claim accrued yield
@@ -110,7 +123,7 @@ contract VVVNodes is ERC721, ERC721URIStorage {
         uint256 vestingSince = _tokenData.vestingSince;
 
         //if node is inactive, return 0 (no vesting will occur between time of deactivation and time at which this function is called while the node is still inactive)
-        if (vestingSince == VESTING_INACTIVE_TIMESTAMP) return 0;
+        if (vestingSince == VESTING_INACTIVE_TIMESTAMP || vestingSince == 0) return 0;
 
         uint256 unvestedAmount = _tokenData.unvestedAmount;
         uint256 amountToVestPerSecond = _tokenData.amountToVestPerSecond;
