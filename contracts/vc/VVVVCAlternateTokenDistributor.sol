@@ -18,7 +18,7 @@ contract VVVVCAlternateTokenDistributor {
     bytes32 public constant CLAIM_TYPEHASH =
         keccak256(
             bytes(
-                "ClaimParams(address callerAddress,address userKycAddress,address projectTokenAddress,address[] projectTokenProxyWallets,uint256[] investmentRoundIds,uint256 deadline,bytes32[] investmentLeaves,bytes32[][] investmentProofs)"
+                "ClaimParams(address callerAddress,address userKycAddress,address projectTokenAddress,address[] projectTokenProxyWallets,uint256[] investmentRoundIds,uint256 deadline)"
             )
         );
     bytes32 public immutable DOMAIN_SEPARATOR;
@@ -108,7 +108,7 @@ contract VVVVCAlternateTokenDistributor {
         //ensure caller (msg.sender) is an alias of the KYC address
         _params.callerAddress = msg.sender;
 
-        if (!_areMerkleProofsValid(_params)) {
+        if (!_areMerkleProofsAndInvestedAmountsValid(_params)) {
             revert InvalidMerkleProof();
         }
 
@@ -188,8 +188,10 @@ contract VVVVCAlternateTokenDistributor {
     }
 
     /// @notice external wrapper for _areMerkleProofsValid
-    function areMerkleProofsValid(ClaimParams memory _params) external view returns (bool) {
-        return _areMerkleProofsValid(_params);
+    function areMerkleProofsAndInvestedAmountsValid(
+        ClaimParams memory _params
+    ) external view returns (bool) {
+        return _areMerkleProofsAndInvestedAmountsValid(_params);
     }
 
     /**
@@ -240,9 +242,7 @@ contract VVVVCAlternateTokenDistributor {
                         _params.projectTokenAddress,
                         _params.projectTokenProxyWallets,
                         _params.investmentRoundIds,
-                        _params.deadline,
-                        _params.investmentLeaves,
-                        _params.investmentProofs
+                        _params.deadline
                     )
                 )
             )
@@ -256,16 +256,21 @@ contract VVVVCAlternateTokenDistributor {
     }
 
     ///@notice verifies user investment assertions at time of claim with merkle proofs. returns false if any of the proofs are invalid
-    function _areMerkleProofsValid(ClaimParams memory _params) private view returns (bool) {
+    function _areMerkleProofsAndInvestedAmountsValid(
+        ClaimParams memory _params
+    ) private view returns (bool) {
         bytes32[] memory investmentRoots = readOnlyLedger.getInvestmentRoots(_params.investmentRoundIds);
 
+        //for each round verify both the proof and the asserted invested amount (leaf)
         for (uint256 i = 0; i < _params.investmentRoundIds.length; i++) {
             if (
                 !MerkleProof.verify(
                     _params.investmentProofs[i],
                     investmentRoots[i],
                     _params.investmentLeaves[i]
-                )
+                ) ||
+                !(_params.investmentLeaves[i] ==
+                    keccak256(abi.encodePacked(_params.userKycAddress, _params.investedPerRound[i])))
             ) {
                 return false;
             }

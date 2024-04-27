@@ -89,7 +89,7 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
         );
 
         //verify merkle proofs for the user for which the proofs are to be generated via the distributor contract
-        assertTrue(AlternateTokenDistributorInstance.areMerkleProofsValid(params));
+        assertTrue(AlternateTokenDistributorInstance.areMerkleProofsAndInvestedAmountsValid(params));
     }
 
     //tests that altered merkle proof will not pass as valid
@@ -100,7 +100,7 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
         params.investmentLeaves[0] = keccak256(abi.encodePacked(params.investmentLeaves[0], uint256(1)));
 
         //ensure invalid merkle proof
-        assertFalse(AlternateTokenDistributorInstance.areMerkleProofsValid(params));
+        assertFalse(AlternateTokenDistributorInstance.areMerkleProofsAndInvestedAmountsValid(params));
     }
 
     //test that the kyc address can claim tokens on its own behalf

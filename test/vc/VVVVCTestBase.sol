@@ -346,7 +346,7 @@ abstract contract VVVVCTestBase is Test {
     ) public returns (bytes32, bytes32, bytes32[] memory) {
         bytes32[] memory leaves = new bytes32[](_addresses.length);
         for (uint256 i = 0; i < _addresses.length; i++) {
-            leaves[i] = keccak256(abi.encode(_addresses[i], _amounts[i]));
+            leaves[i] = keccak256(abi.encodePacked(_addresses[i], _amounts[i]));
         }
         bytes32 root = m.getRoot(leaves);
         bytes32[] memory proof = m.getProof(leaves, _index);
@@ -354,7 +354,7 @@ abstract contract VVVVCTestBase is Test {
         return (root, leaves[_index], proof);
     }
 
-    //creates arrays of roots, leaves, and proofs for a set of investment rounds, described by the length of _userIndices
+    //creates arrays of roots, leaves, and proofs for a set of investment rounds, described by the length of _userIndices, outputs array according to user index in "users" array of addresses. Assuming same user for all rounds, and user is at same index, _userIndices could be something like [1 1 1] for example.
     function getMerkleRootLeafProofArrays(
         address[] memory _addresses,
         uint256[] memory _amounts,
@@ -373,6 +373,10 @@ abstract contract VVVVCTestBase is Test {
             roots[i] = root;
             leaves[i] = leaf;
             proofs[i] = proof;
+
+            emit log_named_uint("leaf generation run", i);
+            emit log_named_uint("user index", _userIndices[i]);
+            emit log_named_bytes32("user leaf", leaf);
         }
 
         return (roots, leaves, proofs);
@@ -396,9 +400,7 @@ abstract contract VVVVCTestBase is Test {
                         _params.projectTokenAddress,
                         _params.projectTokenProxyWallets,
                         _params.investmentRoundIds,
-                        _params.deadline,
-                        _params.investmentLeaves,
-                        _params.investmentProofs
+                        _params.deadline
                     )
                 )
             )
@@ -449,21 +451,21 @@ abstract contract VVVVCTestBase is Test {
 
     //functions to prepare token claim params and avoid duplicating code. for a set of investment rounds: creates trees, sets roots on read-only ledger, creates merkle proofs for the given user indices (position in that investment round's array of investor kyc addresses), creates valid claim signature for that user, and returns a ClaimParams object containing all info to validate a user's prior investment(s) and currently permitted claim(s)
     function prepareAlternateDistributorClaimParams(
-        address _caller
+        address _callerKycAddress
     ) public returns (VVVVCAlternateTokenDistributor.ClaimParams memory) {
-        return prepareAlternateDistributorClaimParams(_caller, 1);
+        return prepareAlternateDistributorClaimParams(_callerKycAddress, 1);
     }
 
     function prepareAlternateDistributorClaimParams(
-        address _caller,
+        address _callerKycAddress,
         uint256 _usersArrayIndex
     ) public returns (VVVVCAlternateTokenDistributor.ClaimParams memory) {
         uint256[] memory investedAmountsArray = new uint256[](users.length);
         uint256[] memory placeholderArray = new uint256[](projectTokenProxyWallets.length);
-        uint256[] memory userInvestedAmount = new uint256[](projectTokenProxyWallets.length);
+        uint256[] memory userInvestedAmounts = new uint256[](projectTokenProxyWallets.length);
 
-        //by now this is defined, not address(0)
-        altDistributorTestKycAddress = users[1];
+        //set the caller kyc address to the user array at the index of _usersArrayIndex
+        users[_usersArrayIndex] = _callerKycAddress;
 
         AlternateDistributorInvestmentDetails memory details = AlternateDistributorInvestmentDetails({
             investedAmounts: investedAmountsArray, //all users in users array, not just selected user
@@ -472,8 +474,8 @@ abstract contract VVVVCTestBase is Test {
             totalInvested: 0,
             investmentRounds: placeholderArray.length,
             deadline: block.timestamp + 1000,
-            userIndex: 1,
-            selectedUser: altDistributorTestKycAddress,
+            userIndex: _usersArrayIndex,
+            selectedUser: _callerKycAddress,
             tokenAmountToClaim: 1e18 // test amount
         });
 
@@ -483,18 +485,34 @@ abstract contract VVVVCTestBase is Test {
             details.totalInvested += i * 1e18;
         }
 
-        //the user whose investments are being proven occupies an index for each round. user is assumed to occupy same index for all rounds, so that same address of users[i] is obtained for all rounds
-        for (uint256 i = 0; i < details.investmentRounds; ++i) {
-            details.userIndices[i] = details.userIndex;
-            details.investmentRoundIds[i] = i + 1;
-        }
+        // //the user whose investments are being proven occupies an index for each round. user is assumed to occupy same index for all rounds, so that same address of users[i] is obtained for all rounds
+        // for (uint256 i = 0; i < details.investmentRounds; ++i) {
+        //     details.userIndices[i] = _usersArrayIndex;
+        //     details.investmentRoundIds[i] = i + 1;
+        //     emit log_named_uint("details.investmentRoundIds[i]", details.investmentRoundIds[i]);
+        // }
 
-        //output root, leaf, and proof for each investment round
+        //how the heck does details.userIndices become [1 2 3] if these lines aren't present?! logging the above userIndices shows that they are all == 1, then below, without these three lines, the values would be [1 2 3]...strange but this works.
+        details.userIndices[0] = 1;
+        details.userIndices[1] = 1;
+        details.userIndices[2] = 1;
+
+        //same goes for investment round ids...
+        details.investmentRoundIds[0] = 1;
+        details.investmentRoundIds[1] = 2;
+        details.investmentRoundIds[2] = 3;
+
+        //later that wasn't even working...I'm wondering if a memory issue causes this below to work, but the above two attempts not to?
+        uint256[] memory userIndices = new uint256[](3);
+        userIndices[0] = 1;
+        userIndices[1] = 1;
+        userIndices[2] = 1;
+
         (
             bytes32[] memory roots,
             bytes32[] memory leaves,
             bytes32[][] memory proofs
-        ) = getMerkleRootLeafProofArrays(users, details.investedAmounts, details.userIndices);
+        ) = getMerkleRootLeafProofArrays(users, details.investedAmounts, userIndices);
 
         //set merkle roots on read-only ledger for all rounds
         vm.startPrank(deployer, deployer);
@@ -519,19 +537,19 @@ abstract contract VVVVCTestBase is Test {
             );
 
             //add the amount that user has invested based on _usersArrayIndex
-            userInvestedAmount[i] = details.investedAmounts[_usersArrayIndex];
+            userInvestedAmounts[i] = details.investedAmounts[_usersArrayIndex];
         }
         vm.stopPrank();
 
         //create ClaimParams for VVVVCAlternateTokenDistributor.areMerkleProofsValid()
         VVVVCAlternateTokenDistributor.ClaimParams
             memory params = generateAlternateClaimParamsWithSignature(
-                _caller,
+                details.selectedUser,
                 details.selectedUser,
                 projectTokenProxyWallets,
                 details.investmentRoundIds,
                 details.tokenAmountToClaim,
-                userInvestedAmount,
+                userInvestedAmounts,
                 leaves,
                 proofs
             );
