@@ -46,16 +46,16 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         uint256 userTokenId = 1;
 
         //check pre-vesting unvested tokens and owner wallet balance for userTokenId
-        (uint256 unvestedAmountPreClaim, , , ) = NodesInstance.tokenData(userTokenId);
+        (uint256 unvestedAmountPreClaim, , , , ) = NodesInstance.tokenData(userTokenId);
         uint256 balancePreClaim = VVVTokenInstance.balanceOf(sampleUser);
 
         //activate node, and wait for tokens to vest
-        NodesInstance.activateNode(userTokenId);
+        NodesInstance.placeholderSetIsActive(userTokenId, true);
         advanceBlockNumberAndTimestampInSeconds(104 weeks); //2 years
         NodesInstance.claim(userTokenId);
 
         //check post-vesting unvested tokens and owner wallet balance for userTokenId
-        (uint256 unvestedAmountPostClaim, , , ) = NodesInstance.tokenData(userTokenId);
+        (uint256 unvestedAmountPostClaim, , , , ) = NodesInstance.tokenData(userTokenId);
         uint256 balancePostClaim = VVVTokenInstance.balanceOf(sampleUser);
 
         vm.stopPrank();
