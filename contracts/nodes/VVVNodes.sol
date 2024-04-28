@@ -59,12 +59,6 @@ contract VVVNodes is ERC721, ERC721URIStorage {
         _mint(_recipient, tokenId);
     }
 
-    //temporary setter for isActive for claim testing
-    function placeholderSetIsActive(uint256 _tokenId, bool _isActive) public {
-        TokenData storage token = tokenData[_tokenId];
-        token.isActive = _isActive;
-    }
-
     ///@notice Allows a node owner to claim accrued yield
     function claim(uint256 _tokenId) public {
         if (msg.sender != ownerOf(_tokenId)) revert CallerIsNotTokenOwner();
