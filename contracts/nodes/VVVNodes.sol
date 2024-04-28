@@ -13,8 +13,6 @@ contract VVVNodes is ERC721, ERC721URIStorage {
     struct TokenData {
         //Remaining tokens to be vested, starts at 60% of $VVV initially locked in each node
         uint256 unvestedAmount;
-        //flag to indicate whether the node is active
-        bool isActive;
         //timestamp of most recent token activation
         uint256 vestingSince;
         //claimable $VVV across vesting, transaction, and launchpad yield sources
@@ -116,7 +114,7 @@ contract VVVNodes is ERC721, ERC721URIStorage {
         uint256 vestingSince = _tokenData.vestingSince;
 
         //if node is inactive, return 0 (no vesting will occur between time of deactivation and time at which this function is called while the node is still inactive)
-        if (!_tokenData.isActive) return 0;
+        if (!_isNodeActive(_tokenData)) return 0;
 
         uint256 totalUnvestedAmount = _tokenData.unvestedAmount;
         uint256 amountToVestPerSecond = _tokenData.amountToVestPerSecond;
@@ -127,5 +125,11 @@ contract VVVNodes is ERC721, ERC721URIStorage {
             : totalUnvestedAmount;
 
         return currentVestedAmount;
+    }
+
+    ///@notice Returns whether node is active based on whether it's staked $VVV is above the activation threshold.
+    //(placeholder for now)
+    function _isNodeActive(TokenData memory _tokenData) private view returns (bool) {
+        return true;
     }
 }
