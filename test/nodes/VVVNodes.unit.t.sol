@@ -11,7 +11,7 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         vm.startPrank(deployer, deployer);
         AuthRegistry = new VVVAuthorizationRegistry(defaultAdminTransferDelay, deployer);
         VVVTokenInstance = new VVVToken(type(uint256).max, 0, address(AuthRegistry));
-        NodesInstance = new VVVNodes(address(VVVTokenInstance));
+        NodesInstance = new VVVNodes(address(VVVTokenInstance), activationThreshold);
         VVVTokenInstance.mint(address(NodesInstance), 100_000_000 * 1e18);
         vm.stopPrank();
     }

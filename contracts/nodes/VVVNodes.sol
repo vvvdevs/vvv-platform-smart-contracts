@@ -27,6 +27,9 @@ contract VVVNodes is ERC721, ERC721URIStorage {
     ///@notice The total number of nodes that can be minted
     uint256 public constant TOTAL_SUPPLY = 5000;
 
+    ///@notice Node activation threshold in staked $VVV
+    uint256 public activationThreshold;
+
     ///@notice The current tokenId
     uint256 public tokenId;
 
@@ -42,8 +45,9 @@ contract VVVNodes is ERC721, ERC721URIStorage {
     ///@notice Thrown when there are no claimable tokens for a node
     error NoClaimableTokens();
 
-    constructor(address _vvvToken) ERC721("Multi-token Nodes", "NODES") {
+    constructor(address _vvvToken, uint256 _activationThreshold) ERC721("Multi-token Nodes", "NODES") {
         vvvToken = IERC20(_vvvToken);
+        activationThreshold = _activationThreshold;
     }
 
     ///@notice Mints a node to the recipient (placeholder)
@@ -57,6 +61,34 @@ contract VVVNodes is ERC721, ERC721URIStorage {
         token.amountToVestPerSecond = 1e18;
 
         _mint(_recipient, tokenId);
+    }
+
+    ///@notice Stakes $VVV, handles activation if amount added causes total staked to surpass activation threshold
+    function stake(uint256 _tokenId, uint256 _amount) public {
+        if (msg.sender != ownerOf(_tokenId)) revert CallerIsNotTokenOwner();
+        TokenData storage token = tokenData[_tokenId];
+
+        if (_isNodeActive(_amount + token.stakedAmount)) {
+            token.vestingSince = block.timestamp;
+        }
+
+        token.stakedAmount += _amount;
+
+        vvvToken.safeTransferFrom(msg.sender, address(this), _amount);
+    }
+
+    ///@notice Unstakes $VVV, handles deactivation if amount removed causes total staked to fall below activation threshold
+    function unstake(uint256 _tokenId, uint256 _amount) public {
+        if (msg.sender != ownerOf(_tokenId)) revert CallerIsNotTokenOwner();
+        TokenData storage token = tokenData[_tokenId];
+
+        if (!_isNodeActive(token.stakedAmount - _amount)) {
+            _updateClaimableFromVesting(token);
+        }
+
+        token.stakedAmount -= _amount;
+
+        vvvToken.safeTransfer(msg.sender, _amount);
     }
 
     ///@notice Allows a node owner to claim accrued yield
@@ -122,8 +154,7 @@ contract VVVNodes is ERC721, ERC721URIStorage {
     }
 
     ///@notice Returns whether node is active based on whether it's staked $VVV is above the activation threshold.
-    //(placeholder for now)
-    function _isNodeActive(TokenData memory _tokenData) private view returns (bool) {
-        return true;
+    function _isNodeActive(uint256 _stakedVVVAmount) private view returns (bool) {
+        return _stakedVVVAmount > activationThreshold;
     }
 }
