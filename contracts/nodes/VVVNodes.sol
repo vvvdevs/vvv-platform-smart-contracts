@@ -11,14 +11,11 @@ contract VVVNodes is ERC721, ERC721URIStorage {
 
     ///@notice Additional data for each token
     struct TokenData {
-        //Remaining tokens to be vested, starts at 60% of $VVV initially locked in each node
-        uint256 unvestedAmount;
-        //timestamp of most recent token activation
-        uint256 vestingSince;
-        //claimable $VVV across vesting, transaction, and launchpad yield sources
-        uint256 claimableAmount;
-        //amount of $VVV to vest per second
-        uint256 amountToVestPerSecond;
+        uint256 unvestedAmount; //Remaining tokens to be vested, starts at 60% of $VVV initially locked in each node
+        uint256 vestingSince; //timestamp of most recent token activation
+        uint256 claimableAmount; //claimable $VVV across vesting, transaction, and launchpad yield sources
+        uint256 amountToVestPerSecond; //amount of $VVV to vest per second
+        uint256 stakedAmount; //total staked $VVV for the node
     }
 
     ///@notice The $VVV token used in node activation and yield accrual
@@ -57,7 +54,7 @@ contract VVVNodes is ERC721, ERC721URIStorage {
 
         //set user token data (testing!)
         TokenData storage token = tokenData[tokenId];
-        token.unvestedAmount = 60_000 * 1e18;
+        token.unvestedAmount = 63_113_904 * 1e18; //1 token / 1 second, 2 years worth
         token.amountToVestPerSecond = 1e18;
 
         _mint(_recipient, tokenId);
@@ -127,6 +124,11 @@ contract VVVNodes is ERC721, ERC721URIStorage {
         return super.supportsInterface(_interfaceId);
     }
 
+    ///@notice returns whether a node of input tokenId is active
+    function isNodeActive(uint256 _tokenId) external view returns (bool) {
+        return _isNodeActive(tokenData[_tokenId].stakedAmount);
+    }
+
     ///@notice utilized in claiming and deactivation, updates the claimable tokens accumulated from vesting
     function _updateClaimableFromVesting(TokenData storage _tokenData) private {
         uint256 currentVestedAmount = _calculateVestedTokens(_tokenData);
@@ -140,7 +142,7 @@ contract VVVNodes is ERC721, ERC721URIStorage {
         uint256 vestingSince = _tokenData.vestingSince;
 
         //if node is inactive, return 0 (no vesting will occur between time of deactivation and time at which this function is called while the node is still inactive)
-        if (!_isNodeActive(_tokenData)) return 0;
+        if (!_isNodeActive(_tokenData.stakedAmount)) return 0;
 
         uint256 totalUnvestedAmount = _tokenData.unvestedAmount;
         uint256 amountToVestPerSecond = _tokenData.amountToVestPerSecond;
@@ -155,6 +157,6 @@ contract VVVNodes is ERC721, ERC721URIStorage {
 
     ///@notice Returns whether node is active based on whether it's staked $VVV is above the activation threshold.
     function _isNodeActive(uint256 _stakedVVVAmount) private view returns (bool) {
-        return _stakedVVVAmount > activationThreshold;
+        return _stakedVVVAmount >= activationThreshold;
     }
 }
