@@ -9,6 +9,8 @@ contract VVVNodes is ERC721, ERC721URIStorage {
     struct TokenData {
         //Remaining tokens to be vested, starts at 60% of $VVV initially locked in each node
         uint256 unvestedAmount;
+        //flag to indicate whether the node is active
+        bool isActive;
         //timestamp of most recent token activation
         uint256 vestingSince;
         //claimable $VVV across vesting, transaction, and launchpad yield sources
@@ -19,9 +21,6 @@ contract VVVNodes is ERC721, ERC721URIStorage {
 
     ///@notice The total number of nodes that can be minted
     uint256 public constant TOTAL_SUPPLY = 5000;
-
-    ///@notice The timestamp assigned to signify that vesting is paused for a node
-    uint256 public constant VESTING_INACTIVE_TIMESTAMP = type(uint32).max;
 
     ///@notice The current tokenId
     uint256 public tokenId;
@@ -61,19 +60,6 @@ contract VVVNodes is ERC721, ERC721URIStorage {
         return super.supportsInterface(_interfaceId);
     }
 
-    ///@notice activates a node (starts vesting)
-    function _activateNode(uint256 _tokenId) private {
-        TokenData storage token = tokenData[_tokenId];
-        token.vestingSince = block.timestamp;
-    }
-
-    ///@notice deactivates a node (updates claimable tokens and pauses vesting)
-    function _deactivateNode(uint256 _tokenId) private {
-        TokenData storage token = tokenData[_tokenId];
-        _updateClaimableFromVesting(token);
-        token.vestingSince = VESTING_INACTIVE_TIMESTAMP;
-    }
-
     ///@notice utilized in claiming and deactivation, updates the claimable tokens accumulated from vesting
     function _updateClaimableFromVesting(TokenData storage _tokenData) private {
         uint256 currentVestedAmount = _calculateVestedTokens(_tokenData);
@@ -87,15 +73,15 @@ contract VVVNodes is ERC721, ERC721URIStorage {
         uint256 vestingSince = _tokenData.vestingSince;
 
         //if node is inactive, return 0 (no vesting will occur between time of deactivation and time at which this function is called while the node is still inactive)
-        if (vestingSince == VESTING_INACTIVE_TIMESTAMP || vestingSince == 0) return 0;
+        if (!_tokenData.isActive) return 0;
 
-        uint256 unvestedAmount = _tokenData.unvestedAmount;
+        uint256 totalUnvestedAmount = _tokenData.unvestedAmount;
         uint256 amountToVestPerSecond = _tokenData.amountToVestPerSecond;
 
-        uint256 currentVestedAmount = unvestedAmount >
-            (block.timestamp - vestingSince) * amountToVestPerSecond
-            ? (block.timestamp - vestingSince) * amountToVestPerSecond
-            : unvestedAmount;
+        uint256 timeBasedVestingAmount = (block.timestamp - vestingSince) * amountToVestPerSecond;
+        uint256 currentVestedAmount = totalUnvestedAmount > timeBasedVestingAmount
+            ? timeBasedVestingAmount
+            : totalUnvestedAmount;
 
         return currentVestedAmount;
     }
