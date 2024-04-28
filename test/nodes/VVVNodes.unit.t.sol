@@ -41,25 +41,41 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
 
     //tests claim
     function testClaim() public {
+        vm.startPrank(deployer, deployer);
+        VVVTokenInstance.mint(sampleUser, activationThreshold);
+        vm.stopPrank();
+
         vm.startPrank(sampleUser, sampleUser);
         NodesInstance.mint(sampleUser); //mints token of ID 1
         uint256 userTokenId = 1;
 
+        //sample vesting setup assuming 1 token/second for 2 years
+        uint256 vestingDuration = 63_113_904; //2 years
+        uint256 refTotalVestedTokens = vestingDuration * 1e18;
+
         //check pre-vesting unvested tokens and owner wallet balance for userTokenId
-        (uint256 unvestedAmountPreClaim, , , ) = NodesInstance.tokenData(userTokenId);
+        (uint256 unvestedAmountPreClaim, , , , ) = NodesInstance.tokenData(userTokenId);
         uint256 balancePreClaim = VVVTokenInstance.balanceOf(sampleUser);
 
         //wait for tokens to vest to the active node
-        advanceBlockNumberAndTimestampInSeconds(104 weeks); //2 years
+        VVVTokenInstance.approve(address(NodesInstance), type(uint256).max);
+        NodesInstance.stake(userTokenId, activationThreshold);
+        advanceBlockNumberAndTimestampInSeconds(vestingDuration * 2); //temp holdover since mint placeholder currently sets vesting timestmp earlier than activation...
         NodesInstance.claim(userTokenId);
 
         //check post-vesting unvested tokens and owner wallet balance for userTokenId
-        (uint256 unvestedAmountPostClaim, , , ) = NodesInstance.tokenData(userTokenId);
+        (uint256 unvestedAmountPostClaim, , , , ) = NodesInstance.tokenData(userTokenId);
         uint256 balancePostClaim = VVVTokenInstance.balanceOf(sampleUser);
 
         vm.stopPrank();
 
-        //the change in unvested tokens should be equal to the change in balance
-        assertEq(unvestedAmountPreClaim - unvestedAmountPostClaim, balancePostClaim - balancePreClaim);
+        assertEq(unvestedAmountPreClaim, refTotalVestedTokens);
+        assertEq(unvestedAmountPostClaim, 0);
+        assertEq(refTotalVestedTokens, balancePostClaim);
     }
+
+    //function testStake() public {}
+    //function testStakeUnownedToken() public {}
+    //function testUnstake() public {}
+    //function testUnstakeUnownedToken() public {}
 }
