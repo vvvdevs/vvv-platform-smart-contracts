@@ -11,7 +11,11 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         vm.startPrank(deployer, deployer);
         AuthRegistry = new VVVAuthorizationRegistry(defaultAdminTransferDelay, deployer);
         VVVTokenInstance = new VVVToken(type(uint256).max, 0, address(AuthRegistry));
-        NodesInstance = new VVVNodes(address(VVVTokenInstance), activationThreshold);
+        NodesInstance = new VVVNodes(
+            address(AuthRegistry),
+            address(VVVTokenInstance),
+            activationThreshold
+        );
         VVVTokenInstance.mint(address(NodesInstance), 100_000_000 * 1e18);
         vm.stopPrank();
     }
@@ -78,4 +82,7 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
     //function testStakeUnownedToken() public {}
     //function testUnstake() public {}
     //function testUnstakeUnownedToken() public {}
+    //function testTransferFailsWhenSoulbound() public {}
+    //function testTransferSucceedsWhenNotSoulbound() public {}
+    //function test*admin setter functions*() public {}
 }

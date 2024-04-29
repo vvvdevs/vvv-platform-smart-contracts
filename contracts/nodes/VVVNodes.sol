@@ -5,8 +5,9 @@ import { ERC721 } from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import { ERC721URIStorage } from "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { VVVAuthorizationRegistryChecker } from "contracts/auth/VVVAuthorizationRegistryChecker.sol";
 
-contract VVVNodes is ERC721, ERC721URIStorage {
+contract VVVNodes is ERC721, ERC721URIStorage, VVVAuthorizationRegistryChecker {
     using SafeERC20 for IERC20;
 
     ///@notice Additional data for each token
@@ -21,14 +22,26 @@ contract VVVNodes is ERC721, ERC721URIStorage {
     ///@notice The $VVV token used in node activation and yield accrual
     IERC20 public vvvToken;
 
+    ///@notice The address of the authorization registry
+    address public authorizationRegistry;
+
+    ///@notice Flag for whether nodes are soulbound
+    bool public soulbound = true;
+
     ///@notice The total number of nodes that can be minted
     uint256 public constant TOTAL_SUPPLY = 5000;
 
     ///@notice Node activation threshold in staked $VVV
     uint256 public activationThreshold;
 
+    ///@notice The maximum staked $VVV which can be considered for launchpad yield points
+    uint256 public maxLaunchpadStakeAmount;
+
     ///@notice The current tokenId
     uint256 public tokenId;
+
+    ///@notice Transaction processing reward
+    uint256 public transactionProcessingReward;
 
     ///@notice Maps a TokenData struct to each tokenId
     mapping(uint256 => TokenData) public tokenData;
@@ -42,13 +55,21 @@ contract VVVNodes is ERC721, ERC721URIStorage {
     ///@notice Thrown when there are no claimable tokens for a node
     error NoClaimableTokens();
 
-    constructor(address _vvvToken, uint256 _activationThreshold) ERC721("Multi-token Nodes", "NODES") {
-        vvvToken = IERC20(_vvvToken);
+    ///@notice Thrown when a node transfer is attempted while nodes are soulbound
+    error NodesAreSoulbound();
+
+    constructor(
+        address _authorizationRegistry,
+        address _vvvToken,
+        uint256 _activationThreshold
+    ) ERC721("Multi-token Nodes", "NODES") VVVAuthorizationRegistryChecker(_authorizationRegistry) {
         activationThreshold = _activationThreshold;
+        authorizationRegistry = _authorizationRegistry;
+        vvvToken = IERC20(_vvvToken);
     }
 
     ///@notice Mints a node to the recipient (placeholder)
-    function mint(address _recipient) public {
+    function mint(address _recipient) external {
         ++tokenId;
         if (tokenId > TOTAL_SUPPLY) revert MaxSupplyReached();
 
@@ -61,7 +82,7 @@ contract VVVNodes is ERC721, ERC721URIStorage {
     }
 
     ///@notice Stakes $VVV, handles activation if amount added causes total staked to surpass activation threshold
-    function stake(uint256 _tokenId, uint256 _amount) public {
+    function stake(uint256 _tokenId, uint256 _amount) external {
         if (msg.sender != ownerOf(_tokenId)) revert CallerIsNotTokenOwner();
         TokenData storage token = tokenData[_tokenId];
 
@@ -75,7 +96,7 @@ contract VVVNodes is ERC721, ERC721URIStorage {
     }
 
     ///@notice Unstakes $VVV, handles deactivation if amount removed causes total staked to fall below activation threshold
-    function unstake(uint256 _tokenId, uint256 _amount) public {
+    function unstake(uint256 _tokenId, uint256 _amount) external {
         if (msg.sender != ownerOf(_tokenId)) revert CallerIsNotTokenOwner();
         TokenData storage token = tokenData[_tokenId];
 
@@ -89,7 +110,7 @@ contract VVVNodes is ERC721, ERC721URIStorage {
     }
 
     ///@notice Allows a node owner to claim accrued yield
-    function claim(uint256 _tokenId) public {
+    function claim(uint256 _tokenId) external {
         if (msg.sender != ownerOf(_tokenId)) revert CallerIsNotTokenOwner();
         TokenData storage token = tokenData[_tokenId];
 
@@ -105,9 +126,49 @@ contract VVVNodes is ERC721, ERC721URIStorage {
         vvvToken.safeTransfer(msg.sender, amountToClaim);
     }
 
+    ///@notice Sets the node activation threshold in staked $VVV
+    function setActivationThreshold(uint256 _activationThreshold) external onlyAuthorized {
+        activationThreshold = _activationThreshold;
+    }
+
+    ///@notice sets the authorization registry address
+    function setAuthorizationRegistry(address _authorizationRegistry) external onlyAuthorized {
+        authorizationRegistry = _authorizationRegistry;
+    }
+
+    ///@notice Sets the maximum staked $VVV which can be considered for launchpad yield points
+    function setMaxLaunchpadStakeAmount(uint256 _maxLaunchpadStakeAmount) external onlyAuthorized {
+        maxLaunchpadStakeAmount = _maxLaunchpadStakeAmount;
+    }
+
+    ///@notice Sets whether nodes are soulbound
+    function setSoulbound(bool _soulbound) external onlyAuthorized {
+        soulbound = _soulbound;
+    }
+
     ///@notice Sets token URI for token of tokenId (placeholder)
-    function setTokenURI(uint256 _tokenId, string calldata _tokenURI) public {
+    function setTokenURI(uint256 _tokenId, string calldata _tokenURI) external onlyAuthorized {
         _setTokenURI(_tokenId, _tokenURI);
+    }
+
+    ///@notice Sets the transaction processing reward
+    function setTransactionProcessingReward(uint256 _transactionProcessingReward) external onlyAuthorized {
+        transactionProcessingReward = _transactionProcessingReward;
+    }
+
+    ///@notice Sets the $VVV token address
+    function setVVVToken(address _vvvToken) external onlyAuthorized {
+        vvvToken = IERC20(_vvvToken);
+    }
+
+    ///@notice Withdraws $VVV from the contract
+    function withdraw(uint256 _amount) external onlyAuthorized {
+        vvvToken.safeTransfer(msg.sender, _amount);
+    }
+
+    ///@notice returns whether a node of input tokenId is active
+    function isNodeActive(uint256 _tokenId) external view returns (bool) {
+        return _isNodeActive(tokenData[_tokenId].stakedAmount);
     }
 
     ///@notice Returns the tokenURI for the given tokenId, required override
@@ -124,9 +185,14 @@ contract VVVNodes is ERC721, ERC721URIStorage {
         return super.supportsInterface(_interfaceId);
     }
 
-    ///@notice returns whether a node of input tokenId is active
-    function isNodeActive(uint256 _tokenId) external view returns (bool) {
-        return _isNodeActive(tokenData[_tokenId].stakedAmount);
+    ///@notice Override of ERC721:_update to enforce soulbound restrictions when tokens are not being minted
+    function _update(
+        address _to,
+        uint256 _tokenId,
+        address _auth
+    ) internal virtual override returns (address) {
+        if (soulbound && _auth != address(0)) revert NodesAreSoulbound();
+        return super._update(_to, _tokenId, _auth);
     }
 
     ///@notice utilized in claiming and deactivation, updates the claimable tokens accumulated from vesting
