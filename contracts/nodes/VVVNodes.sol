@@ -76,6 +76,13 @@ contract VVVNodes is ERC721, ERC721URIStorage {
         vvvToken.safeTransfer(msg.sender, amountToClaim);
     }
 
+    ///@notice Claims for all input tokenIds
+    function batchClaim(uint256[] calldata _tokenIds) public {
+        for (uint256 i = 0; i < _tokenIds.length; i++) {
+            claim(_tokenIds[i]);
+        }
+    }
+
     ///@notice Sets token URI for token of tokenId (placeholder)
     function setTokenURI(uint256 _tokenId, string calldata _tokenURI) public {
         _setTokenURI(_tokenId, _tokenURI);
