@@ -128,12 +128,18 @@ contract VVVNodes is ERC721, ERC721URIStorage, VVVAuthorizationRegistryChecker {
 
     ///@notice Sets the node activation threshold in staked $VVV
     function setActivationThreshold(uint256 _activationThreshold) external onlyAuthorized {
-        activationThreshold = _activationThreshold;
-    }
+        //update claimable balanaces of nodes which will become inactive as a result of the threshold change
+        for (uint256 i = 1; i <= tokenId; i++) {
+            TokenData storage token = tokenData[i];
+            if (
+                _isNodeActive(token.stakedAmount) &&
+                !_isNodeActive(token.stakedAmount - _activationThreshold)
+            ) {
+                _updateClaimableFromVesting(token);
+            }
+        }
 
-    ///@notice sets the authorization registry address
-    function setAuthorizationRegistry(address _authorizationRegistry) external onlyAuthorized {
-        authorizationRegistry = _authorizationRegistry;
+        activationThreshold = _activationThreshold;
     }
 
     ///@notice Sets the maximum staked $VVV which can be considered for launchpad yield points
