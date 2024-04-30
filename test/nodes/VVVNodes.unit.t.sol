@@ -11,7 +11,7 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         vm.startPrank(deployer, deployer);
         AuthRegistry = new VVVAuthorizationRegistry(defaultAdminTransferDelay, deployer);
         VVVTokenInstance = new VVVToken(type(uint256).max, 0, address(AuthRegistry));
-        NodesInstance = new VVVNodes(address(VVVTokenInstance), activationThreshold);
+        NodesInstance = new VVVNodes(activationThreshold);
         VVVTokenInstance.mint(address(NodesInstance), 100_000_000 * 1e18);
         vm.stopPrank();
     }
@@ -41,9 +41,8 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
 
     //tests claim
     function testClaim() public {
-        vm.startPrank(deployer, deployer);
-        VVVTokenInstance.mint(sampleUser, activationThreshold);
-        vm.stopPrank();
+        vm.deal(sampleUser, activationThreshold);
+        vm.deal(address(NodesInstance), type(uint128).max);
 
         vm.startPrank(sampleUser, sampleUser);
         NodesInstance.mint(sampleUser); //mints token of ID 1
@@ -55,18 +54,15 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
 
         //check pre-vesting unvested tokens and owner wallet balance for userTokenId
         (uint256 unvestedAmountPreClaim, , , , ) = NodesInstance.tokenData(userTokenId);
-        uint256 balancePreClaim = VVVTokenInstance.balanceOf(sampleUser);
 
         //wait for tokens to vest to the active node
-        VVVTokenInstance.approve(address(NodesInstance), type(uint256).max);
-        NodesInstance.stake(userTokenId, activationThreshold);
+        NodesInstance.stake{ value: activationThreshold }(userTokenId);
         advanceBlockNumberAndTimestampInSeconds(vestingDuration * 2); //temp holdover since mint placeholder currently sets vesting timestmp earlier than activation...
         NodesInstance.claim(userTokenId);
 
         //check post-vesting unvested tokens and owner wallet balance for userTokenId
         (uint256 unvestedAmountPostClaim, , , , ) = NodesInstance.tokenData(userTokenId);
-        uint256 balancePostClaim = VVVTokenInstance.balanceOf(sampleUser);
-
+        uint256 balancePostClaim = sampleUser.balance;
         vm.stopPrank();
 
         assertEq(unvestedAmountPreClaim, refTotalVestedTokens);

@@ -18,9 +18,6 @@ contract VVVNodes is ERC721, ERC721URIStorage {
         uint256 stakedAmount; //total staked $VVV for the node
     }
 
-    ///@notice The $VVV token used in node activation and yield accrual
-    IERC20 public vvvToken;
-
     ///@notice The total number of nodes that can be minted
     uint256 public constant TOTAL_SUPPLY = 5000;
 
@@ -42,8 +39,13 @@ contract VVVNodes is ERC721, ERC721URIStorage {
     ///@notice Thrown when there are no claimable tokens for a node
     error NoClaimableTokens();
 
-    constructor(address _vvvToken, uint256 _activationThreshold) ERC721("Multi-token Nodes", "NODES") {
-        vvvToken = IERC20(_vvvToken);
+    ///@notice Thrown when a native transfer fails
+    error TransferFailed();
+
+    ///@notice Thrown when an attempt is made to stake/unstake 0 $VVV
+    error ZeroTokenTransfer();
+
+    constructor(uint256 _activationThreshold) ERC721("Multi-token Nodes", "NODES") {
         activationThreshold = _activationThreshold;
     }
 
@@ -61,21 +63,21 @@ contract VVVNodes is ERC721, ERC721URIStorage {
     }
 
     ///@notice Stakes $VVV, handles activation if amount added causes total staked to surpass activation threshold
-    function stake(uint256 _tokenId, uint256 _amount) public {
+    function stake(uint256 _tokenId) public payable {
+        if (msg.value == 0) revert ZeroTokenTransfer();
         if (msg.sender != ownerOf(_tokenId)) revert CallerIsNotTokenOwner();
         TokenData storage token = tokenData[_tokenId];
 
-        if (_isNodeActive(_amount + token.stakedAmount)) {
+        if (_isNodeActive(msg.value + token.stakedAmount)) {
             token.vestingSince = block.timestamp;
         }
 
-        token.stakedAmount += _amount;
-
-        vvvToken.safeTransferFrom(msg.sender, address(this), _amount);
+        token.stakedAmount += msg.value;
     }
 
     ///@notice Unstakes $VVV, handles deactivation if amount removed causes total staked to fall below activation threshold
     function unstake(uint256 _tokenId, uint256 _amount) public {
+        if (_amount == 0) revert ZeroTokenTransfer();
         if (msg.sender != ownerOf(_tokenId)) revert CallerIsNotTokenOwner();
         TokenData storage token = tokenData[_tokenId];
 
@@ -85,7 +87,8 @@ contract VVVNodes is ERC721, ERC721URIStorage {
 
         token.stakedAmount -= _amount;
 
-        vvvToken.safeTransfer(msg.sender, _amount);
+        (bool success, ) = msg.sender.call{ value: _amount }("");
+        if (!success) revert TransferFailed();
     }
 
     ///@notice Allows a node owner to claim accrued yield
@@ -102,7 +105,8 @@ contract VVVNodes is ERC721, ERC721URIStorage {
         //update vestingSince to the current timestamp to maintain correct vesting calculations
         token.vestingSince = block.timestamp;
 
-        vvvToken.safeTransfer(msg.sender, amountToClaim);
+        (bool success, ) = msg.sender.call{ value: amountToClaim }("");
+        if (!success) revert TransferFailed();
     }
 
     ///@notice Sets token URI for token of tokenId (placeholder)
