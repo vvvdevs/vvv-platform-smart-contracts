@@ -59,7 +59,8 @@ contract VVVNodes is ERC721, ERC721URIStorage {
             unvestedAmount: 63_113_904 * 1e18, //seconds in 2 years * 1e18 for easy math with amount to vest per second
             vestingSince: block.timestamp,
             claimableAmount: 0,
-            amountToVestPerSecond: 1e18
+            amountToVestPerSecond: 1e18,
+            stakedAmount: 0
         });
 
         _mint(_recipient, tokenId);
@@ -84,7 +85,7 @@ contract VVVNodes is ERC721, ERC721URIStorage {
         if (msg.sender != ownerOf(_tokenId)) revert CallerIsNotTokenOwner();
         TokenData storage token = tokenData[_tokenId];
 
-        if (!_isNodeActive(token.stakedAmount - _amount)) {
+        if (_isNodeActive(token.stakedAmount) && !_isNodeActive(token.stakedAmount - _amount)) {
             _updateClaimableFromVesting(token);
         }
 
