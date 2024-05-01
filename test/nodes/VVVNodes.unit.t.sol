@@ -33,4 +33,25 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         vm.stopPrank();
         assertEq(NodesInstance.tokenURI(1), "https://example.com/token/1");
     }
+
+    //tests correct calculation of vested amount with a given activation date and unvestedAmount. This function uses placeholder logic in the mint() and placeholderUpdateClaimable() functions, to be updated in later issues.
+    function testUpdateClaimableFromVesting() public {
+        uint256 sampleTokensVestedInTwoYears = 63_113_904 * 1e18;
+        uint256 tokenId = 1;
+
+        vm.startPrank(sampleUser, sampleUser);
+        NodesInstance.mint(sampleUser);
+
+        //surpass 104 weeks or about 2 years
+        advanceBlockNumberAndTimestampInSeconds(105 weeks);
+
+        //the full amount should be vested after > 2 years
+        NodesInstance.placeholderUpdateClaimable(tokenId);
+        vm.stopPrank();
+
+        (uint256 unvestedAmount, , uint256 claimableAmount, ) = NodesInstance.tokenData(tokenId);
+
+        assertEq(unvestedAmount, 0);
+        assertEq(claimableAmount, sampleTokensVestedInTwoYears);
+    }
 }
