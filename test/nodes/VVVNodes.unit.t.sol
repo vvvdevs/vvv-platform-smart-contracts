@@ -39,7 +39,7 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         assertEq(NodesInstance.tokenURI(1), "https://example.com/token/1");
     }
 
-    //tests claim
+    //tests claim, entire amount accrued during vesting period should be claimable by a user. utilizes placeholder logic in mint() to set TokenData
     function testClaim() public {
         vm.deal(sampleUser, activationThreshold);
         vm.deal(address(NodesInstance), type(uint128).max);

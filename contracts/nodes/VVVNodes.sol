@@ -54,10 +54,13 @@ contract VVVNodes is ERC721, ERC721URIStorage {
         ++tokenId;
         if (tokenId > TOTAL_SUPPLY) revert MaxSupplyReached();
 
-        //set user token data (testing!)
-        TokenData storage token = tokenData[tokenId];
-        token.unvestedAmount = 63_113_904 * 1e18; //1 token / 1 second, 2 years worth
-        token.amountToVestPerSecond = 1e18;
+        //placeholder logic to set TokenData
+        tokenData[tokenId] = TokenData({
+            unvestedAmount: 63_113_904 * 1e18, //seconds in 2 years * 1e18 for easy math with amount to vest per second
+            vestingSince: block.timestamp,
+            claimableAmount: 0,
+            amountToVestPerSecond: 1e18
+        });
 
         _mint(_recipient, tokenId);
     }
