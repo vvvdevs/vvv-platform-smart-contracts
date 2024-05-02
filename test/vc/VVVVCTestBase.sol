@@ -99,7 +99,6 @@ abstract contract VVVVCTestBase is Test {
         uint256 deadline;
         uint256 userIndex;
         address selectedUser;
-        //TODO: need to be better defined?
         uint256 tokenAmountToClaim;
     }
 
@@ -460,6 +459,7 @@ abstract contract VVVVCTestBase is Test {
     ) public returns (VVVVCAlternateTokenDistributor.ClaimParams memory) {
         uint256[] memory investedAmountsArray = new uint256[](users.length);
         uint256[] memory placeholderArray = new uint256[](projectTokenProxyWallets.length);
+        uint256[] memory placeholderArray2 = new uint256[](projectTokenProxyWallets.length);
         uint256[] memory userInvestedAmounts = new uint256[](projectTokenProxyWallets.length);
 
         //set the caller kyc address to the user array at the index of _usersArrayIndex
@@ -468,7 +468,7 @@ abstract contract VVVVCTestBase is Test {
         AlternateDistributorInvestmentDetails memory details = AlternateDistributorInvestmentDetails({
             investedAmounts: investedAmountsArray, //all users in users array, not just selected user
             userIndices: placeholderArray,
-            investmentRoundIds: placeholderArray,
+            investmentRoundIds: placeholderArray2,
             totalInvested: 0,
             investmentRounds: placeholderArray.length,
             deadline: block.timestamp + 1000,
@@ -483,33 +483,17 @@ abstract contract VVVVCTestBase is Test {
             details.totalInvested += i * 1e18;
         }
 
-        // //the user whose investments are being proven occupies an index for each round. user is assumed to occupy same index for all rounds, so that same address of users[i] is obtained for all rounds
-        // for (uint256 i = 0; i < details.investmentRounds; ++i) {
-        //     details.userIndices[i] = _usersArrayIndex;
-        //     details.investmentRoundIds[i] = i + 1;
-        //     emit log_named_uint("details.investmentRoundIds[i]", details.investmentRoundIds[i]);
-        // }
-
-        //how the heck does details.userIndices become [1 2 3] if these lines aren't present?! logging the above userIndices shows that they are all == 1, then below, without these three lines, the values would be [1 2 3]...strange but this works.
-        details.userIndices[0] = 1;
-        details.userIndices[1] = 1;
-        details.userIndices[2] = 1;
-
-        //same goes for investment round ids...
-        details.investmentRoundIds[0] = 1;
-        details.investmentRoundIds[1] = 2;
-        details.investmentRoundIds[2] = 3;
-
-        //later that wasn't even working...I'm wondering if a memory issue causes this below to work, but the above two attempts not to?
-        uint256[] memory userIndices = new uint256[](3);
-        userIndices[0] = 1;
-        userIndices[1] = 1;
-        userIndices[2] = 1;
+        //the user whose investments are being proven occupies an index for each round. user is assumed to occupy same index for all rounds, so that same address of users[i] is obtained for all rounds
+        for (uint256 i = 0; i < details.investmentRounds; ++i) {
+            details.userIndices[i] = _usersArrayIndex;
+            details.investmentRoundIds[i] = i + 1;
+            emit log_named_uint("details.investmentRoundIds[i]", details.investmentRoundIds[i]);
+        }
 
         (bytes32[] memory roots, , bytes32[][] memory proofs) = getMerkleRootLeafProofArrays(
             users,
             details.investedAmounts,
-            userIndices
+            details.userIndices
         );
 
         //set merkle roots on read-only ledger for all rounds
