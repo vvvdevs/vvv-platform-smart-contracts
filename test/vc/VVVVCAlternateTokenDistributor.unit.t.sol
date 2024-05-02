@@ -93,11 +93,22 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
     }
 
     //tests that altered merkle proof will not pass as valid
-    function testInvalidMerkleProof() public {
+    function testInvalidMerkleProofAlteredProof() public {
         VVVVCAlternateTokenDistributor.ClaimParams memory params = prepareAlternateDistributorClaimParams(
             altDistributorTestKycAddress
         );
         params.investmentProofs[0][0] = bytes32(uint256(1234));
+
+        //ensure invalid merkle proof
+        assertFalse(AlternateTokenDistributorInstance.areMerkleProofsAndInvestedAmountsValid(params));
+    }
+
+    //tests that altering the investedPerRound amount will also invalidate the merkle proof
+    function testInvalidMerkleProofInvalidInvestedAmount() public {
+        VVVVCAlternateTokenDistributor.ClaimParams memory params = prepareAlternateDistributorClaimParams(
+            altDistributorTestKycAddress
+        );
+        params.investedPerRound[0] += 1;
 
         //ensure invalid merkle proof
         assertFalse(AlternateTokenDistributorInstance.areMerkleProofsAndInvestedAmountsValid(params));
@@ -233,6 +244,22 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
         vm.expectRevert(VVVVCAlternateTokenDistributor.ExceedsAllocation.selector);
         AlternateTokenDistributorInstance.claim(params);
 
+        vm.stopPrank();
+    }
+
+    //tests that an attempt to claim with an altered investedPerRound amount will cause a revert with error InvalidMerkleProof
+    function testClaimInvalidInvestedPerRound() public {
+        VVVVCAlternateTokenDistributor.ClaimParams memory params = prepareAlternateDistributorClaimParams(
+            altDistributorTestKycAddress
+        );
+
+        //alter the invested amount for one round
+        params.investedPerRound[0] += 1;
+
+        //altDistributorTestKycAddress is used because prepareAlternateDistributorClaimParams() uses the 'users' array to create the merkle tree, so it's convenient to have the caller be a member of the tree
+        vm.startPrank(altDistributorTestKycAddress, altDistributorTestKycAddress);
+        vm.expectRevert(VVVVCAlternateTokenDistributor.InvalidMerkleProof.selector);
+        AlternateTokenDistributorInstance.claim(params);
         vm.stopPrank();
     }
 
