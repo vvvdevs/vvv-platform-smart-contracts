@@ -210,6 +210,7 @@ contract VVVVCAlternateTokenDistributor {
         if (_userInvestedPaymentTokens == 0) return 0;
 
         uint256 totalInvestedPaymentTokens = readOnlyLedger.totalInvestedPerRound(_investmentRoundId);
+        if (totalInvestedPaymentTokens == 0) return 0;
 
         //total pool of claimable tokens is balance of proxy wallets + total claimed for this token address
         uint256 totalProjectTokensDepositedToProxyWallet = IERC20(_projectTokenAddress).balanceOf(

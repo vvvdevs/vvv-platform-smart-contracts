@@ -64,6 +64,7 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
     //validates the claim signature for claiming tokens
     function testValidateSignature() public {
         VVVVCAlternateTokenDistributor.ClaimParams memory params = prepareAlternateDistributorClaimParams(
+            altDistributorTestKycAddress,
             altDistributorTestKycAddress
         );
 
@@ -74,6 +75,7 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
     //test that signature is marked invalid if some parameter is altered
     function testInvalidSignature() public {
         VVVVCAlternateTokenDistributor.ClaimParams memory params = prepareAlternateDistributorClaimParams(
+            altDistributorTestKycAddress,
             altDistributorTestKycAddress
         );
         params.deadline += 1;
@@ -85,6 +87,7 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
     //tests flow of validating a merkle proof involved in claiming tokens
     function testValidateMerkleProofViaDistributor() public {
         VVVVCAlternateTokenDistributor.ClaimParams memory params = prepareAlternateDistributorClaimParams(
+            altDistributorTestKycAddress,
             altDistributorTestKycAddress
         );
 
@@ -95,6 +98,7 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
     //tests that altered merkle proof will not pass as valid
     function testInvalidMerkleProofAlteredProof() public {
         VVVVCAlternateTokenDistributor.ClaimParams memory params = prepareAlternateDistributorClaimParams(
+            altDistributorTestKycAddress,
             altDistributorTestKycAddress
         );
         params.investmentProofs[0][0] = bytes32(uint256(1234));
@@ -106,6 +110,7 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
     //tests that altering the investedPerRound amount will also invalidate the merkle proof
     function testInvalidMerkleProofInvalidInvestedAmount() public {
         VVVVCAlternateTokenDistributor.ClaimParams memory params = prepareAlternateDistributorClaimParams(
+            altDistributorTestKycAddress,
             altDistributorTestKycAddress
         );
         params.investedPerRound[0] += 1;
@@ -117,6 +122,7 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
     //test that the kyc address can claim tokens on its own behalf
     function testClaimWithKycAddress() public {
         VVVVCAlternateTokenDistributor.ClaimParams memory params = prepareAlternateDistributorClaimParams(
+            altDistributorTestKycAddress,
             altDistributorTestKycAddress
         );
 
@@ -133,7 +139,8 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
     //test that an alias of the kyc address can claim tokens on behalf of the kyc address
     function testClaimWithAlias() public {
         VVVVCAlternateTokenDistributor.ClaimParams memory params = prepareAlternateDistributorClaimParams(
-            sampleUser
+            sampleUser,
+            altDistributorTestKycAddress
         );
 
         //altDistributorTestKycAddress is used because prepareAlternateDistributorClaimParams() uses the 'users' array to create the merkle tree, so it's convenient to have the caller be a member of the tree
@@ -155,6 +162,7 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
         uint256 totalUserClaimableTokens;
 
         VVVVCAlternateTokenDistributor.ClaimParams memory params = prepareAlternateDistributorClaimParams(
+            altDistributorTestKycAddress,
             altDistributorTestKycAddress
         );
 
@@ -185,6 +193,7 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
     // tests any claim that includes a parameter value that invalidates the signature
     function testClaimWithInvalidSignature() public {
         VVVVCAlternateTokenDistributor.ClaimParams memory params = prepareAlternateDistributorClaimParams(
+            altDistributorTestKycAddress,
             altDistributorTestKycAddress
         );
 
@@ -201,6 +210,7 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
     // tests that user cannot claim more than their total allocation based on their investment
     function testClaimMoreThanAllocation() public {
         VVVVCAlternateTokenDistributor.ClaimParams memory params = prepareAlternateDistributorClaimParams(
+            altDistributorTestKycAddress,
             altDistributorTestKycAddress
         );
 
@@ -219,6 +229,7 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
         uint256 totalUserClaimableTokens;
 
         VVVVCAlternateTokenDistributor.ClaimParams memory params = prepareAlternateDistributorClaimParams(
+            altDistributorTestKycAddress,
             altDistributorTestKycAddress
         );
 
@@ -250,6 +261,7 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
     //tests that an attempt to claim with an altered investedPerRound amount will cause a revert with error InvalidMerkleProof
     function testClaimInvalidInvestedPerRound() public {
         VVVVCAlternateTokenDistributor.ClaimParams memory params = prepareAlternateDistributorClaimParams(
+            altDistributorTestKycAddress,
             altDistributorTestKycAddress
         );
 
@@ -274,7 +286,7 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
         for (uint256 i = 0; i < usersLength; i++) {
             //obtain this user's investment info
             VVVVCAlternateTokenDistributor.ClaimParams
-                memory params = prepareAlternateDistributorClaimParams(users[i], i);
+                memory params = prepareAlternateDistributorClaimParams(users[i], users[i], i);
 
             //add this user's investment amount to the sum of all users' investment amounts
             sumOfInvestedAmounts += params.investedPerRound[0];
@@ -283,7 +295,7 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
         for (uint256 i = 0; i < usersLength; i++) {
             //obtain this user's investment info
             VVVVCAlternateTokenDistributor.ClaimParams
-                memory params = prepareAlternateDistributorClaimParams(users[i], i);
+                memory params = prepareAlternateDistributorClaimParams(users[i], users[i], i);
 
             //calculate the claimable amount of tokens for this user, add to sum of all users' claimable amounts
             uint256 userClaimableTokens = AlternateTokenDistributorInstance
@@ -315,16 +327,17 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
     // Test that VCClaim is correctly emitted when project tokens are claimed
     function testEmitVCClaim() public {
         VVVVCAlternateTokenDistributor.ClaimParams memory params = prepareAlternateDistributorClaimParams(
+            sampleUser,
             altDistributorTestKycAddress
         );
         uint256 tokenAmountToClaim = 1;
         params.tokenAmountToClaim = tokenAmountToClaim;
 
-        vm.startPrank(altDistributorTestKycAddress, altDistributorTestKycAddress);
+        vm.startPrank(sampleUser, sampleUser);
         vm.expectEmit(address(AlternateTokenDistributorInstance));
         emit VVVVCAlternateTokenDistributor.VCClaim(
             altDistributorTestKycAddress,
-            altDistributorTestKycAddress,
+            sampleUser,
             params.projectTokenAddress,
             params.projectTokenProxyWallets,
             params.tokenAmountToClaim

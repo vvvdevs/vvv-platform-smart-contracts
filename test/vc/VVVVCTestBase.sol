@@ -99,6 +99,7 @@ abstract contract VVVVCTestBase is Test {
         uint256 deadline;
         uint256 userIndex;
         address selectedUser;
+        address selectedUserKyc;
         uint256 tokenAmountToClaim;
     }
 
@@ -448,12 +449,14 @@ abstract contract VVVVCTestBase is Test {
 
     //functions to prepare token claim params and avoid duplicating code. for a set of investment rounds: creates trees, sets roots on read-only ledger, creates merkle proofs for the given user indices (position in that investment round's array of investor kyc addresses), creates valid claim signature for that user, and returns a ClaimParams object containing all info to validate a user's prior investment(s) and currently permitted claim(s)
     function prepareAlternateDistributorClaimParams(
+        address _callerAddress,
         address _callerKycAddress
     ) public returns (VVVVCAlternateTokenDistributor.ClaimParams memory) {
-        return prepareAlternateDistributorClaimParams(_callerKycAddress, 1);
+        return prepareAlternateDistributorClaimParams(_callerAddress, _callerKycAddress, 1);
     }
 
     function prepareAlternateDistributorClaimParams(
+        address _callerAddress,
         address _callerKycAddress,
         uint256 _usersArrayIndex
     ) public returns (VVVVCAlternateTokenDistributor.ClaimParams memory) {
@@ -473,7 +476,8 @@ abstract contract VVVVCTestBase is Test {
             investmentRounds: placeholderArray.length,
             deadline: block.timestamp + 1000,
             userIndex: _usersArrayIndex,
-            selectedUser: _callerKycAddress,
+            selectedUser: _callerAddress,
+            selectedUserKyc: _callerKycAddress,
             tokenAmountToClaim: 1e18 // test amount
         });
 
@@ -527,7 +531,7 @@ abstract contract VVVVCTestBase is Test {
         VVVVCAlternateTokenDistributor.ClaimParams
             memory params = generateAlternateClaimParamsWithSignature(
                 details.selectedUser,
-                details.selectedUser,
+                details.selectedUserKyc,
                 projectTokenProxyWallets,
                 details.investmentRoundIds,
                 details.tokenAmountToClaim,
