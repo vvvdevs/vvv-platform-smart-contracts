@@ -420,7 +420,6 @@ abstract contract VVVVCTestBase is Test {
         uint256[] memory _investmentRoundIds,
         uint256 _tokenAmountToClaim,
         uint256[] memory _investedPerRound,
-        bytes32[] memory _investmentLeaves,
         bytes32[][] memory _investmentProofs
     ) public view returns (VVVVCAlternateTokenDistributor.ClaimParams memory) {
         VVVVCAlternateTokenDistributor.ClaimParams memory params = VVVVCAlternateTokenDistributor
@@ -434,7 +433,6 @@ abstract contract VVVVCTestBase is Test {
                 deadline: block.timestamp + 1 hours,
                 signature: bytes("placeholder"),
                 investedPerRound: _investedPerRound,
-                investmentLeaves: _investmentLeaves,
                 investmentProofs: _investmentProofs
             });
 
@@ -508,11 +506,11 @@ abstract contract VVVVCTestBase is Test {
         userIndices[1] = 1;
         userIndices[2] = 1;
 
-        (
-            bytes32[] memory roots,
-            bytes32[] memory leaves,
-            bytes32[][] memory proofs
-        ) = getMerkleRootLeafProofArrays(users, details.investedAmounts, userIndices);
+        (bytes32[] memory roots, , bytes32[][] memory proofs) = getMerkleRootLeafProofArrays(
+            users,
+            details.investedAmounts,
+            userIndices
+        );
 
         //set merkle roots on read-only ledger for all rounds
         vm.startPrank(deployer, deployer);
@@ -550,7 +548,6 @@ abstract contract VVVVCTestBase is Test {
                 details.investmentRoundIds,
                 details.tokenAmountToClaim,
                 userInvestedAmounts,
-                leaves,
                 proofs
             );
 
