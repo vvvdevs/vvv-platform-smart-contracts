@@ -97,7 +97,7 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
         VVVVCAlternateTokenDistributor.ClaimParams memory params = prepareAlternateDistributorClaimParams(
             altDistributorTestKycAddress
         );
-        params.investmentLeaves[0] = keccak256(abi.encodePacked(params.investmentLeaves[0], uint256(1)));
+        params.investmentProofs[0][0] = bytes32(uint256(1234));
 
         //ensure invalid merkle proof
         assertFalse(AlternateTokenDistributorInstance.areMerkleProofsAndInvestedAmountsValid(params));

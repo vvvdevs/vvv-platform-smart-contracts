@@ -43,7 +43,6 @@ contract VVVVCAlternateTokenDistributor {
         @param deadline Deadline for signature validity
         @param signature Signature of the user's KYC wallet address
         @param investedPerRound Array of the user's stable equivalent amount invested per round
-        @param investmentLeaves array of merkle tree leaves, one for each round for which to verify invested amount on read-only ledger
         @param investmentProofs array of merkle tree proofs, one for each round for which to verify invested amount on read-only ledger
      */
     struct ClaimParams {
@@ -56,7 +55,6 @@ contract VVVVCAlternateTokenDistributor {
         uint256 deadline;
         bytes signature;
         uint256[] investedPerRound;
-        bytes32[] investmentLeaves;
         bytes32[][] investmentProofs;
     }
 
@@ -267,10 +265,8 @@ contract VVVVCAlternateTokenDistributor {
                 !MerkleProof.verify(
                     _params.investmentProofs[i],
                     investmentRoots[i],
-                    _params.investmentLeaves[i]
-                ) ||
-                !(_params.investmentLeaves[i] ==
-                    keccak256(abi.encodePacked(_params.userKycAddress, _params.investedPerRound[i])))
+                    keccak256(abi.encodePacked(_params.userKycAddress, _params.investedPerRound[i]))
+                )
             ) {
                 return false;
             }
