@@ -57,34 +57,95 @@ contract VVVVCAlternateTokenDistributorFuzzTests is VVVVCTestBase {
         altDistributorTestKycAddress = users[1];
     }
 
-    // //corresponds to testFuzz_InvestAndClaimSuccess in VVVVCTokenDistributor.fuzz.t.sol
-    // function testFuzz_ClaimSuccess(
-    //     address _callerAddress,
-    //     address _kycAddress,
-    //     uint256 _seed,
-    //     uint256 _length
-    // ) public {
+    //corresponds to testFuzz_InvestAndClaimSuccess in VVVVCTokenDistributor.fuzz.t.sol
+    function testFuzz_ClaimSuccess(address _callerAddress, address _kycAddress) public {
+        vm.assume(_callerAddress != address(0));
+        vm.assume(_kycAddress != address(0));
 
-    // }
+        VVVVCAlternateTokenDistributor.ClaimParams memory params = prepareAlternateDistributorClaimParams(
+            _callerAddress,
+            _kycAddress
+        );
 
-    // /**
-    //     address(ProjectTokenInstance) is used so this address is not fuzzed
-    //     Other than that, this tests for an expected revert given random inputs
-    //     as a check that the logic that requires a prior investment is solid
-    //  */
-    // function testFuzz_ClaimRevert(
-    //     address _callerAddress,
-    //     address _kycAddress,
-    //     uint256 _seed,
-    //     uint256 _length
-    // ) public {}
+        vm.startPrank(_callerAddress, _callerAddress);
+        AlternateTokenDistributorInstance.claim(params);
+        vm.stopPrank();
 
-    // // Tests that the distributor always returns zero when there is not an investment made + project token balance in "claim from" or proxy wallet
-    // function testFuzz_CalculateBaseClaimableProjectTokensAlwaysZero(
-    //     address _caller,
-    //     uint256 _seed
-    // ) public {}
+        //check that the project token was withdrawn from the proxy wallet to the caller address
+        assertEq(params.tokenAmountToClaim, ProjectTokenInstance.balanceOf(params.callerAddress));
+    }
 
-    // // Tests that distributor returns correct amount in proportion to invested amount in all cases
-    // function testFuzz_CalculateBaseClaimableProjectTokens(address _caller, uint256 _seed) public {}
+    /**
+        tests for an expected revert given random inputs
+        as a check that the logic that requires a prior investment is solid
+     */
+    function testFuzz_ClaimRevert(address _callerAddress, address _kycAddress, uint256 _seed) public {
+        vm.assume(_callerAddress != address(0));
+        vm.assume(_kycAddress != address(0));
+        vm.assume(_seed != 0);
+
+        VVVVCAlternateTokenDistributor.ClaimParams memory params = prepareAlternateDistributorClaimParams(
+            _callerAddress,
+            _kycAddress
+        );
+
+        //find claimable amount of tokens
+        uint256 totalUserClaimableTokens;
+        for (uint256 i = 0; i < params.projectTokenProxyWallets.length; i++) {
+            totalUserClaimableTokens += AlternateTokenDistributorInstance
+                .calculateBaseClaimableProjectTokens(
+                    params.projectTokenAddress,
+                    params.projectTokenProxyWallets[i],
+                    params.investmentRoundIds[i],
+                    params.investedPerRound[i]
+                );
+        }
+        params.tokenAmountToClaim = totalUserClaimableTokens;
+
+        //altering various claim parameters based on _seed, bounding some values to ensure no intersection with existing addresses/values which will not revert
+        uint256 paramToAlter = _seed % 7;
+        if (paramToAlter == 0) {
+            params.userKycAddress = address(uint160(uint256(keccak256(abi.encodePacked(_seed)))));
+        } else if (paramToAlter == 1) {
+            params.projectTokenAddress = address(uint160(uint256(keccak256(abi.encodePacked(_seed)))));
+        } else if (paramToAlter == 2) {
+            uint256 boundSeed = bound(_seed, projectTokenProxyWalletKey + 1, type(uint256).max);
+            params.projectTokenProxyWallets[0] = address(
+                uint160(uint256(keccak256(abi.encodePacked(boundSeed))))
+            );
+        } else if (paramToAlter == 3) {
+            params.investmentRoundIds[0] = bound(_seed, 0, type(uint32).max);
+        } else if (paramToAlter == 4) {
+            params.tokenAmountToClaim = bound(_seed, params.tokenAmountToClaim + 1, type(uint256).max);
+        } else if (paramToAlter == 5) {
+            params.deadline = bound(_seed, 0, type(uint32).max);
+        } else if (paramToAlter == 6) {
+            params.investedPerRound[0] = bound(_seed, type(uint64).max, type(uint256).max);
+        }
+
+        vm.startPrank(_callerAddress, _callerAddress);
+        vm.expectRevert();
+        AlternateTokenDistributorInstance.claim(params);
+        vm.stopPrank();
+    }
+
+    // Tests that the distributor always returns zero when there is not an investment made + project token balance in "claim from" or proxy wallet
+    function testFuzz_CalculateBaseClaimableProjectTokensAlwaysZero(
+        address _caller,
+        uint256 _seed
+    ) public {
+        vm.assume(_caller != address(0));
+        vm.assume(_seed != 0);
+        uint256 investmentRoundId = bound(_seed, 1, type(uint128).max);
+        uint256 investedAmount = bound(_seed, 1, type(uint256).max);
+
+        uint256 claimableAmount = AlternateTokenDistributorInstance.calculateBaseClaimableProjectTokens(
+            address(ProjectTokenInstance),
+            _caller,
+            investmentRoundId,
+            investedAmount
+        );
+
+        assertTrue(claimableAmount == 0);
+    }
 }
