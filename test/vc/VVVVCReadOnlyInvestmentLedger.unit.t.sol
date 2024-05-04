@@ -60,7 +60,7 @@ contract VVVVCReadOnlyInvestmentLedgerUnitTests is VVVVCTestBase {
 
         //Verify that the state was set
         assertEq(ReadOnlyLedgerInstance.kycAddressInvestedRoots(investmentRound), kycAddressInvestedRoot);
-        assertEq(ReadOnlyLedgerInstance.totalInvested(investmentRound), totalInvested);
+        assertEq(ReadOnlyLedgerInstance.totalInvestedPerRound(investmentRound), totalInvested);
     }
 
     //Tests that an invalid signature will cause a revert with the InvalidSignature error
