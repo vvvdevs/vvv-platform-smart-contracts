@@ -333,7 +333,6 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
     }
 
     // Test that calculateBaseClaimableProjectTokens returns the correct amount
-    // with two addresses of unequal invested amounts
     function testCalculateBaseClaimableProjectTokens() public {
         //some large number indicative of a realistic number of investors
         uint256 numInvestors = 3333;
