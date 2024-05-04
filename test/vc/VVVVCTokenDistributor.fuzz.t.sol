@@ -222,13 +222,6 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
             thisInvestmentRoundId
         );
 
-        emit log_named_uint(
-            "User invested: ",
-            LedgerInstance.kycAddressInvestedPerRound(_caller, thisInvestmentRoundId)
-        );
-        emit log_named_uint("claimableAmount", claimableAmount);
-        emit log_named_uint("projectTokenWalletBalance", projectTokenWalletBalance);
-
         assertTrue(claimableAmount == projectTokenWalletBalance);
     }
 }
