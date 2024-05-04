@@ -3,13 +3,14 @@ pragma solidity 0.8.23;
 
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { IVVVVCInvestmentLedger } from "./IVVVVCInvestmentLedger.sol";
+import { IVVVVCReadOnlyInvestmentLedger } from "./IVVVVCReadOnlyInvestmentLedger.sol";
+import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract VVVVCTokenDistributor {
+contract VVVVCAlternateTokenDistributor {
     using SafeERC20 for IERC20;
 
-    IVVVVCInvestmentLedger public ledger;
+    IVVVVCReadOnlyInvestmentLedger public readOnlyLedger;
 
     /// @notice EIP-712 standard definitions
     bytes32 public constant DOMAIN_TYPEHASH =
@@ -17,7 +18,7 @@ contract VVVVCTokenDistributor {
     bytes32 public constant CLAIM_TYPEHASH =
         keccak256(
             bytes(
-                "ClaimParams(address callerAddress,address userKycAddress,address projectTokenAddress,address[] projectTokenProxyWallets,uint256[] investmentRoundIds,uint256 tokenAmountToClaim,uint256 deadline)"
+                "ClaimParams(address callerAddress,address userKycAddress,address projectTokenAddress,address[] projectTokenProxyWallets,uint256[] investmentRoundIds,uint256 deadline)"
             )
         );
     bytes32 public immutable DOMAIN_SEPARATOR;
@@ -37,10 +38,12 @@ contract VVVVCTokenDistributor {
         @param userKycAddress Address of the user's KYC wallet
         @param projectTokenAddress Address of the project token to be claimed
         @param projectTokenProxyWallets Array of addresses of the wallets from which the project token is to be claimed
-        @param investmentRoundIds Array of ledger investment round ids involved in the claim
+        @param investmentRoundIds Array of read-only ledger investment round ids involved in the claim
         @param tokenAmountToClaim Total (combined across all rounds) amount of project tokens to claim
         @param deadline Deadline for signature validity
         @param signature Signature of the user's KYC wallet address
+        @param investedPerRound Array of the user's stable equivalent amount invested per round
+        @param investmentProofs array of merkle tree proofs, one for each round for which to verify invested amount on read-only ledger
      */
     struct ClaimParams {
         address callerAddress;
@@ -51,6 +54,8 @@ contract VVVVCTokenDistributor {
         uint256 tokenAmountToClaim;
         uint256 deadline;
         bytes signature;
+        uint256[] investedPerRound;
+        bytes32[][] investmentProofs;
     }
 
     /**
@@ -75,9 +80,12 @@ contract VVVVCTokenDistributor {
     /// @notice Error thrown when the signer address is not recovered from the provided signature
     error InvalidSignature();
 
-    constructor(address _signer, address _ledger, string memory _environmentTag) {
+    ///@notice Error thrown when the merkle proof is invalid
+    error InvalidMerkleProof();
+
+    constructor(address _signer, address _readOnlyLedger, string memory _environmentTag) {
         signer = _signer;
-        ledger = IVVVVCInvestmentLedger(_ledger);
+        readOnlyLedger = IVVVVCReadOnlyInvestmentLedger(_readOnlyLedger);
 
         // EIP-712 domain separator
         DOMAIN_SEPARATOR = keccak256(
@@ -92,11 +100,15 @@ contract VVVVCTokenDistributor {
 
     /**
         @notice Allows any address which is an alias of a KYC address to claim tokens across multiple rounds which provide that token
-        @param _params A ClaimParams struct describing the desired claim(s)
+        @param _params A ClaimParams struct describing the desired claim(s) and associated merkle proof(s) for amount(s) invested
      */
     function claim(ClaimParams memory _params) public {
         //ensure caller (msg.sender) is an alias of the KYC address
         _params.callerAddress = msg.sender;
+
+        if (!_areMerkleProofsAndInvestedAmountsValid(_params)) {
+            revert InvalidMerkleProof();
+        }
 
         if (!_isSignatureValid(_params)) {
             revert InvalidSignature();
@@ -112,10 +124,10 @@ contract VVVVCTokenDistributor {
             uint256 thisInvestmentRoundId = _params.investmentRoundIds[i];
 
             uint256 baseClaimableFromWallet = _calculateBaseClaimableProjectTokens(
-                _params.userKycAddress,
                 _params.projectTokenAddress,
                 thisProxyWallet,
-                thisInvestmentRoundId
+                thisInvestmentRoundId,
+                _params.investedPerRound[i]
             );
             uint256 claimableFromWallet = baseClaimableFromWallet -
                 userClaimedTokensForRound[_params.userKycAddress][thisInvestmentRoundId];
@@ -149,19 +161,22 @@ contract VVVVCTokenDistributor {
         );
     }
 
-    /// @notice external wrapper for _calculateBaseClaimableProjectTokens
+    /**
+        @notice external wrapper for _calculateBaseClaimableProjectTokens
+        @dev does not validate the invested amount, assumes it is validated in the call to claim()
+     */
     function calculateBaseClaimableProjectTokens(
-        address _userKycAddress,
         address _projectTokenAddress,
         address _proxyWalletAddress,
-        uint256 _investmentRoundId
+        uint256 _investmentRoundId,
+        uint256 _userInvestedPaymentTokens
     ) external view returns (uint256) {
         return
             _calculateBaseClaimableProjectTokens(
-                _userKycAddress,
                 _projectTokenAddress,
                 _proxyWalletAddress,
-                _investmentRoundId
+                _investmentRoundId,
+                _userInvestedPaymentTokens
             );
     }
 
@@ -170,28 +185,32 @@ contract VVVVCTokenDistributor {
         return _isSignatureValid(_params);
     }
 
+    /// @notice external wrapper for _areMerkleProofsValid
+    function areMerkleProofsAndInvestedAmountsValid(
+        ClaimParams memory _params
+    ) external view returns (bool) {
+        return _areMerkleProofsAndInvestedAmountsValid(_params);
+    }
+
     /**
         @notice Reads the VVVVCInvestmentLedger contract to calculate the base claimable token amount, which does not consider the amount already claimed by the KYC address
         @dev uses fraction of invested funds to determine fraction of claimable tokens
         @dev ensure _proxyWalletAddress corresponds to the _investmentRoundId
-        @param _userKycAddress Address of the user's KYC wallet
         @param _projectTokenAddress Address of the project token to be claimed
         @param _proxyWalletAddress Address of the wallet from which the project token is to be claimed
         @param _investmentRoundId Investment round ID for which to calculate claimable tokens
+        @param _userInvestedPaymentTokens Amount of payment tokens the user has invested in this round, assumed to be validated in the call to claim() via Merkle proof
      */
     function _calculateBaseClaimableProjectTokens(
-        address _userKycAddress,
         address _projectTokenAddress,
         address _proxyWalletAddress,
-        uint256 _investmentRoundId
+        uint256 _investmentRoundId,
+        uint256 _userInvestedPaymentTokens
     ) private view returns (uint256) {
-        uint256 userInvestedPaymentTokens = ledger.kycAddressInvestedPerRound(
-            _userKycAddress,
-            _investmentRoundId
-        );
-        if (userInvestedPaymentTokens == 0) return 0;
+        if (_userInvestedPaymentTokens == 0) return 0;
 
-        uint256 totalInvestedPaymentTokens = ledger.totalInvestedPerRound(_investmentRoundId);
+        uint256 totalInvestedPaymentTokens = readOnlyLedger.totalInvestedPerRound(_investmentRoundId);
+        if (totalInvestedPaymentTokens == 0) return 0;
 
         //total pool of claimable tokens is balance of proxy wallets + total claimed for this token address
         uint256 totalProjectTokensDepositedToProxyWallet = IERC20(_projectTokenAddress).balanceOf(
@@ -200,7 +219,7 @@ contract VVVVCTokenDistributor {
 
         //return fraction of total pool of claimable tokens, based on fraction of invested funds
         return
-            (userInvestedPaymentTokens * totalProjectTokensDepositedToProxyWallet) /
+            (_userInvestedPaymentTokens * totalProjectTokensDepositedToProxyWallet) /
             totalInvestedPaymentTokens;
     }
 
@@ -233,5 +252,27 @@ contract VVVVCTokenDistributor {
         bool isSigner = recoveredAddress == signer;
         bool isExpired = block.timestamp > _params.deadline;
         return isSigner && !isExpired;
+    }
+
+    ///@notice verifies user investment assertions at time of claim with merkle proofs. returns false if any of the proofs are invalid
+    function _areMerkleProofsAndInvestedAmountsValid(
+        ClaimParams memory _params
+    ) private view returns (bool) {
+        bytes32[] memory investmentRoots = readOnlyLedger.getInvestmentRoots(_params.investmentRoundIds);
+
+        //for each round verify both the proof and the asserted invested amount (leaf)
+        for (uint256 i = 0; i < _params.investmentRoundIds.length; i++) {
+            if (
+                !MerkleProof.verify(
+                    _params.investmentProofs[i],
+                    investmentRoots[i],
+                    keccak256(abi.encodePacked(_params.userKycAddress, _params.investedPerRound[i]))
+                )
+            ) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }
