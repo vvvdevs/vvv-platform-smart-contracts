@@ -10,9 +10,7 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
     function setUp() public {
         vm.startPrank(deployer, deployer);
         AuthRegistry = new VVVAuthorizationRegistry(defaultAdminTransferDelay, deployer);
-        VVVTokenInstance = new VVVToken(type(uint256).max, 0, address(AuthRegistry));
-        NodesInstance = new VVVNodes(address(VVVTokenInstance));
-        VVVTokenInstance.mint(address(NodesInstance), 100_000_000 * 1e18);
+        NodesInstance = new VVVNodes(address(AuthRegistry), activationThreshold);
         vm.stopPrank();
     }
 
@@ -39,27 +37,218 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         assertEq(NodesInstance.tokenURI(1), "https://example.com/token/1");
     }
 
-    //tests claim
+    //tests that a node owner can stake $VVV via their node s.t. the node is activated
+    function testStakeActivate() public {
+        vm.deal(sampleUser, activationThreshold);
+
+        vm.startPrank(sampleUser, sampleUser);
+        NodesInstance.mint(sampleUser); //mints tokenId 1
+        NodesInstance.stake{ value: activationThreshold }(1);
+        vm.stopPrank();
+
+        bool isActive = NodesInstance.isNodeActive(1);
+        (, , , , uint256 stakedAmount) = NodesInstance.tokenData(1);
+        assertTrue(isActive);
+        assertEq(stakedAmount, activationThreshold);
+        assertEq(address(NodesInstance).balance, activationThreshold);
+    }
+
+    //tests that a node owner can stake sub-activation threshold amount
+    function testStakeSubActivationThreshold() public {
+        vm.deal(sampleUser, activationThreshold);
+
+        vm.startPrank(sampleUser, sampleUser);
+        NodesInstance.mint(sampleUser); //mints tokenId 1
+        NodesInstance.stake{ value: activationThreshold - 1 }(1);
+        vm.stopPrank();
+
+        bool isActive = NodesInstance.isNodeActive(1);
+        assertFalse(isActive);
+    }
+
+    //tests that an attempt to stake 0 $VVV will revert
+    function testStakeZeroMsgValue() public {
+        vm.startPrank(sampleUser, sampleUser);
+        NodesInstance.mint(sampleUser); //mints tokenId 1
+        vm.expectRevert(VVVNodes.ZeroTokenTransfer.selector);
+        NodesInstance.stake{ value: 0 }(1);
+        vm.stopPrank();
+    }
+
+    //test that a user's attempt to stake in an unowned node reverts
+    function testStakeUnownedToken() public {
+        vm.deal(sampleUser, activationThreshold);
+
+        vm.startPrank(deployer, deployer);
+        NodesInstance.mint(deployer); //mints tokenId 1
+        vm.stopPrank();
+
+        vm.startPrank(sampleUser, sampleUser);
+        NodesInstance.mint(sampleUser); //mints tokenId 2
+        vm.expectRevert(VVVNodes.CallerIsNotTokenOwner.selector);
+        NodesInstance.stake{ value: activationThreshold }(1);
+        vm.stopPrank();
+    }
+
+    //tests that a node owner can unstake $VVV via their node
+    function testUnstake() public {
+        vm.deal(sampleUser, activationThreshold);
+        uint256 tokenId = 1;
+
+        vm.startPrank(sampleUser, sampleUser);
+        NodesInstance.mint(sampleUser); //mints tokenId 1
+        NodesInstance.stake{ value: activationThreshold }(tokenId);
+
+        bool isActiveBeforeUnstake = NodesInstance.isNodeActive(tokenId);
+
+        // //advance more than 0 so that unstake won't revert due to zero vested tokens
+        // advanceBlockNumberAndTimestampInSeconds(1);
+
+        uint256 userBalanceBeforeUnstake = sampleUser.balance;
+        NodesInstance.unstake(tokenId, activationThreshold);
+        vm.stopPrank();
+
+        bool isActiveAfterUnstake = NodesInstance.isNodeActive(tokenId);
+
+        //the node is active after staking and inactive after unstaking
+        assertTrue(isActiveBeforeUnstake);
+        assertFalse(isActiveAfterUnstake);
+
+        //the same staked amount is now back in the user's wallet + some dust due to 1s of vesting
+        assertGt(sampleUser.balance, userBalanceBeforeUnstake);
+    }
+
+    //test that a user's attempt to unstake from an unowned node reverts
+    function testUnstakeUnownedToken() public {
+        vm.deal(sampleUser, activationThreshold);
+        uint256 tokenId = 1;
+
+        vm.startPrank(sampleUser, sampleUser);
+        NodesInstance.mint(sampleUser); //mints tokenId 1
+        NodesInstance.stake{ value: activationThreshold }(tokenId);
+        vm.stopPrank();
+
+        vm.startPrank(deployer, deployer);
+        vm.expectRevert(VVVNodes.CallerIsNotTokenOwner.selector);
+        NodesInstance.unstake(tokenId, activationThreshold);
+        vm.stopPrank();
+    }
+
+    //tests that unstaking s.t. the node is below the activation threshold triggers the actions associated with deactivation
+    function testUnstakeDeactivatesNode() public {
+        vm.deal(sampleUser, activationThreshold);
+        uint256 tokenId = 1;
+
+        vm.startPrank(sampleUser, sampleUser);
+        NodesInstance.mint(sampleUser); //mints tokenId 1
+        NodesInstance.stake{ value: activationThreshold }(tokenId);
+
+        //full unvested amount
+        (uint256 unvestedAmountPreDeactivation, , , , ) = NodesInstance.tokenData(tokenId);
+
+        //advance enough to accrue some vested tokens
+        advanceBlockNumberAndTimestampInSeconds(2 weeks);
+
+        //unstaking 1 token should deactivate the node
+        NodesInstance.unstake(tokenId, 1);
+        vm.stopPrank();
+
+        //post-deactivation unvested amount is slightly less, the difference has become claimable
+        (uint256 unvestedAmountPostDeactivation, , uint256 claimableAmount, , ) = NodesInstance.tokenData(
+            tokenId
+        );
+
+        //change in unvested amount is same as amount made claimable during deactivation
+        assertEq(unvestedAmountPreDeactivation - unvestedAmountPostDeactivation, claimableAmount);
+    }
+
+    //tests claim, entire amount accrued during vesting period should be claimable by a user. utilizes placeholder logic in mint() to set TokenData
     function testClaim() public {
+        vm.deal(sampleUser, activationThreshold);
+        vm.deal(address(NodesInstance), type(uint128).max);
+
         vm.startPrank(sampleUser, sampleUser);
         NodesInstance.mint(sampleUser); //mints token of ID 1
         uint256 userTokenId = 1;
 
-        //check pre-vesting unvested tokens and owner wallet balance for userTokenId
-        (uint256 unvestedAmountPreClaim, , , ) = NodesInstance.tokenData(userTokenId);
-        uint256 balancePreClaim = VVVTokenInstance.balanceOf(sampleUser);
+        //sample vesting setup assuming 1 token/second for 2 years
+        uint256 vestingDuration = 63_113_904; //2 years
+        uint256 refTotalVestedTokens = vestingDuration * 1e18;
 
-        //wait for tokens to vest to the active node
-        advanceBlockNumberAndTimestampInSeconds(104 weeks); //2 years
+        //check pre-vesting unvested tokens and owner wallet balance for userTokenId
+        (uint256 unvestedAmountPreClaim, , , , ) = NodesInstance.tokenData(userTokenId);
+
+        //stake the activation threshold to activate the node
+        NodesInstance.stake{ value: activationThreshold }(userTokenId);
+
+        advanceBlockNumberAndTimestampInSeconds(vestingDuration * 2);
+
         NodesInstance.claim(userTokenId);
 
         //check post-vesting unvested tokens and owner wallet balance for userTokenId
-        (uint256 unvestedAmountPostClaim, , , ) = NodesInstance.tokenData(userTokenId);
-        uint256 balancePostClaim = VVVTokenInstance.balanceOf(sampleUser);
-
+        (uint256 unvestedAmountPostClaim, , , , ) = NodesInstance.tokenData(userTokenId);
+        uint256 balancePostClaim = sampleUser.balance;
         vm.stopPrank();
 
-        //the change in unvested tokens should be equal to the change in balance
-        assertEq(unvestedAmountPreClaim - unvestedAmountPostClaim, balancePostClaim - balancePreClaim);
+        assertEq(unvestedAmountPreClaim, refTotalVestedTokens);
+        assertEq(unvestedAmountPostClaim, 0);
+        assertEq(refTotalVestedTokens, balancePostClaim);
     }
+
+    //tests claim with a tokenId that is not owned by the caller
+    function testClaimNotOwned() public {
+        vm.deal(sampleUser, activationThreshold);
+        vm.deal(address(NodesInstance), type(uint128).max);
+
+        vm.startPrank(sampleUser, sampleUser);
+        NodesInstance.mint(sampleUser); //mints token of ID 1
+        uint256 userTokenId = 1;
+
+        //sample vesting setup assuming 1 token/second for 2 years
+        uint256 vestingDuration = 63_113_904; //2 years
+
+        //stake the activation threshold to activate the node
+        NodesInstance.stake{ value: activationThreshold }(userTokenId);
+        vm.stopPrank();
+
+        advanceBlockNumberAndTimestampInSeconds(vestingDuration * 2);
+
+        vm.startPrank(deployer, deployer);
+        vm.expectRevert(VVVNodes.CallerIsNotTokenOwner.selector);
+        NodesInstance.claim(userTokenId);
+        vm.stopPrank();
+    }
+
+    //tests claim of zero $VVV (can't be defined as a claim amount, but if a user claims with a token they own the instant after activating, this error will be thrown)
+    function testClaimZero() public {
+        vm.deal(sampleUser, activationThreshold);
+        vm.deal(address(NodesInstance), type(uint128).max);
+
+        vm.startPrank(sampleUser, sampleUser);
+        NodesInstance.mint(sampleUser); //mints token of ID 1
+        uint256 userTokenId = 1;
+
+        //stake the activation threshold to activate the node
+        NodesInstance.stake{ value: activationThreshold }(userTokenId);
+
+        vm.expectRevert(VVVNodes.NoClaimableTokens.selector);
+        NodesInstance.claim(userTokenId);
+        vm.stopPrank();
+    }
+
+    //tests that a view function can output whether a token of tokenId is active
+    function testCheckNodeIsActive() public {
+        vm.deal(sampleUser, activationThreshold);
+        uint256 tokenId = 1;
+
+        vm.startPrank(sampleUser, sampleUser);
+        NodesInstance.mint(sampleUser); //mints tokenId 1
+        NodesInstance.stake{ value: activationThreshold }(tokenId);
+        vm.stopPrank();
+
+        assertTrue(NodesInstance.isNodeActive(tokenId));
+    }
+    //function testTransferFailsWhenSoulbound() public {}
+    //function testTransferSucceedsWhenNotSoulbound() public {}
+    //function test*admin setter functions*() public {}
 }
