@@ -116,7 +116,7 @@ contract VVVNodes is ERC721, ERC721URIStorage, VVVAuthorizationRegistryChecker {
     }
 
     ///@notice Allows a node owner to claim accrued yield
-    function claim(uint256 _tokenId) external {
+    function claim(uint256 _tokenId) public {
         if (msg.sender != ownerOf(_tokenId)) revert CallerIsNotTokenOwner();
         TokenData storage token = tokenData[_tokenId];
 
@@ -131,6 +131,13 @@ contract VVVNodes is ERC721, ERC721URIStorage, VVVAuthorizationRegistryChecker {
 
         (bool success, ) = msg.sender.call{ value: amountToClaim }("");
         if (!success) revert TransferFailed();
+    }
+
+    ///@notice Claims for all input tokenIds
+    function batchClaim(uint256[] calldata _tokenIds) public {
+        for (uint256 i = 0; i < _tokenIds.length; i++) {
+            claim(_tokenIds[i]);
+        }
     }
 
     ///@notice Sets the node activation threshold in staked $VVV
@@ -157,13 +164,6 @@ contract VVVNodes is ERC721, ERC721URIStorage, VVVAuthorizationRegistryChecker {
     ///@notice Sets whether nodes are soulbound
     function setSoulbound(bool _soulbound) external onlyAuthorized {
         soulbound = _soulbound;
-    }
-
-    ///@notice Claims for all input tokenIds
-    function batchClaim(uint256[] calldata _tokenIds) public {
-        for (uint256 i = 0; i < _tokenIds.length; i++) {
-            claim(_tokenIds[i]);
-        }
     }
 
     ///@notice Sets token URI for token of tokenId (placeholder)
