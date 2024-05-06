@@ -282,7 +282,93 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
 
         assertTrue(NodesInstance.isNodeActive(tokenId));
     }
-    //function testTransferFailsWhenSoulbound() public {}
-    //function testTransferSucceedsWhenNotSoulbound() public {}
-    //function test*admin setter functions*() public {}
+
+    //tests that minting works, but transfers do not when tokens are soulbound
+    function testTransferFailsWhenSoulbound() public {
+        uint256 tokenId = 1;
+
+        vm.startPrank(sampleUser, sampleUser);
+        NodesInstance.mint(sampleUser); //mints tokenId 1
+
+        vm.expectRevert(VVVNodes.NodesAreSoulbound.selector);
+        NodesInstance.transferFrom(sampleUser, deployer, tokenId);
+        vm.stopPrank();
+    }
+
+    //tests that after setting soulbound=false, transfers work normally
+    function testTransferSucceedsAfterSoulboundSetToFalse() public {
+        uint256 tokenId = 1;
+
+        vm.startPrank(sampleUser, sampleUser);
+        NodesInstance.mint(sampleUser); //mints tokenId 1
+        vm.expectRevert(VVVNodes.NodesAreSoulbound.selector);
+        NodesInstance.transferFrom(sampleUser, deployer, tokenId);
+        vm.stopPrank();
+
+        vm.startPrank(deployer, deployer);
+        NodesInstance.setSoulbound(false);
+        vm.stopPrank();
+
+        vm.startPrank(sampleUser, sampleUser);
+        NodesInstance.transferFrom(sampleUser, deployer, tokenId);
+        vm.stopPrank();
+
+        assertEq(NodesInstance.balanceOf(deployer), 1);
+    }
+
+    //tests that an admin can set activationThreshold
+    function testSetActivationThreshold() public {
+        uint256 currentActivationThreshold = NodesInstance.activationThreshold();
+        uint256 newActivationThreshold = currentActivationThreshold + 1;
+
+        vm.startPrank(deployer, deployer);
+        NodesInstance.setActivationThreshold(newActivationThreshold);
+        vm.stopPrank();
+        assertEq(NodesInstance.activationThreshold(), newActivationThreshold);
+    }
+
+    //tests that an admin can set maxLaunchpadStakeAmount
+    function testSetMaxLaunchpadStakeAmount() public {
+        uint256 currentMaxLaunchpadStakeAmount = NodesInstance.maxLaunchpadStakeAmount();
+        uint256 newMaxLaunchpadStakeAmount = currentMaxLaunchpadStakeAmount + 1;
+
+        vm.startPrank(deployer, deployer);
+        NodesInstance.setMaxLaunchpadStakeAmount(newMaxLaunchpadStakeAmount);
+        vm.stopPrank();
+        assertEq(NodesInstance.maxLaunchpadStakeAmount(), newMaxLaunchpadStakeAmount);
+    }
+
+    //tests that an admin can set soulbound
+    function testSetSoulbound() public {
+        bool currentSoulbound = NodesInstance.soulbound();
+        bool newSoulbound = !currentSoulbound;
+
+        vm.startPrank(deployer, deployer);
+        NodesInstance.setSoulbound(newSoulbound);
+        vm.stopPrank();
+        assertEq(NodesInstance.soulbound(), newSoulbound);
+    }
+
+    //tests that an admin can set transactionProcessingReward
+    function testSetTransactionProcessingReward() public {
+        uint256 currentTransactionProcessingReward = NodesInstance.transactionProcessingReward();
+        uint256 newTransactionProcessingReward = currentTransactionProcessingReward + 1;
+
+        vm.startPrank(deployer, deployer);
+        NodesInstance.setTransactionProcessingReward(newTransactionProcessingReward);
+        vm.stopPrank();
+        assertEq(NodesInstance.transactionProcessingReward(), newTransactionProcessingReward);
+    }
+
+    //tests that an admin can withdraw $VVV from the contract
+    function testWithdrawVVVVNative() public {
+        uint256 amountToWithdraw = 100 * 1e18;
+        vm.deal(address(NodesInstance), amountToWithdraw);
+
+        vm.startPrank(deployer, deployer);
+        NodesInstance.withdraw(amountToWithdraw);
+        vm.stopPrank();
+
+        assertEq(address(NodesInstance).balance, 0);
+    }
 }
