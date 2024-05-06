@@ -236,6 +236,39 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         vm.stopPrank();
     }
 
+    //tests that batchClaim can claim $VVV for multiple nodes
+    function testBatchClaim() public {
+        vm.deal(address(NodesInstance), type(uint128).max);
+
+        uint256 nodesToMint = 12;
+        vm.deal(sampleUser, activationThreshold * nodesToMint);
+
+        uint256 vestingDuration = 63_113_904; //2 years
+        uint256[] memory tokenIds = new uint256[](nodesToMint);
+
+        //mint nodesToMint nodes and stake activationThreshold for each. i is tokenId.
+        vm.startPrank(sampleUser, sampleUser);
+        for (uint256 i = 1; i <= nodesToMint; ++i) {
+            NodesInstance.mint(sampleUser);
+
+            //stake the activation threshold to activate the node
+            NodesInstance.stake{ value: activationThreshold }(i);
+        }
+
+        //wait for the vesting period to pass
+        advanceBlockNumberAndTimestampInSeconds(vestingDuration + 1);
+
+        //calls batchClaim to claim for both nodes
+        for (uint256 i = 0; i < nodesToMint; ++i) {
+            tokenIds[i] = i + 1;
+        }
+        NodesInstance.batchClaim(tokenIds);
+        vm.stopPrank();
+
+        //assert that the user has vestingDuration * nodesToMint $VVV
+        assertEq(sampleUser.balance, vestingDuration * nodesToMint * 1e18);
+    }
+
     //tests that a view function can output whether a token of tokenId is active
     function testCheckNodeIsActive() public {
         vm.deal(sampleUser, activationThreshold);
