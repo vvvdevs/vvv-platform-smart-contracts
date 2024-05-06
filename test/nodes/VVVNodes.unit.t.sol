@@ -327,6 +327,55 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         assertEq(NodesInstance.activationThreshold(), newActivationThreshold);
     }
 
+    //tests that an active node becomes inactive when an admin increases activationThreshold
+    function testNodeInactivationOnThresholdIncrease() public {
+        vm.deal(sampleUser, activationThreshold);
+        uint256 tokenId = 1;
+
+        vm.startPrank(sampleUser, sampleUser);
+        NodesInstance.mint(sampleUser); //mints tokenId 1
+        bool isActiveBeforeStake = NodesInstance.isNodeActive(tokenId);
+        NodesInstance.stake{ value: activationThreshold }(tokenId);
+        bool isActiveAfterStake = NodesInstance.isNodeActive(tokenId);
+        vm.stopPrank();
+
+        vm.startPrank(deployer, deployer);
+        NodesInstance.setActivationThreshold(activationThreshold + 1);
+        vm.stopPrank();
+
+        bool isActiveAfterThresholdChange = NodesInstance.isNodeActive(tokenId);
+
+        assertFalse(isActiveBeforeStake);
+        assertTrue(isActiveAfterStake);
+        assertFalse(isActiveAfterThresholdChange);
+    }
+
+    //tests that a threshold decrease which would activate a previously inactive node
+    function testNodeActivationOnThresholdDecrease() public {
+        vm.deal(sampleUser, activationThreshold);
+        uint256 tokenId = 1;
+        uint256 newThreshold = activationThreshold - 1;
+
+        vm.startPrank(sampleUser, sampleUser);
+        NodesInstance.mint(sampleUser); //mints tokenId 1
+        bool isActiveBeforeStake = NodesInstance.isNodeActive(tokenId);
+
+        //stake one less than the activation threshold so the node does not activate
+        NodesInstance.stake{ value: newThreshold }(tokenId);
+        bool isActiveAfterStake = NodesInstance.isNodeActive(tokenId);
+        vm.stopPrank();
+
+        vm.startPrank(deployer, deployer);
+        NodesInstance.setActivationThreshold(newThreshold);
+        vm.stopPrank();
+
+        bool isActiveAfterThresholdChange = NodesInstance.isNodeActive(tokenId);
+
+        assertFalse(isActiveBeforeStake);
+        assertFalse(isActiveAfterStake);
+        assertTrue(isActiveAfterThresholdChange);
+    }
+
     //tests that an admin can set maxLaunchpadStakeAmount
     function testSetMaxLaunchpadStakeAmount() public {
         uint256 currentMaxLaunchpadStakeAmount = NodesInstance.maxLaunchpadStakeAmount();
