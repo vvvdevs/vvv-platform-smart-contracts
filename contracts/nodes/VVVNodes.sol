@@ -2,12 +2,11 @@
 pragma solidity ^0.8.23;
 
 import { ERC721 } from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import { ERC721URIStorage } from "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { VVVAuthorizationRegistryChecker } from "contracts/auth/VVVAuthorizationRegistryChecker.sol";
 
-contract VVVNodes is ERC721, ERC721URIStorage, VVVAuthorizationRegistryChecker {
+contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
     using SafeERC20 for IERC20;
 
     ///@notice Additional data for each token
@@ -24,6 +23,9 @@ contract VVVNodes is ERC721, ERC721URIStorage, VVVAuthorizationRegistryChecker {
 
     ///@notice Flag for whether nodes are soulbound
     bool public soulbound = true;
+
+    ///@notice The baseURI for the token metadata
+    string public baseURI;
 
     ///@notice The total number of nodes that can be minted
     uint256 public constant TOTAL_SUPPLY = 5000;
@@ -66,10 +68,12 @@ contract VVVNodes is ERC721, ERC721URIStorage, VVVAuthorizationRegistryChecker {
 
     constructor(
         address _authorizationRegistry,
+        string memory _newBaseURI,
         uint256 _activationThreshold
     ) ERC721("Multi-token Nodes", "NODES") VVVAuthorizationRegistryChecker(_authorizationRegistry) {
         activationThreshold = _activationThreshold;
         authorizationRegistry = _authorizationRegistry;
+        baseURI = _newBaseURI;
     }
 
     ///@notice Mints a node to the recipient (placeholder)
@@ -188,8 +192,8 @@ contract VVVNodes is ERC721, ERC721URIStorage, VVVAuthorizationRegistryChecker {
     }
 
     ///@notice Sets token URI for token of tokenId (placeholder)
-    function setTokenURI(uint256 _tokenId, string calldata _tokenURI) external onlyAuthorized {
-        _setTokenURI(_tokenId, _tokenURI);
+    function setBaseURI(string calldata _newBaseURI) external onlyAuthorized {
+        baseURI = _newBaseURI;
     }
 
     ///@notice Sets the transaction processing reward
@@ -208,18 +212,9 @@ contract VVVNodes is ERC721, ERC721URIStorage, VVVAuthorizationRegistryChecker {
         return _isNodeActive(tokenData[_tokenId].stakedAmount, activationThreshold);
     }
 
-    ///@notice Returns the tokenURI for the given tokenId, required override
-    function tokenURI(
-        uint256 _tokenId
-    ) public view override(ERC721, ERC721URIStorage) returns (string memory) {
-        return super.tokenURI(_tokenId);
-    }
-
-    ///@notice Returns whether the given interfaceId is supported, required override
-    function supportsInterface(
-        bytes4 _interfaceId
-    ) public view override(ERC721, ERC721URIStorage) returns (bool) {
-        return super.supportsInterface(_interfaceId);
+    ///@notice override for ERC721:_baseURI to set baseURI
+    function _baseURI() internal view override returns (string memory) {
+        return baseURI;
     }
 
     ///@notice Override of ERC721:_update to enforce soulbound restrictions when tokens are not being minted
