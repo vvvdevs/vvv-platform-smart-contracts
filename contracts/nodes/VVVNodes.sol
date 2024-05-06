@@ -58,6 +58,9 @@ contract VVVNodes is ERC721, ERC721URIStorage, VVVAuthorizationRegistryChecker {
     ///@notice Thrown when a native transfer fails
     error TransferFailed();
 
+    ///@notice Thrown when there is an attempt to set the activation threshold to its current value
+    error UnchangedActivationThreshold();
+
     ///@notice Thrown when an attempt is made to stake/unstake 0 $VVV
     error ZeroTokenTransfer();
 
@@ -92,7 +95,7 @@ contract VVVNodes is ERC721, ERC721URIStorage, VVVAuthorizationRegistryChecker {
         if (msg.sender != ownerOf(_tokenId)) revert CallerIsNotTokenOwner();
         TokenData storage token = tokenData[_tokenId];
 
-        if (_isNodeActive(msg.value + token.stakedAmount)) {
+        if (_isNodeActive(msg.value + token.stakedAmount, activationThreshold)) {
             token.vestingSince = block.timestamp;
         }
 
@@ -105,7 +108,10 @@ contract VVVNodes is ERC721, ERC721URIStorage, VVVAuthorizationRegistryChecker {
         if (msg.sender != ownerOf(_tokenId)) revert CallerIsNotTokenOwner();
         TokenData storage token = tokenData[_tokenId];
 
-        if (_isNodeActive(token.stakedAmount) && !_isNodeActive(token.stakedAmount - _amount)) {
+        if (
+            _isNodeActive(token.stakedAmount, activationThreshold) &&
+            !_isNodeActive(token.stakedAmount - _amount, activationThreshold)
+        ) {
             _updateClaimableFromVesting(token);
         }
 
@@ -135,15 +141,30 @@ contract VVVNodes is ERC721, ERC721URIStorage, VVVAuthorizationRegistryChecker {
 
     ///@notice Sets the node activation threshold in staked $VVV
     function setActivationThreshold(uint256 _activationThreshold) external onlyAuthorized {
-        //update claimable balanaces of nodes which will become inactive as a result of the threshold change
-        for (uint256 i = 1; i <= tokenId; i++) {
-            TokenData storage token = tokenData[i];
-            if (
-                _isNodeActive(token.stakedAmount) &&
-                !_isNodeActive(token.stakedAmount - _activationThreshold)
-            ) {
-                _updateClaimableFromVesting(token);
+        if (_activationThreshold > activationThreshold) {
+            //update claimable balanaces of nodes which will become inactive as a result of the threshold increase
+            for (uint256 i = 1; i <= tokenId; i++) {
+                TokenData storage token = tokenData[i];
+                if (
+                    _isNodeActive(token.stakedAmount, activationThreshold) &&
+                    !_isNodeActive(token.stakedAmount, _activationThreshold)
+                ) {
+                    _updateClaimableFromVesting(token);
+                }
             }
+        } else if (_activationThreshold < activationThreshold) {
+            //set vestingSince for nodes which will become active as a result of the threshold decrease
+            for (uint256 i = 1; i <= tokenId; i++) {
+                TokenData storage token = tokenData[i];
+                if (
+                    _isNodeActive(token.stakedAmount, _activationThreshold) &&
+                    !_isNodeActive(token.stakedAmount, activationThreshold)
+                ) {
+                    token.vestingSince = block.timestamp;
+                }
+            }
+        } else {
+            revert UnchangedActivationThreshold();
         }
 
         activationThreshold = _activationThreshold;
@@ -177,7 +198,7 @@ contract VVVNodes is ERC721, ERC721URIStorage, VVVAuthorizationRegistryChecker {
 
     ///@notice returns whether a node of input tokenId is active
     function isNodeActive(uint256 _tokenId) external view returns (bool) {
-        return _isNodeActive(tokenData[_tokenId].stakedAmount);
+        return _isNodeActive(tokenData[_tokenId].stakedAmount, activationThreshold);
     }
 
     ///@notice Returns the tokenURI for the given tokenId, required override
@@ -217,7 +238,7 @@ contract VVVNodes is ERC721, ERC721URIStorage, VVVAuthorizationRegistryChecker {
         uint256 vestingSince = _tokenData.vestingSince;
 
         //if node is inactive, return 0 (no vesting will occur between time of deactivation and time at which this function is called while the node is still inactive)
-        if (!_isNodeActive(_tokenData.stakedAmount)) return 0;
+        if (!_isNodeActive(_tokenData.stakedAmount, activationThreshold)) return 0;
 
         uint256 totalUnvestedAmount = _tokenData.unvestedAmount;
         uint256 amountToVestPerSecond = _tokenData.amountToVestPerSecond;
@@ -231,7 +252,10 @@ contract VVVNodes is ERC721, ERC721URIStorage, VVVAuthorizationRegistryChecker {
     }
 
     ///@notice Returns whether node is active based on whether it's staked $VVV is above the activation threshold.
-    function _isNodeActive(uint256 _stakedVVVAmount) private view returns (bool) {
-        return _stakedVVVAmount >= activationThreshold;
+    function _isNodeActive(
+        uint256 _stakedVVVAmount,
+        uint256 _activationThreshold
+    ) private pure returns (bool) {
+        return _stakedVVVAmount >= _activationThreshold;
     }
 }
