@@ -237,6 +237,7 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
     }
 
     //tests that batchClaim can claim $VVV for multiple nodes
+    //checks for claim() above reach sad paths which apply to batchClaim as well.
     function testBatchClaim() public {
         vm.deal(address(NodesInstance), type(uint128).max);
 
@@ -265,7 +266,7 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         NodesInstance.batchClaim(tokenIds);
         vm.stopPrank();
 
-        //assert that the user has vestingDuration * nodesToMint $VVV
+        //assert that the user has correct amount of $VVV claimed from all nodes
         assertEq(sampleUser.balance, vestingDuration * nodesToMint * 1e18);
     }
 
