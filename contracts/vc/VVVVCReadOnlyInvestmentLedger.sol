@@ -25,7 +25,7 @@ contract VVVVCReadOnlyInvestmentLedger is AccessControl {
     mapping(uint256 => bytes32) public kycAddressInvestedRoots;
 
     /// @notice stable-equivalent invested for each round
-    mapping(uint256 => uint256) public totalInvested;
+    mapping(uint256 => uint256) public totalInvestedPerRound;
 
     /// @notice emitted when a round's state is set (for both per-user and total invested amounts)
     event RoundStateSet(
@@ -87,11 +87,20 @@ contract VVVVCReadOnlyInvestmentLedger is AccessControl {
         }
 
         kycAddressInvestedRoots[_investmentRound] = _kycAddressInvestedRoot;
-        totalInvested[_investmentRound] = _totalInvested;
+        totalInvestedPerRound[_investmentRound] = _totalInvested;
 
         ++nonce;
 
         emit RoundStateSet(_investmentRound, _kycAddressInvestedRoot, _totalInvested, nonce);
+    }
+
+    ///@notice outputs array of investment roots for given round ids
+    function getInvestmentRoots(uint256[] calldata _roundIds) external view returns (bytes32[] memory) {
+        bytes32[] memory investmentRoots = new bytes32[](_roundIds.length);
+        for (uint256 i = 0; i < _roundIds.length; i++) {
+            investmentRoots[i] = kycAddressInvestedRoots[_roundIds[i]];
+        }
+        return investmentRoots;
     }
 
     /**
