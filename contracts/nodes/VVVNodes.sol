@@ -13,7 +13,7 @@ contract VVVNodes is ERC721, ERC721URIStorage, VVVAuthorizationRegistryChecker {
     ///@notice Additional data for each token
     struct TokenData {
         uint256 unvestedAmount; //Remaining tokens to be vested, starts at 60% of $VVV initially locked in each node
-        uint256 vestingSince; //timestamp of most recent token activation
+        uint256 vestingSince; //timestamp of most recent token activation or claim
         uint256 claimableAmount; //claimable $VVV across vesting, transaction, and launchpad yield sources
         uint256 amountToVestPerSecond; //amount of $VVV to vest per second
         uint256 stakedAmount; //total staked $VVV for the node
