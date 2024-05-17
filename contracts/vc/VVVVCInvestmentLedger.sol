@@ -30,7 +30,7 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
     bool public investmentIsPaused;
 
     /// @notice the denominator used to convert units of payment tokens to units of $STABLE (i.e. USDC/T)
-    uint256 public exchangeRateDenominator = 1e6;
+    uint256 public immutable exchangeRateDenominator;
 
     /// @notice stores kyc address amounts invested for each investment round
     mapping(address => mapping(uint256 => uint256)) public kycAddressInvestedPerRound;
@@ -118,13 +118,17 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
         @notice stores the signer address and initializes the EIP-712 domain separator
         @param _signer The address authorized to sign investment transactions
         @param _environmentTag The environment tag for the EIP-712 domain separator
+        @param _authorizationRegistryAddress The address of the authorization registry
+        @param _exchangeRateDenominator The denominator used to convert units of payment tokens to units of $STABLE
      */
     constructor(
         address _signer,
         string memory _environmentTag,
-        address _authorizationRegistryAddress
+        address _authorizationRegistryAddress,
+        uint256 _exchangeRateDenominator
     ) VVVAuthorizationRegistryChecker(_authorizationRegistryAddress) {
         signer = _signer;
+        exchangeRateDenominator = _exchangeRateDenominator;
 
         // EIP-712 domain separator
         DOMAIN_SEPARATOR = keccak256(
@@ -255,11 +259,6 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
         kycAddressInvestedPerRound[_kycAddress][_investmentRound] += _amountToInvest;
         totalInvestedPerRound[_investmentRound] += _amountToInvest;
         emit VCInvestment(_investmentRound, address(0), _kycAddress, 0, 0, _amountToInvest);
-    }
-
-    ///@notice Allows admin to set the exchange rate denominator
-    function setExchangeRateDenominator(uint256 _exchangeRateDenominator) external onlyAuthorized {
-        exchangeRateDenominator = _exchangeRateDenominator;
     }
 
     /**
