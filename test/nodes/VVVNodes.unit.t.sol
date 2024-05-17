@@ -103,9 +103,6 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
 
         bool isActiveBeforeUnstake = NodesInstance.isNodeActive(tokenId);
 
-        // //advance more than 0 so that unstake won't revert due to zero vested tokens
-        // advanceBlockNumberAndTimestampInSeconds(1);
-
         uint256 userBalanceBeforeUnstake = sampleUser.balance;
         NodesInstance.unstake(tokenId, activationThreshold);
         vm.stopPrank();
@@ -146,7 +143,14 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         NodesInstance.stake{ value: activationThreshold }(tokenId);
 
         //full unvested amount
-        (uint256 unvestedAmountPreDeactivation, , , , ) = NodesInstance.tokenData(tokenId);
+        (
+            uint256 unvestedAmountPreDeactivation,
+            uint256 vestingSince,
+            ,
+            uint256 amountToVestPerSecond,
+
+        ) = NodesInstance.tokenData(tokenId);
+        uint256 timestampAtStake = block.timestamp;
 
         //advance enough to accrue some vested tokens
         advanceBlockNumberAndTimestampInSeconds(2 weeks);
@@ -160,8 +164,13 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
             tokenId
         );
 
+        uint256 expectedVestedAmount = (block.timestamp - vestingSince) * amountToVestPerSecond; //2 weeks of vesting
+
         //change in unvested amount is same as amount made claimable during deactivation
         assertEq(unvestedAmountPreDeactivation - unvestedAmountPostDeactivation, claimableAmount);
+
+        //assert that the claimable amount is the amount expected to be vested after 2 weeks
+        assertEq(expectedVestedAmount, claimableAmount);
     }
 
     //tests claim, entire amount accrued during vesting period should be claimable by a user. utilizes placeholder logic in mint() to set TokenData
