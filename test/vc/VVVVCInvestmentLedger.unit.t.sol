@@ -22,7 +22,12 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         //deploy auth registry (deployer is default admin)
         AuthRegistry = new VVVAuthorizationRegistry(defaultAdminTransferDelay, deployer);
 
-        LedgerInstance = new VVVVCInvestmentLedger(testSigner, environmentTag, address(AuthRegistry));
+        LedgerInstance = new VVVVCInvestmentLedger(
+            testSigner,
+            environmentTag,
+            address(AuthRegistry),
+            exchangeRateDenominator
+        );
 
         //grant ledgerManager the ledgerManagerRole
         AuthRegistry.grantRole(ledgerManagerRole, ledgerManager);
@@ -30,18 +35,12 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         //add permissions to ledgerManagerRole for withdraw and addInvestmentRecord on the LedgerInstance
         bytes4 withdrawSelector = LedgerInstance.withdraw.selector;
         bytes4 addInvestmentRecordSelector = LedgerInstance.addInvestmentRecord.selector;
-        bytes4 setExchangeRateDenominatorSelector = LedgerInstance.setExchangeRateDenominator.selector;
         bytes4 refundSelector = LedgerInstance.refundUserInvestment.selector;
         bytes4 setInvestmentPausedSelector = LedgerInstance.setInvestmentIsPaused.selector;
         AuthRegistry.setPermission(address(LedgerInstance), withdrawSelector, ledgerManagerRole);
         AuthRegistry.setPermission(
             address(LedgerInstance),
             addInvestmentRecordSelector,
-            ledgerManagerRole
-        );
-        AuthRegistry.setPermission(
-            address(LedgerInstance),
-            setExchangeRateDenominatorSelector,
             ledgerManagerRole
         );
         AuthRegistry.setPermission(address(LedgerInstance), refundSelector, ledgerManagerRole);
@@ -398,31 +397,6 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         vm.startPrank(sampleUser, sampleUser);
         vm.expectRevert();
         LedgerInstance.addInvestmentRecord(kycAddress, investmentRound, investmentAmount);
-        vm.stopPrank();
-    }
-
-    /**
-        @notice test that admin can set the stablecoin exchange rate denominator
-     */
-    function testSetExchangeRateDenominator() public {
-        uint256 newExchangeRateDenominator = 1e18;
-
-        vm.startPrank(ledgerManager, ledgerManager);
-        LedgerInstance.setExchangeRateDenominator(newExchangeRateDenominator);
-        vm.stopPrank();
-
-        assertTrue(LedgerInstance.exchangeRateDenominator() == newExchangeRateDenominator);
-    }
-
-    /**
-        @notice tests that a non-admin cannot set the stablecoin exchange rate denominator
-     */
-    function testNonAdminSetExchangeRateDenominator() public {
-        uint256 newExchangeRateDenominator = 1e18;
-
-        vm.startPrank(sampleUser, sampleUser);
-        vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
-        LedgerInstance.setExchangeRateDenominator(newExchangeRateDenominator);
         vm.stopPrank();
     }
 

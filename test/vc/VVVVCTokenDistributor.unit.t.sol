@@ -17,7 +17,12 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
         vm.startPrank(deployer, deployer);
 
         //placeholder address(0) for VVVAuthorizationRegistry
-        LedgerInstance = new VVVVCInvestmentLedger(testSigner, environmentTag, address(0));
+        LedgerInstance = new VVVVCInvestmentLedger(
+            testSigner,
+            environmentTag,
+            address(0),
+            exchangeRateDenominator
+        );
         ledgerDomainSeparator = LedgerInstance.DOMAIN_SEPARATOR();
         investmentTypehash = LedgerInstance.INVESTMENT_TYPEHASH();
 

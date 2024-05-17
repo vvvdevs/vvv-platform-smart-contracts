@@ -19,7 +19,12 @@ contract VVVVCInvestmentLedgerFuzzTests is VVVVCTestBase {
         PaymentTokenInstance = new MockERC20(6); //usdc has 6 decimals
 
         //deploy ledger with placeholder, as no testing of call permissions are tested in this file
-        LedgerInstance = new VVVVCInvestmentLedger(testSigner, environmentTag, address(0));
+        LedgerInstance = new VVVVCInvestmentLedger(
+            testSigner,
+            environmentTag,
+            address(0),
+            exchangeRateDenominator
+        );
         ledgerDomainSeparator = LedgerInstance.DOMAIN_SEPARATOR();
         investmentTypehash = LedgerInstance.INVESTMENT_TYPEHASH();
 

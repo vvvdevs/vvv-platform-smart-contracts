@@ -64,6 +64,7 @@ abstract contract VVVVCTestBase is Test {
     bytes32 ledgerManagerRole = keccak256("LEDGER_MANAGER_ROLE");
     uint48 defaultAdminTransferDelay = 1 days;
     uint256 exchangeRateNumerator = 1e6;
+    uint256 exchangeRateDenominator = 1e6;
 
     //claim contract-specific values
     uint256 projectTokenAmountToProxyWallet = 1_000_000 * 1e18; //1 million tokens
