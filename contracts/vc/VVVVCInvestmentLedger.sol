@@ -30,7 +30,7 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
     bool public investmentIsPaused;
 
     /// @notice the denominator used to convert units of payment tokens to units of $STABLE (i.e. USDC/T)
-    uint256 public immutable exchangeRateDenominator = 1e6;
+    uint256 public immutable exchangeRateDenominator;
 
     /// @notice stores kyc address amounts invested for each investment round
     mapping(address => mapping(uint256 => uint256)) public kycAddressInvestedPerRound;
@@ -118,6 +118,8 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
         @notice stores the signer address and initializes the EIP-712 domain separator
         @param _signer The address authorized to sign investment transactions
         @param _environmentTag The environment tag for the EIP-712 domain separator
+        @param _authorizationRegistryAddress The address of the authorization registry
+        @param _exchangeRateDenominator The denominator used to convert units of payment tokens to units of $STABLE
      */
     constructor(
         address _signer,
