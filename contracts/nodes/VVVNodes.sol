@@ -142,7 +142,7 @@ contract VVVNodes is ERC721, ERC721URIStorage, VVVAuthorizationRegistryChecker {
     ///@notice Sets the node activation threshold in staked $VVV
     function setActivationThreshold(uint256 _activationThreshold) external onlyAuthorized {
         if (_activationThreshold > activationThreshold) {
-            //update claimable balanaces of nodes which will become inactive as a result of the threshold increase
+            //update claimable balances of nodes which will become inactive as a result of the threshold increase
             for (uint256 i = 1; i <= tokenId; i++) {
                 TokenData storage token = tokenData[i];
                 if (
