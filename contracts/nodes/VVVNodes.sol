@@ -58,9 +58,6 @@ contract VVVNodes is ERC721, ERC721URIStorage, VVVAuthorizationRegistryChecker {
     ///@notice Thrown when a native transfer fails
     error TransferFailed();
 
-    ///@notice Thrown when there is an attempt to set the activation threshold to its current value
-    error UnchangedActivationThreshold();
-
     ///@notice Thrown when an attempt is made to stake/unstake 0 $VVV
     error ZeroTokenTransfer();
 
@@ -163,8 +160,6 @@ contract VVVNodes is ERC721, ERC721URIStorage, VVVAuthorizationRegistryChecker {
                     token.vestingSince = block.timestamp;
                 }
             }
-        } else {
-            revert UnchangedActivationThreshold();
         }
 
         activationThreshold = _activationThreshold;
