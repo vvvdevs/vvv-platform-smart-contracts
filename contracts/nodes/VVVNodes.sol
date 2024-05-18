@@ -58,9 +58,6 @@ contract VVVNodes is ERC721, ERC721URIStorage, VVVAuthorizationRegistryChecker {
     ///@notice Thrown when a native transfer fails
     error TransferFailed();
 
-    ///@notice Thrown when there is an attempt to set the activation threshold to its current value
-    error UnchangedActivationThreshold();
-
     ///@notice Thrown when an attempt is made to stake/unstake 0 $VVV
     error ZeroTokenTransfer();
 
@@ -149,7 +146,7 @@ contract VVVNodes is ERC721, ERC721URIStorage, VVVAuthorizationRegistryChecker {
     ///@notice Sets the node activation threshold in staked $VVV
     function setActivationThreshold(uint256 _activationThreshold) external onlyAuthorized {
         if (_activationThreshold > activationThreshold) {
-            //update claimable balanaces of nodes which will become inactive as a result of the threshold increase
+            //update claimable balances of nodes which will become inactive as a result of the threshold increase
             for (uint256 i = 1; i <= tokenId; i++) {
                 TokenData storage token = tokenData[i];
                 if (
@@ -170,8 +167,6 @@ contract VVVNodes is ERC721, ERC721URIStorage, VVVAuthorizationRegistryChecker {
                     token.vestingSince = block.timestamp;
                 }
             }
-        } else {
-            revert UnchangedActivationThreshold();
         }
 
         activationThreshold = _activationThreshold;
