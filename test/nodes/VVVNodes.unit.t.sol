@@ -3,6 +3,7 @@ pragma solidity ^0.8.23;
 
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { VVVAuthorizationRegistry } from "contracts/auth/VVVAuthorizationRegistry.sol";
+import { VVVAuthorizationRegistryChecker } from "contracts/auth/VVVAuthorizationRegistryChecker.sol";
 import { VVVNodes } from "contracts/nodes/VVVNodes.sol";
 import { VVVNodesTestBase } from "./VVVNodesTestBase.sol";
 import { VVVToken } from "contracts/tokens/VvvToken.sol";
@@ -61,6 +62,15 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         string memory tokenURINewBase = NodesInstance.tokenURI(tokenId);
         string memory concatRefNewBaseURI = string(abi.encodePacked(newBaseURI, tokenId.toString()));
         assertEq(tokenURINewBase, concatRefNewBaseURI);
+    }
+
+    //tests that an admin cannot set the tokenURI
+    function testNonAdminCannotSetTokenURI() public {
+        vm.startPrank(sampleUser, sampleUser);
+        NodesInstance.mint(deployer);
+        vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
+        NodesInstance.setTokenURI(1, "https://example.com/token/1");
+        vm.stopPrank();
     }
 
     //tests that a node owner can stake $VVV via their node s.t. the node is activated
@@ -127,9 +137,6 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
 
         bool isActiveBeforeUnstake = NodesInstance.isNodeActive(tokenId);
 
-        // //advance more than 0 so that unstake won't revert due to zero vested tokens
-        // advanceBlockNumberAndTimestampInSeconds(1);
-
         uint256 userBalanceBeforeUnstake = sampleUser.balance;
         NodesInstance.unstake(tokenId, activationThreshold);
         vm.stopPrank();
@@ -170,7 +177,13 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         NodesInstance.stake{ value: activationThreshold }(tokenId);
 
         //full unvested amount
-        (uint256 unvestedAmountPreDeactivation, , , , ) = NodesInstance.tokenData(tokenId);
+        (
+            uint256 unvestedAmountPreDeactivation,
+            uint256 vestingSince,
+            ,
+            uint256 amountToVestPerSecond,
+
+        ) = NodesInstance.tokenData(tokenId);
 
         //advance enough to accrue some vested tokens
         advanceBlockNumberAndTimestampInSeconds(2 weeks);
@@ -184,8 +197,13 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
             tokenId
         );
 
+        uint256 expectedVestedAmount = (block.timestamp - vestingSince) * amountToVestPerSecond; //2 weeks of vesting
+
         //change in unvested amount is same as amount made claimable during deactivation
         assertEq(unvestedAmountPreDeactivation - unvestedAmountPostDeactivation, claimableAmount);
+
+        //assert that the claimable amount is the amount expected to be vested after 2 weeks
+        assertEq(expectedVestedAmount, claimableAmount);
     }
 
     //tests claim, entire amount accrued during vesting period should be claimable by a user. utilizes placeholder logic in mint() to set TokenData
@@ -263,7 +281,6 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
     }
 
     //tests that batchClaim can claim $VVV for multiple nodes
-    //checks for claim() above reach sad paths which apply to batchClaim as well.
     function testBatchClaim() public {
         vm.deal(address(NodesInstance), type(uint128).max);
 
@@ -294,6 +311,88 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
 
         //assert that the user has correct amount of $VVV claimed from all nodes
         assertEq(sampleUser.balance, vestingDuration * nodesToMint * 1e18);
+    }
+
+    //tests batchClaim where a user does not own one of the nodes
+    function testBatchClaimUnownedNode() public {
+        vm.deal(address(NodesInstance), type(uint128).max);
+        vm.deal(deployer, type(uint256).max);
+
+        uint256 nodesToMint = 12;
+        vm.deal(sampleUser, activationThreshold * nodesToMint);
+
+        uint256 vestingDuration = 63_113_904; //2 years
+        uint256[] memory tokenIds = new uint256[](nodesToMint);
+
+        //mint nodesToMint nodes and stake activationThreshold for each. i is tokenId.
+        vm.startPrank(sampleUser, sampleUser);
+        for (uint256 i = 1; i <= nodesToMint; ++i) {
+            NodesInstance.mint(sampleUser);
+
+            //stake the activation threshold to activate the node
+            NodesInstance.stake{ value: activationThreshold }(i);
+        }
+
+        //set soulbound to false to allow transfer
+        vm.startPrank(deployer, deployer);
+        NodesInstance.setSoulbound(false);
+        vm.stopPrank();
+
+        //transfer one token from sampleUser to deployer and activate it
+        vm.startPrank(sampleUser, sampleUser);
+        NodesInstance.transferFrom(sampleUser, deployer, 1);
+        vm.stopPrank();
+
+        vm.startPrank(deployer, deployer);
+        NodesInstance.stake{ value: activationThreshold }(1);
+        vm.stopPrank();
+
+        //wait for the vesting period to pass
+        advanceBlockNumberAndTimestampInSeconds(vestingDuration + 1);
+
+        //calls batchClaim to claim for both nodes
+        for (uint256 i = 0; i < nodesToMint; ++i) {
+            tokenIds[i] = i + 1;
+        }
+
+        vm.expectRevert(VVVNodes.CallerIsNotTokenOwner.selector);
+        NodesInstance.batchClaim(tokenIds);
+        vm.stopPrank();
+    }
+
+    //tests that a user cannot batch claim when one of the nodes has zero claimable tokens
+    function testBatchClaimZero() public {
+        vm.deal(address(NodesInstance), type(uint128).max);
+        vm.deal(deployer, type(uint256).max);
+
+        uint256 nodesToMint = 12;
+        vm.deal(sampleUser, activationThreshold * nodesToMint);
+
+        uint256 vestingDuration = 63_113_904; //2 years
+        uint256[] memory tokenIds = new uint256[](nodesToMint);
+
+        //mint nodesToMint nodes and stake activationThreshold for each. i is tokenId.
+        vm.startPrank(sampleUser, sampleUser);
+        for (uint256 i = 1; i <= nodesToMint; ++i) {
+            NodesInstance.mint(sampleUser);
+
+            //stake the activation threshold to activate the node
+            if (i != 2) {
+                NodesInstance.stake{ value: activationThreshold }(i);
+            }
+        }
+
+        //wait for the vesting period to pass
+        advanceBlockNumberAndTimestampInSeconds(vestingDuration + 1);
+
+        //calls batchClaim to claim for both nodes
+        for (uint256 i = 0; i < nodesToMint; ++i) {
+            tokenIds[i] = i + 1;
+        }
+
+        vm.expectRevert(VVVNodes.NoClaimableTokens.selector);
+        NodesInstance.batchClaim(tokenIds);
+        vm.stopPrank();
     }
 
     //tests that a view function can output whether a token of tokenId is active
@@ -353,6 +452,14 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         assertEq(NodesInstance.activationThreshold(), newActivationThreshold);
     }
 
+    //tests that a non-admin cannot set activation threshold
+    function testNonAdminCannotSetActivationThreshold() public {
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
+        NodesInstance.setActivationThreshold(activationThreshold + 1);
+        vm.stopPrank();
+    }
+
     //tests that an active node becomes inactive when an admin increases activationThreshold
     function testNodeInactivationOnThresholdIncrease() public {
         vm.deal(sampleUser, activationThreshold);
@@ -402,6 +509,40 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         assertTrue(isActiveAfterThresholdChange);
     }
 
+    //tests that a defined gas limit is not exceeded when calling setActivationThreshold in the worst possible conditions
+    function testGasConsumedBySetActivationThreshold() public {
+        uint256 vestingDuration = 63_113_904; //2 years
+        uint256 totalGasLimit = type(uint256).max;
+        vm.deal(sampleUser, type(uint256).max);
+
+        //mint 5000 nodes
+        uint256 nodesToMint = 5000;
+        for (uint256 i = 0; i < nodesToMint; i++) {
+            NodesInstance.mint(sampleUser);
+        }
+
+        //activate all nodes
+        vm.startPrank(sampleUser);
+        for (uint256 i = 0; i < nodesToMint; i++) {
+            NodesInstance.stake{ value: activationThreshold }(i + 1);
+        }
+        vm.stopPrank();
+
+        //wait for all tokens to vest
+        advanceBlockNumberAndTimestampInSeconds(vestingDuration * 2);
+
+        vm.startPrank(deployer, deployer);
+        uint256 gasLeftBeforeThresholdChange = gasleft();
+        NodesInstance.setActivationThreshold(type(uint256).max);
+        uint256 gasLeftAfterThresholdChange = gasleft();
+        vm.stopPrank();
+
+        uint256 gasUsed = gasLeftBeforeThresholdChange - gasLeftAfterThresholdChange;
+        uint256 gasUsedPerNode = gasUsed / nodesToMint;
+
+        assertLt(gasUsed, totalGasLimit);
+    }
+
     //tests that an admin can set maxLaunchpadStakeAmount
     function testSetMaxLaunchpadStakeAmount() public {
         uint256 currentMaxLaunchpadStakeAmount = NodesInstance.maxLaunchpadStakeAmount();
@@ -411,6 +552,14 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         NodesInstance.setMaxLaunchpadStakeAmount(newMaxLaunchpadStakeAmount);
         vm.stopPrank();
         assertEq(NodesInstance.maxLaunchpadStakeAmount(), newMaxLaunchpadStakeAmount);
+    }
+
+    //tests that a non-admin cannot set maxLaunchpadStakeAmount
+    function testNonAdminCannotSetMaxLaunchpadStakeAmount() public {
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
+        NodesInstance.setMaxLaunchpadStakeAmount(activationThreshold + 1);
+        vm.stopPrank();
     }
 
     //tests that an admin can set soulbound
@@ -424,6 +573,14 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         assertEq(NodesInstance.soulbound(), newSoulbound);
     }
 
+    //tests that a non-admin cannot set soulbound
+    function testNonAdminCannotSetSoulbound() public {
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
+        NodesInstance.setSoulbound(true);
+        vm.stopPrank();
+    }
+
     //tests that an admin can set transactionProcessingReward
     function testSetTransactionProcessingReward() public {
         uint256 currentTransactionProcessingReward = NodesInstance.transactionProcessingReward();
@@ -433,6 +590,14 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         NodesInstance.setTransactionProcessingReward(newTransactionProcessingReward);
         vm.stopPrank();
         assertEq(NodesInstance.transactionProcessingReward(), newTransactionProcessingReward);
+    }
+
+    //tests than a non-admin cannot set transactionProcessingReward
+    function testNonAdminCannotSetTransactionProcessingReward() public {
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
+        NodesInstance.setTransactionProcessingReward(1);
+        vm.stopPrank();
     }
 
     //tests that an admin can withdraw $VVV from the contract
@@ -445,5 +610,16 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         vm.stopPrank();
 
         assertEq(address(NodesInstance).balance, 0);
+    }
+
+    //tests that a non-admin cannot withdraw $VVV
+    function testNonAdminCannotWithdrawVVV() public {
+        uint256 amountToWithdraw = 100 * 1e18;
+        vm.deal(address(NodesInstance), amountToWithdraw);
+
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
+        NodesInstance.withdraw(1);
+        vm.stopPrank();
     }
 }
