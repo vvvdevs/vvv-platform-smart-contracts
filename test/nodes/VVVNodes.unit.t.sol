@@ -255,7 +255,6 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
     }
 
     //tests that batchClaim can claim $VVV for multiple nodes
-    //checks for claim() above reach sad paths which apply to batchClaim as well.
     function testBatchClaim() public {
         vm.deal(address(NodesInstance), type(uint128).max);
 
@@ -286,6 +285,88 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
 
         //assert that the user has correct amount of $VVV claimed from all nodes
         assertEq(sampleUser.balance, vestingDuration * nodesToMint * 1e18);
+    }
+
+    //tests batchClaim where a user does not own one of the nodes
+    function testBatchClaimUnownedNode() public {
+        vm.deal(address(NodesInstance), type(uint128).max);
+        vm.deal(deployer, type(uint256).max);
+
+        uint256 nodesToMint = 12;
+        vm.deal(sampleUser, activationThreshold * nodesToMint);
+
+        uint256 vestingDuration = 63_113_904; //2 years
+        uint256[] memory tokenIds = new uint256[](nodesToMint);
+
+        //mint nodesToMint nodes and stake activationThreshold for each. i is tokenId.
+        vm.startPrank(sampleUser, sampleUser);
+        for (uint256 i = 1; i <= nodesToMint; ++i) {
+            NodesInstance.mint(sampleUser);
+
+            //stake the activation threshold to activate the node
+            NodesInstance.stake{ value: activationThreshold }(i);
+        }
+
+        //set soulbound to false to allow transfer
+        vm.startPrank(deployer, deployer);
+        NodesInstance.setSoulbound(false);
+        vm.stopPrank();
+
+        //transfer one token from sampleUser to deployer and activate it
+        vm.startPrank(sampleUser, sampleUser);
+        NodesInstance.transferFrom(sampleUser, deployer, 1);
+        vm.stopPrank();
+
+        vm.startPrank(deployer, deployer);
+        NodesInstance.stake{ value: activationThreshold }(1);
+        vm.stopPrank();
+
+        //wait for the vesting period to pass
+        advanceBlockNumberAndTimestampInSeconds(vestingDuration + 1);
+
+        //calls batchClaim to claim for both nodes
+        for (uint256 i = 0; i < nodesToMint; ++i) {
+            tokenIds[i] = i + 1;
+        }
+
+        vm.expectRevert(VVVNodes.CallerIsNotTokenOwner.selector);
+        NodesInstance.batchClaim(tokenIds);
+        vm.stopPrank();
+    }
+
+    //tests that a user cannot batch claim when one of the nodes has zero claimable tokens
+    function testBatchClaimZero() public {
+        vm.deal(address(NodesInstance), type(uint128).max);
+        vm.deal(deployer, type(uint256).max);
+
+        uint256 nodesToMint = 12;
+        vm.deal(sampleUser, activationThreshold * nodesToMint);
+
+        uint256 vestingDuration = 63_113_904; //2 years
+        uint256[] memory tokenIds = new uint256[](nodesToMint);
+
+        //mint nodesToMint nodes and stake activationThreshold for each. i is tokenId.
+        vm.startPrank(sampleUser, sampleUser);
+        for (uint256 i = 1; i <= nodesToMint; ++i) {
+            NodesInstance.mint(sampleUser);
+
+            //stake the activation threshold to activate the node
+            if (i != 2) {
+                NodesInstance.stake{ value: activationThreshold }(i);
+            }
+        }
+
+        //wait for the vesting period to pass
+        advanceBlockNumberAndTimestampInSeconds(vestingDuration + 1);
+
+        //calls batchClaim to claim for both nodes
+        for (uint256 i = 0; i < nodesToMint; ++i) {
+            tokenIds[i] = i + 1;
+        }
+
+        vm.expectRevert(VVVNodes.NoClaimableTokens.selector);
+        NodesInstance.batchClaim(tokenIds);
+        vm.stopPrank();
     }
 
     //tests that a view function can output whether a token of tokenId is active
