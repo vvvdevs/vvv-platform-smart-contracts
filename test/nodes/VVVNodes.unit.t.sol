@@ -2,6 +2,7 @@
 pragma solidity ^0.8.23;
 
 import { VVVAuthorizationRegistry } from "contracts/auth/VVVAuthorizationRegistry.sol";
+import { VVVAuthorizationRegistryChecker } from "contracts/auth/VVVAuthorizationRegistryChecker.sol";
 import { VVVNodes } from "contracts/nodes/VVVNodes.sol";
 import { VVVNodesTestBase } from "./VVVNodesTestBase.sol";
 import { VVVToken } from "contracts/tokens/VvvToken.sol";
@@ -35,6 +36,15 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         NodesInstance.setTokenURI(1, "https://example.com/token/1");
         vm.stopPrank();
         assertEq(NodesInstance.tokenURI(1), "https://example.com/token/1");
+    }
+
+    //tests that an admin cannot set the tokenURI
+    function testNonAdminCannotSetTokenURI() public {
+        vm.startPrank(sampleUser, sampleUser);
+        NodesInstance.mint(deployer);
+        vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
+        NodesInstance.setTokenURI(1, "https://example.com/token/1");
+        vm.stopPrank();
     }
 
     //tests that a node owner can stake $VVV via their node s.t. the node is activated
@@ -148,7 +158,6 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
             uint256 amountToVestPerSecond,
 
         ) = NodesInstance.tokenData(tokenId);
-        uint256 timestampAtStake = block.timestamp;
 
         //advance enough to accrue some vested tokens
         advanceBlockNumberAndTimestampInSeconds(2 weeks);
@@ -302,6 +311,14 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         assertEq(NodesInstance.activationThreshold(), newActivationThreshold);
     }
 
+    //tests that a non-admin cannot set activation threshold
+    function testNonAdminCannotSetActivationThreshold() public {
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
+        NodesInstance.setActivationThreshold(activationThreshold + 1);
+        vm.stopPrank();
+    }
+
     //tests that an active node becomes inactive when an admin increases activationThreshold
     function testNodeInactivationOnThresholdIncrease() public {
         vm.deal(sampleUser, activationThreshold);
@@ -351,6 +368,40 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         assertTrue(isActiveAfterThresholdChange);
     }
 
+    //tests that a defined gas limit is not exceeded when calling setActivationThreshold in the worst possible conditions
+    function testGasConsumedBySetActivationThreshold() public {
+        uint256 vestingDuration = 63_113_904; //2 years
+        uint256 totalGasLimit = type(uint256).max;
+        vm.deal(sampleUser, type(uint256).max);
+
+        //mint 5000 nodes
+        uint256 nodesToMint = 5000;
+        for (uint256 i = 0; i < nodesToMint; i++) {
+            NodesInstance.mint(sampleUser);
+        }
+
+        //activate all nodes
+        vm.startPrank(sampleUser);
+        for (uint256 i = 0; i < nodesToMint; i++) {
+            NodesInstance.stake{ value: activationThreshold }(i + 1);
+        }
+        vm.stopPrank();
+
+        //wait for all tokens to vest
+        advanceBlockNumberAndTimestampInSeconds(vestingDuration * 2);
+
+        vm.startPrank(deployer, deployer);
+        uint256 gasLeftBeforeThresholdChange = gasleft();
+        NodesInstance.setActivationThreshold(type(uint256).max);
+        uint256 gasLeftAfterThresholdChange = gasleft();
+        vm.stopPrank();
+
+        uint256 gasUsed = gasLeftBeforeThresholdChange - gasLeftAfterThresholdChange;
+        uint256 gasUsedPerNode = gasUsed / nodesToMint;
+
+        assertLt(gasUsed, totalGasLimit);
+    }
+
     //tests that an admin can set maxLaunchpadStakeAmount
     function testSetMaxLaunchpadStakeAmount() public {
         uint256 currentMaxLaunchpadStakeAmount = NodesInstance.maxLaunchpadStakeAmount();
@@ -360,6 +411,14 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         NodesInstance.setMaxLaunchpadStakeAmount(newMaxLaunchpadStakeAmount);
         vm.stopPrank();
         assertEq(NodesInstance.maxLaunchpadStakeAmount(), newMaxLaunchpadStakeAmount);
+    }
+
+    //tests that a non-admin cannot set maxLaunchpadStakeAmount
+    function testNonAdminCannotSetMaxLaunchpadStakeAmount() public {
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
+        NodesInstance.setMaxLaunchpadStakeAmount(activationThreshold + 1);
+        vm.stopPrank();
     }
 
     //tests that an admin can set soulbound
@@ -373,6 +432,14 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         assertEq(NodesInstance.soulbound(), newSoulbound);
     }
 
+    //tests that a non-admin cannot set soulbound
+    function testNonAdminCannotSetSoulbound() public {
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
+        NodesInstance.setSoulbound(true);
+        vm.stopPrank();
+    }
+
     //tests that an admin can set transactionProcessingReward
     function testSetTransactionProcessingReward() public {
         uint256 currentTransactionProcessingReward = NodesInstance.transactionProcessingReward();
@@ -382,6 +449,14 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         NodesInstance.setTransactionProcessingReward(newTransactionProcessingReward);
         vm.stopPrank();
         assertEq(NodesInstance.transactionProcessingReward(), newTransactionProcessingReward);
+    }
+
+    //tests than a non-admin cannot set transactionProcessingReward
+    function testNonAdminCannotSetTransactionProcessingReward() public {
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
+        NodesInstance.setTransactionProcessingReward(1);
+        vm.stopPrank();
     }
 
     //tests that an admin can withdraw $VVV from the contract
@@ -394,5 +469,16 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         vm.stopPrank();
 
         assertEq(address(NodesInstance).balance, 0);
+    }
+
+    //tests that a non-admin cannot withdraw $VVV
+    function testNonAdminCannotWithdrawVVV() public {
+        uint256 amountToWithdraw = 100 * 1e18;
+        vm.deal(address(NodesInstance), amountToWithdraw);
+
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
+        NodesInstance.withdraw(1);
+        vm.stopPrank();
     }
 }
