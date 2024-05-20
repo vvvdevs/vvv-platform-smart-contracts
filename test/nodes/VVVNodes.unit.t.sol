@@ -1,6 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
+import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { VVVAuthorizationRegistry } from "contracts/auth/VVVAuthorizationRegistry.sol";
 import { VVVAuthorizationRegistryChecker } from "contracts/auth/VVVAuthorizationRegistryChecker.sol";
 import { VVVNodes } from "contracts/nodes/VVVNodes.sol";
@@ -8,10 +9,12 @@ import { VVVNodesTestBase } from "./VVVNodesTestBase.sol";
 import { VVVToken } from "contracts/tokens/VvvToken.sol";
 
 contract VVVNodesUnitTest is VVVNodesTestBase {
+    using Strings for uint256;
+
     function setUp() public {
         vm.startPrank(deployer, deployer);
         AuthRegistry = new VVVAuthorizationRegistry(defaultAdminTransferDelay, deployer);
-        NodesInstance = new VVVNodes(address(AuthRegistry), activationThreshold);
+        NodesInstance = new VVVNodes(address(AuthRegistry), defaultBaseURI, activationThreshold);
         vm.stopPrank();
     }
 
@@ -27,15 +30,38 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         assertEq(NodesInstance.balanceOf(sampleUser), 1);
     }
 
-    //tests setting tokenURI for a tokenId
-    function testSetTokenURI() public {
+    //tests setting baseURI
+    function testSetBaseURI() public {
+        string memory newBaseURI = "https://example.com/token/";
         vm.startPrank(deployer, deployer);
         NodesInstance.mint(deployer);
         vm.stopPrank();
         vm.startPrank(deployer, deployer);
-        NodesInstance.setTokenURI(1, "https://example.com/token/1");
+        NodesInstance.setBaseURI(newBaseURI);
         vm.stopPrank();
-        assertEq(NodesInstance.tokenURI(1), "https://example.com/token/1");
+        assertEq(NodesInstance.baseURI(), newBaseURI);
+    }
+
+    //tests that a new base URI reflects in the ERC721 function which reads an individual token's URI
+    function testReadTokenURIAfterBaseURIUpdate() public {
+        uint256 tokenId = 1;
+        string memory newBaseURI = "https://example.com/token/";
+
+        vm.startPrank(sampleUser, sampleUser);
+        NodesInstance.mint(sampleUser);
+        vm.stopPrank();
+
+        string memory tokenURIdefaultBase = NodesInstance.tokenURI(tokenId);
+        string memory concatRefDefaultURI = string(abi.encodePacked(defaultBaseURI, tokenId.toString()));
+        assertEq(tokenURIdefaultBase, concatRefDefaultURI);
+
+        vm.startPrank(deployer, deployer);
+        NodesInstance.setBaseURI(newBaseURI);
+        vm.stopPrank();
+
+        string memory tokenURINewBase = NodesInstance.tokenURI(tokenId);
+        string memory concatRefNewBaseURI = string(abi.encodePacked(newBaseURI, tokenId.toString()));
+        assertEq(tokenURINewBase, concatRefNewBaseURI);
     }
 
     //tests that an admin cannot set the tokenURI
