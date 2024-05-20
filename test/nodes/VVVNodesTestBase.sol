@@ -22,6 +22,11 @@ abstract contract VVVNodesTestBase is Test {
 
     uint48 defaultAdminTransferDelay = 1 days;
 
+    //500 $VVV activation threshold for nodes
+    uint256 activationThreshold = 500 * 1e18;
+
+    string defaultBaseURI = "http://localhost/nodes/";
+
     function advanceBlockNumberAndTimestampInBlocks(uint256 blocks) public {
         blockNumber += blocks;
         blockTimestamp += blocks * 12; //seconds per block
