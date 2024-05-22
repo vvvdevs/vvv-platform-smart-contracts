@@ -65,11 +65,11 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
     }
 
     //tests that an admin cannot set the tokenURI
-    function testNonAdminCannotSetTokenURI() public {
+    function testNonAdminCannotSetBaseURI() public {
         vm.startPrank(sampleUser, sampleUser);
         NodesInstance.mint(deployer);
         vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
-        NodesInstance.setTokenURI(1, "https://example.com/token/1");
+        NodesInstance.setBaseURI("https://example.com/token/");
         vm.stopPrank();
     }
 
