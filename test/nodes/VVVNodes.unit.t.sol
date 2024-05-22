@@ -6,7 +6,6 @@ import { VVVAuthorizationRegistry } from "contracts/auth/VVVAuthorizationRegistr
 import { VVVAuthorizationRegistryChecker } from "contracts/auth/VVVAuthorizationRegistryChecker.sol";
 import { VVVNodes } from "contracts/nodes/VVVNodes.sol";
 import { VVVNodesTestBase } from "./VVVNodesTestBase.sol";
-import { VVVToken } from "contracts/tokens/VvvToken.sol";
 
 contract VVVNodesUnitTest is VVVNodesTestBase {
     using Strings for uint256;

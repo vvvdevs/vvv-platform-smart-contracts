@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import { Test } from "lib/forge-std/src/Test.sol";
+import "lib/forge-std/src/Test.sol";
 import { VVVAuthorizationRegistry } from "contracts/auth/VVVAuthorizationRegistry.sol";
 import { VVVNodes } from "contracts/nodes/VVVNodes.sol";
 import { VVVToken } from "contracts/tokens/VvvToken.sol";
