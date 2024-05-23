@@ -436,6 +436,126 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         vm.stopPrank();
     }
 
+    //tests that an admin can deposit launchpad yield for max supply of nodes
+    function testDepositLaunchpadYield() public {
+        uint256 nodesToMint = NodesInstance.TOTAL_SUPPLY();
+        uint256[] memory tokenIds = new uint256[](nodesToMint);
+        uint256[] memory amounts = new uint256[](nodesToMint);
+        address[] memory nodeOwners = new address[](nodesToMint);
+        uint256 amountsSum;
+
+        for (uint256 i = 0; i < nodesToMint; ++i) {
+            address thisNodeOwner = address(uint160(uint256(keccak256(abi.encodePacked(i)))));
+            NodesInstance.mint(thisNodeOwner);
+
+            tokenIds[i] = i + 1;
+            amounts[i] = (uint256(keccak256(abi.encodePacked(i))) % 10 ether) + 1;
+            amountsSum += amounts[i];
+            nodeOwners[i] = thisNodeOwner;
+        }
+
+        vm.deal(deployer, amountsSum);
+
+        vm.startPrank(deployer, deployer);
+        NodesInstance.depositLaunchpadYield{ value: amountsSum }(tokenIds, amounts);
+        vm.stopPrank();
+
+        for (uint256 i = 0; i < nodesToMint; ++i) {
+            (, , uint256 claimableAmount, , ) = NodesInstance.tokenData(i + 1);
+            assertEq(claimableAmount, amounts[i]);
+        }
+    }
+
+    //tests that a non-admin can't call depositLaunchpadYield
+    function testNonAdminCannotDepositLaunchpadYield() public {
+        uint256 nodesToMint = 1;
+        uint256[] memory tokenIds = new uint256[](nodesToMint);
+        uint256[] memory amounts = new uint256[](nodesToMint);
+
+        vm.startPrank(sampleUser, sampleUser);
+
+        NodesInstance.mint(sampleUser);
+
+        //permission errors will be first-encountered, so no need to have working values, arrays, etc.
+        vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
+        NodesInstance.depositLaunchpadYield(tokenIds, amounts);
+
+        vm.stopPrank();
+    }
+
+    //tests that if an admin attempts to deposit launchpad yield with unequal array lengths, the call reverts
+    function testDepositLaunchpadYieldUnequalArrayLengths() public {
+        uint256 nodesToMint = 1;
+        uint256[] memory tokenIds = new uint256[](nodesToMint);
+        uint256[] memory amounts = new uint256[](nodesToMint + 1);
+
+        vm.startPrank(deployer, deployer);
+        vm.expectRevert(VVVNodes.ArrayLengthMismatch.selector);
+        NodesInstance.depositLaunchpadYield(tokenIds, amounts);
+        vm.stopPrank();
+    }
+
+    //tests that if an admin attempts to deposit launchpad yield with zero msg.value, the call reverts
+    function testDepositLaunchpadYieldZeroValue() public {
+        uint256 nodesToMint = 1;
+        uint256[] memory tokenIds = new uint256[](nodesToMint);
+        uint256[] memory amounts = new uint256[](nodesToMint);
+
+        vm.startPrank(deployer, deployer);
+        vm.expectRevert(VVVNodes.ZeroTokenTransfer.selector);
+        NodesInstance.depositLaunchpadYield(tokenIds, amounts);
+        vm.stopPrank();
+    }
+
+    //tests that if an admin attempts to deposit launchpad yield for an unminted token id, the call reverts
+    function testDepositLaunchpadYieldUnmintedTokenId() public {
+        //one less than the total supply now
+        uint256 nodesToMint = NodesInstance.TOTAL_SUPPLY();
+
+        uint256[] memory tokenIds = new uint256[](nodesToMint);
+        uint256[] memory amounts = new uint256[](nodesToMint);
+        address[] memory nodeOwners = new address[](nodesToMint);
+        uint256 amountsSum;
+
+        for (uint256 i = 0; i < nodesToMint; ++i) {
+            address thisNodeOwner = address(uint160(uint256(keccak256(abi.encodePacked(i)))));
+
+            //don't mint the last token, despite assigning more claimable tokens
+            if (i != nodesToMint - 1) {
+                NodesInstance.mint(thisNodeOwner);
+            }
+
+            tokenIds[i] = i + 1;
+            amounts[i] = (uint256(keccak256(abi.encodePacked(i))) % 10 ether) + 1;
+            amountsSum += amounts[i];
+            nodeOwners[i] = thisNodeOwner;
+        }
+
+        vm.deal(deployer, amountsSum);
+
+        vm.startPrank(deployer, deployer);
+        vm.expectRevert(VVVNodes.UnmintedTokenId.selector);
+        NodesInstance.depositLaunchpadYield{ value: amountsSum }(tokenIds, amounts);
+        vm.stopPrank();
+    }
+
+    //tests that if an admin attempts to deposit launchpad yield with msg.value != sum of amounts input, the call reverts
+    function testDepositLaunchpadYieldUnequalValue() public {
+        uint256 nodesToMint = 1;
+        uint256[] memory tokenIds = new uint256[](nodesToMint);
+        uint256[] memory amounts = new uint256[](nodesToMint);
+        tokenIds[0] = 1;
+
+        vm.deal(deployer, 1);
+
+        NodesInstance.mint(sampleUser);
+
+        vm.startPrank(deployer, deployer);
+        vm.expectRevert(VVVNodes.MsgValueDistAmountMismatch.selector);
+        NodesInstance.depositLaunchpadYield{ value: 1 }(tokenIds, amounts);
+        vm.stopPrank();
+    }
+
     //tests that a view function can output whether a token of tokenId is active
     function testCheckNodeIsActive() public {
         vm.deal(sampleUser, activationThreshold);
