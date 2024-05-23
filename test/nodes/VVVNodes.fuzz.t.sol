@@ -40,7 +40,7 @@ contract VVVNodesFuzzTest is VVVNodesTestBase {
             activationThreshold * 10
         );
         uint256 timeElapsed = bound(_timeElapsed, 60 minutes, 525600 minutes * 2); //pass between 1 second and 2 years per cycle
-        uint256 numCycles = 5; //bound(_numCycles, 1, 20); //number of interaction cycles
+        uint256 numCycles = 4; //bound(_numCycles, 1, 20); //number of interaction cycles
 
         TestData memory testData = TestData({
             tokenId: 1,
@@ -59,6 +59,8 @@ contract VVVNodesFuzzTest is VVVNodesTestBase {
         vm.deal(sampleUser, type(uint128).max);
 
         NodesInstance.stake{ value: initialStakeAmount }(testData.tokenId);
+
+        uint256 postInitialStakeBalance = sampleUser.balance;
 
         //ensure node is active
         bool isActiveAfterStake = NodesInstance.isNodeActive(testData.tokenId);
@@ -80,28 +82,28 @@ contract VVVNodesFuzzTest is VVVNodesTestBase {
                 try NodesInstance.claim(testData.tokenId) {} catch {}
             }
 
-            // //every so often, unstake amount, pass some time, and claim
-            // //a portion of these runs will deactivate the node
-            // else if (i % 2 == 1) {
-            //     // see how much there is to unstake and unstake a random amount which
-            //     (,,,,uint256 stakedAmount) = NodesInstance.tokenData(testData.tokenId);
-            //     uint256 unstakeAmount = bound(_unstakeAmount, 1e18, stakedAmount);
+            //every so often, unstake amount, pass some time, and claim
+            //a portion of these runs will deactivate the node
+            if (i % 2 == 1) {
+                // see how much there is to unstake and unstake a random amount which
+                (, , , , uint256 stakedAmount) = NodesInstance.tokenData(testData.tokenId);
+                uint256 unstakeAmount = bound(_unstakeAmount, 1e18, stakedAmount);
 
-            //     NodesInstance.unstake(testData.tokenId, unstakeAmount);
-            //     testData.cycleNetUnstakedAmount += unstakeAmount; // Update total staked amount
+                NodesInstance.unstake(testData.tokenId, unstakeAmount);
+                testData.cycleNetUnstakedAmount += unstakeAmount; // Update total staked amount
 
-            //     advanceBlockNumberAndTimestampInSeconds(timeElapsed + testData.baseTimeElapsed);
-            //     try NodesInstance.claim(testData.tokenId) {} catch {}
-            // }
+                advanceBlockNumberAndTimestampInSeconds(timeElapsed + testData.baseTimeElapsed);
+                try NodesInstance.claim(testData.tokenId) {} catch {}
+            }
 
             //every so often if deactivated, stake to reactivate,
             //pass some time, and claim
-            // if (i % 2 == 1) {
-            //     NodesInstance.stake{ value: initialStakeAmount }(testData.tokenId);
-            //     testData.cycleNetStakedAmount += initialStakeAmount; // Update total staked amount
-            //     advanceBlockNumberAndTimestampInSeconds(timeElapsed + testData.baseTimeElapsed);
-            //     try NodesInstance.claim(testData.tokenId) {} catch {}
-            // }
+            if (i % 3 == 1) {
+                NodesInstance.stake{ value: initialStakeAmount }(testData.tokenId);
+                testData.cycleNetStakedAmount += initialStakeAmount; // Update total staked amount
+                advanceBlockNumberAndTimestampInSeconds(timeElapsed + testData.baseTimeElapsed);
+                try NodesInstance.claim(testData.tokenId) {} catch {}
+            }
 
             (uint256 postClaimUnvestedAmount, , , , ) = NodesInstance.tokenData(testData.tokenId);
             uint256 postClaimUnvestedDifference = preClaimUnvestedAmount - postClaimUnvestedAmount;
@@ -113,11 +115,11 @@ contract VVVNodesFuzzTest is VVVNodesTestBase {
             The claimed tokens should be equal to the unvested change given VVVNodes:_updateClaimableFromVesting updating both
             claimable and unvested at the same time and in equal amounts.
              */
-            emit log_named_uint("postClaimUnvestedAmount", postClaimUnvestedAmount);
-            emit log_named_uint("preClaimUnvestedAmount", preClaimUnvestedAmount);
+            // emit log_named_uint("postClaimUnvestedAmount", postClaimUnvestedAmount);
+            // emit log_named_uint("preClaimUnvestedAmount", preClaimUnvestedAmount);
             emit log_named_uint("postClaimUnvestedDifference", postClaimUnvestedDifference);
-            emit log_named_uint("postClaimBalance", postClaimBalance);
-            emit log_named_uint("preClaimBalance", preClaimBalance);
+            // emit log_named_uint("postClaimBalance", postClaimBalance);
+            // emit log_named_uint("preClaimBalance", preClaimBalance);
             uint256 rawBalanceDifference = postClaimBalance > preClaimBalance
                 ? postClaimBalance - preClaimBalance
                 : preClaimBalance - postClaimBalance;
@@ -125,7 +127,9 @@ contract VVVNodesFuzzTest is VVVNodesTestBase {
             emit log_named_uint("cycleNetStakedAmount", testData.cycleNetStakedAmount);
             emit log_named_uint("cycleNetUnstakedAmount", testData.cycleNetUnstakedAmount);
 
-            uint256 claimedTokens = rawBalanceDifference - testData.cycleNetStakedAmount;
+            uint256 claimedTokens = rawBalanceDifference +
+                testData.cycleNetStakedAmount -
+                testData.cycleNetUnstakedAmount;
 
             testData.totalUnvestedChange += postClaimUnvestedDifference;
             testData.totalNetClaimedTokens += claimedTokens;
