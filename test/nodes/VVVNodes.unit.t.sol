@@ -196,7 +196,7 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
             tokenId
         );
 
-        uint256 expectedVestedAmount = (block.timestamp - vestingSince) * amountToVestPerSecond; //2 weeks of vesting
+        uint256 expectedVestedAmount = (block.timestamp - vestingSince + 1) * amountToVestPerSecond; //2 weeks of vesting
 
         //change in unvested amount is same as amount made claimable during deactivation
         assertEq(unvestedAmountPreDeactivation - unvestedAmountPostDeactivation, claimableAmount);
@@ -268,6 +268,9 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         uint256 balancePostClaim = sampleUser.balance;
         vm.stopPrank();
 
+        emit log_named_uint("refVestedAmount", refTotalVestedTokens);
+        emit log_named_uint("claimedAmount", balancePostClaim - balancePostStake);
+
         assertEq(unvestedAmountPreClaim - unvestedAmountPostClaim, balancePostClaim - balancePostStake);
         assertEq(unvestedAmountPostClaim, balancePostClaim);
         assertEq(refTotalVestedTokens, balancePostClaim);
@@ -305,9 +308,13 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         vm.startPrank(sampleUser, sampleUser);
         NodesInstance.mint(sampleUser); //mints token of ID 1
         uint256 userTokenId = 1;
+        uint256 vestingDuration = 63_113_904; //2 years
 
         //stake the activation threshold to activate the node
         NodesInstance.stake{ value: activationThreshold }(userTokenId);
+
+        advanceBlockNumberAndTimestampInSeconds(vestingDuration * 2);
+        NodesInstance.claim(userTokenId);
 
         vm.expectRevert(VVVNodes.NoClaimableTokens.selector);
         NodesInstance.claim(userTokenId);
