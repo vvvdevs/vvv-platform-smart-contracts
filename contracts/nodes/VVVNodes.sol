@@ -96,7 +96,11 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
         if (msg.sender != ownerOf(_tokenId)) revert CallerIsNotTokenOwner();
         TokenData storage token = tokenData[_tokenId];
 
-        if (_isNodeActive(msg.value + token.stakedAmount, activationThreshold)) {
+        //if node is inactive and this stake activates it, set vestingSince to the current timestamp
+        if (
+            !_isNodeActive(token.stakedAmount, activationThreshold) &&
+            _isNodeActive(msg.value + token.stakedAmount, activationThreshold)
+        ) {
             token.vestingSince = block.timestamp;
         }
 
@@ -240,7 +244,8 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
         uint256 totalUnvestedAmount = _tokenData.unvestedAmount;
         uint256 amountToVestPerSecond = _tokenData.amountToVestPerSecond;
 
-        uint256 timeBasedVestingAmount = (block.timestamp - vestingSince) * amountToVestPerSecond;
+        //inclusive of timestamp which set vestingSince
+        uint256 timeBasedVestingAmount = (block.timestamp - vestingSince + 1) * amountToVestPerSecond;
         uint256 currentVestedAmount = totalUnvestedAmount > timeBasedVestingAmount
             ? timeBasedVestingAmount
             : totalUnvestedAmount;

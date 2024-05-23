@@ -238,6 +238,41 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         assertEq(refTotalVestedTokens, balancePostClaim);
     }
 
+    //tests that token claims are accurate when only a partial vesting period has elapsed
+    function testClaimPartial() public {
+        vm.deal(sampleUser, activationThreshold);
+        vm.deal(address(NodesInstance), type(uint128).max);
+
+        vm.startPrank(sampleUser, sampleUser);
+        NodesInstance.mint(sampleUser); //mints token of ID 1
+        uint256 userTokenId = 1;
+
+        //sample vesting setup assuming 1 token/second for 2 years
+        uint256 vestingDuration = 63_113_904; //2 years
+        uint256 refTotalVestedTokens = (vestingDuration * 1e18) / 2;
+
+        //check pre-vesting unvested tokens and owner wallet balance for userTokenId
+        (uint256 unvestedAmountPreClaim, , , , ) = NodesInstance.tokenData(userTokenId);
+
+        //stake the activation threshold to activate the node
+        NodesInstance.stake{ value: activationThreshold }(userTokenId);
+
+        uint256 balancePostStake = sampleUser.balance;
+
+        advanceBlockNumberAndTimestampInSeconds(vestingDuration / 2);
+
+        NodesInstance.claim(userTokenId);
+
+        //check post-vesting unvested tokens and owner wallet balance for userTokenId
+        (uint256 unvestedAmountPostClaim, , , , ) = NodesInstance.tokenData(userTokenId);
+        uint256 balancePostClaim = sampleUser.balance;
+        vm.stopPrank();
+
+        assertEq(unvestedAmountPreClaim - unvestedAmountPostClaim, balancePostClaim - balancePostStake);
+        assertEq(unvestedAmountPostClaim, balancePostClaim);
+        assertEq(refTotalVestedTokens, balancePostClaim);
+    }
+
     //tests claim with a tokenId that is not owned by the caller
     function testClaimNotOwned() public {
         vm.deal(sampleUser, activationThreshold);
@@ -537,7 +572,6 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         vm.stopPrank();
 
         uint256 gasUsed = gasLeftBeforeThresholdChange - gasLeftAfterThresholdChange;
-        uint256 gasUsedPerNode = gasUsed / nodesToMint;
 
         assertLt(gasUsed, totalGasLimit);
     }
