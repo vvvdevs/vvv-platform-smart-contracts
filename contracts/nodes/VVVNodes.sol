@@ -45,11 +45,20 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
     ///@notice Maps a TokenData struct to each tokenId
     mapping(uint256 => TokenData) public tokenData;
 
+    ///@notice Thrown when input array lenghts are not matched
+    error ArrayLengthMismatch();
+
     ///@notice Thrown when the caller is not the owner of the token
     error CallerIsNotTokenOwner();
 
+    ///@notice Thrown when an operation is attempted on an unminted token
+    error UnmintedTokenId();
+
     ///@notice Thrown when a mint is attempted past the total supply
     error MaxSupplyReached();
+
+    ///@notice Thrown when msg.value doesn't match the sum of amounts to be distributed to each node
+    error MsgValueDistAmountMismatch();
 
     ///@notice Thrown when there are no claimable tokens for a node
     error NoClaimableTokens();
@@ -149,6 +158,28 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
         for (uint256 i = 0; i < _tokenIds.length; i++) {
             claim(_tokenIds[i]);
         }
+    }
+
+    ///@notice Deposits launchpad yield to each token
+    function depositLaunchpadYield(
+        uint256[] calldata _tokenIds,
+        uint256[] calldata _amounts
+    ) external payable onlyAuthorized {
+        if (_tokenIds.length != _amounts.length) revert ArrayLengthMismatch();
+        if (msg.value == 0) revert ZeroTokenTransfer();
+        uint256 amountsSum;
+
+        for (uint256 i = 0; i < _tokenIds.length; i++) {
+            TokenData storage token = tokenData[_tokenIds[i]];
+
+            if (token.amountToVestPerSecond == 0) revert UnmintedTokenId();
+
+            uint256 thisAmount = _amounts[i];
+            token.claimableAmount += thisAmount;
+            amountsSum += thisAmount;
+        }
+
+        if (amountsSum != msg.value) revert MsgValueDistAmountMismatch();
     }
 
     ///@notice Sets the node activation threshold in staked $VVV
