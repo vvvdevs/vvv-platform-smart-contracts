@@ -268,9 +268,6 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         uint256 balancePostClaim = sampleUser.balance;
         vm.stopPrank();
 
-        emit log_named_uint("refVestedAmount", refTotalVestedTokens);
-        emit log_named_uint("claimedAmount", balancePostClaim - balancePostStake);
-
         assertEq(unvestedAmountPreClaim - unvestedAmountPostClaim, balancePostClaim - balancePostStake);
         assertEq(unvestedAmountPostClaim, balancePostClaim);
         assertEq(refTotalVestedTokens, balancePostClaim);
@@ -457,7 +454,9 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         vm.deal(deployer, amountsSum);
 
         vm.startPrank(deployer, deployer);
+        uint256 gasLeftBefore = gasleft();
         NodesInstance.depositLaunchpadYield{ value: amountsSum }(tokenIds, amounts);
+        uint256 gasUsed = gasLeftBefore - gasleft();
         vm.stopPrank();
 
         for (uint256 i = 0; i < nodesToMint; ++i) {
