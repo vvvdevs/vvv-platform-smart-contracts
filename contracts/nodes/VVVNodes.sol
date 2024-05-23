@@ -160,7 +160,7 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
         }
     }
 
-    ///@notice Deposits launchpad yield to each token
+    ///@notice Deposits launchpad yield to selectedtoken
     function depositLaunchpadYield(
         uint256[] calldata _tokenIds,
         uint256[] calldata _amounts
@@ -181,6 +181,9 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
 
         if (amountsSum != msg.value) revert MsgValueDistAmountMismatch();
     }
+
+    ///@notice unlocks transaction processing yield for selected tokens
+    function unlockTransactionProcessingYield() external onlyAuthorized {}
 
     ///@notice Sets the node activation threshold in staked $VVV
     function setActivationThreshold(uint256 _activationThreshold) external onlyAuthorized {
