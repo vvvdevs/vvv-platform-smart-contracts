@@ -196,7 +196,7 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
             tokenId
         );
 
-        uint256 expectedVestedAmount = (block.timestamp - vestingSince + 1) * amountToVestPerSecond; //2 weeks of vesting
+        uint256 expectedVestedAmount = (block.timestamp - vestingSince) * amountToVestPerSecond; //2 weeks of vesting
 
         //change in unvested amount is same as amount made claimable during deactivation
         assertEq(unvestedAmountPreDeactivation - unvestedAmountPostDeactivation, claimableAmount);
@@ -248,8 +248,9 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         uint256 userTokenId = 1;
 
         //sample vesting setup assuming 1 token/second for 2 years
+        uint256 startTimestamp = block.timestamp;
         uint256 vestingDuration = 63_113_904; //2 years
-        uint256 refTotalVestedTokens = (vestingDuration * 1e18) / 2;
+        uint256 refTotalVestedTokens = ((vestingDuration / 2 - startTimestamp + 1) * 1e18);
 
         //check pre-vesting unvested tokens and owner wallet balance for userTokenId
         (uint256 unvestedAmountPreClaim, , , , ) = NodesInstance.tokenData(userTokenId);
@@ -259,7 +260,7 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
 
         uint256 balancePostStake = sampleUser.balance;
 
-        advanceBlockNumberAndTimestampInSeconds(vestingDuration / 2);
+        advanceBlockNumberAndTimestampInSeconds((vestingDuration / 2) + 1);
 
         NodesInstance.claim(userTokenId);
 
@@ -269,8 +270,8 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         vm.stopPrank();
 
         assertEq(unvestedAmountPreClaim - unvestedAmountPostClaim, balancePostClaim - balancePostStake);
-        assertEq(unvestedAmountPostClaim, balancePostClaim);
-        assertEq(refTotalVestedTokens, balancePostClaim);
+        assertEq(unvestedAmountPostClaim, balancePostClaim - balancePostStake);
+        assertEq(refTotalVestedTokens, balancePostClaim - balancePostStake);
     }
 
     //tests claim with a tokenId that is not owned by the caller
