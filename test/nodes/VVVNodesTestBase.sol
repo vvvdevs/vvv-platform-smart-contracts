@@ -1,11 +1,15 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import { Test } from "lib/forge-std/src/Test.sol";
+import "lib/forge-std/src/Test.sol";
+import { VVVAuthorizationRegistry } from "contracts/auth/VVVAuthorizationRegistry.sol";
 import { VVVNodes } from "contracts/nodes/VVVNodes.sol";
+import { VVVToken } from "contracts/tokens/VvvToken.sol";
 
 abstract contract VVVNodesTestBase is Test {
+    VVVAuthorizationRegistry AuthRegistry;
     VVVNodes NodesInstance;
+    VVVToken VVVTokenInstance;
 
     uint256 deployerKey = 1234;
     uint256 sampleUserKey = 1234567;
@@ -15,6 +19,13 @@ abstract contract VVVNodesTestBase is Test {
 
     uint256 blockNumber;
     uint256 blockTimestamp;
+
+    uint48 defaultAdminTransferDelay = 1 days;
+
+    //500 $VVV activation threshold for nodes
+    uint256 activationThreshold = 500 * 1e18;
+
+    string defaultBaseURI = "http://localhost/nodes/";
 
     function advanceBlockNumberAndTimestampInBlocks(uint256 blocks) public {
         blockNumber += blocks;
