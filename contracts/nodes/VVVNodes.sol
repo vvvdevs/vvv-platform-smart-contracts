@@ -244,8 +244,7 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
         uint256 totalUnvestedAmount = _tokenData.unvestedAmount;
         uint256 amountToVestPerSecond = _tokenData.amountToVestPerSecond;
 
-        //inclusive of timestamp which set vestingSince
-        uint256 timeBasedVestingAmount = (block.timestamp - vestingSince + 1) * amountToVestPerSecond;
+        uint256 timeBasedVestingAmount = (block.timestamp - vestingSince) * amountToVestPerSecond;
         uint256 currentVestedAmount = totalUnvestedAmount > timeBasedVestingAmount
             ? timeBasedVestingAmount
             : totalUnvestedAmount;
