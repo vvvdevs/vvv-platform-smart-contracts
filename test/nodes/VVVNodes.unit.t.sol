@@ -196,7 +196,7 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
             tokenId
         );
 
-        uint256 expectedVestedAmount = (block.timestamp - vestingSince + 1) * amountToVestPerSecond; //2 weeks of vesting
+        uint256 expectedVestedAmount = (block.timestamp - vestingSince) * amountToVestPerSecond; //2 weeks of vesting
 
         //change in unvested amount is same as amount made claimable during deactivation
         assertEq(unvestedAmountPreDeactivation - unvestedAmountPostDeactivation, claimableAmount);
