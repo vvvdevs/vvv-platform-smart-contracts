@@ -43,7 +43,7 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
     ///@notice Maps a TokenData struct to each tokenId
     mapping(uint256 => TokenData) public tokenData;
 
-    ///@notice Thrown when input array lenghts are not matched
+    ///@notice Thrown when input array lengths are not matched
     error ArrayLengthMismatch();
 
     ///@notice Thrown when the caller is not the owner of the token
