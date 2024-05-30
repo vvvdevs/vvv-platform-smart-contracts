@@ -21,12 +21,51 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         assertNotEq(address(NodesInstance), address(0));
     }
 
-    //tests that mint works
+    //tests that the placeholder mint function works
     function testMint() public {
         vm.startPrank(sampleUser, sampleUser);
         NodesInstance.mint(sampleUser);
         vm.stopPrank();
         assertEq(NodesInstance.balanceOf(sampleUser), 1);
+    }
+
+    //tests that the adminMint function correctly mints a node to the supplied destination address with the defined locked tokens
+    function testAdminMint() public {
+        vm.startPrank(deployer, deployer);
+
+        uint256 lockedTokens = 17_500e18; //platinum locked tokens
+
+        uint256 unvestedAmount = (lockedTokens * 60) / 100;
+        uint256 lockedTransactionProcessingYield = lockedTokens - unvestedAmount;
+        uint256 amountToVestPerSecond = unvestedAmount / NodesInstance.VESTING_DURATION();
+
+        NodesInstance.adminMint(sampleUser, lockedTokens);
+        vm.stopPrank();
+
+        (
+            uint256 unvestedAmountRead,
+            uint256 vestingSinceRead,
+            uint256 lockedTransactionProcessingYieldRead,
+            uint256 claimableAmountRead,
+            uint256 amountToVestPerSecondRead,
+            uint256 stakedAmountRead
+        ) = NodesInstance.tokenData(1);
+
+        assertEq(NodesInstance.balanceOf(sampleUser), 1);
+        assertEq(unvestedAmountRead, unvestedAmount);
+        assertEq(vestingSinceRead, 0);
+        assertEq(lockedTransactionProcessingYieldRead, lockedTransactionProcessingYield);
+        assertEq(claimableAmountRead, 0);
+        assertEq(amountToVestPerSecondRead, amountToVestPerSecond);
+        assertEq(stakedAmountRead, 0);
+    }
+
+    //tests that a non-admin cannot call adminMint
+    function testNonAdminCannotAdminMint() public {
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
+        NodesInstance.adminMint(sampleUser, uint256(1));
+        vm.stopPrank();
     }
 
     //tests setting baseURI
