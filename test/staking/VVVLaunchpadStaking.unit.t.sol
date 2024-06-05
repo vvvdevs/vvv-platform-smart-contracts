@@ -17,18 +17,45 @@ contract VVVLaunchpadStakingUnitTests is VVVStakingTestBase {
     function setUp() public {
         vm.startPrank(deployer, deployer);
 
+        //set default staking durations
         setDefaultLaunchpadStakingDurations();
 
         AuthRegistry = new VVVAuthorizationRegistry(defaultAdminTransferDelay, deployer);
         LaunchpadStakingInstance = new VVVLaunchpadStaking(stakingDurations, address(AuthRegistry));
         VvvTokenInstance = new VVVToken(type(uint256).max, 0, address(AuthRegistry));
 
+        //set auth registry permissions
         AuthRegistry.grantRole(launchpadStakingManagerRole, launchpadStakingManager);
+        bytes4 setStakingDurationsSelector = LaunchpadStakingInstance.setStakingDurations.selector;
+        AuthRegistry.setPermission(
+            address(LaunchpadStakingInstance),
+            setStakingDurationsSelector,
+            launchpadStakingManagerRole
+        );
 
         vm.stopPrank();
     }
 
     function testDeployment() public {
         assertTrue(address(LaunchpadStakingInstance) != address(0));
+    }
+
+    //tests that the admin can set the array of staking durations
+    function testAdminSetStakingDurations() public {
+        vm.startPrank(launchpadStakingManager, launchpadStakingManager);
+        LaunchpadStakingInstance.setStakingDurations(stakingDurations);
+        vm.stopPrank();
+
+        for (uint256 i = 0; i < stakingDurations.length; i++) {
+            assertEq(LaunchpadStakingInstance.stakingDurations(i), stakingDurations[i]);
+        }
+    }
+
+    //tests that a non-admin cannot set the array of staking durations
+    function testNonAdminCannotSetStakingDurations() public {
+        vm.startPrank(deployer, deployer);
+        vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
+        LaunchpadStakingInstance.setStakingDurations(stakingDurations);
+        vm.stopPrank();
     }
 }
