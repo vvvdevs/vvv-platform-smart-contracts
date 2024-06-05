@@ -67,12 +67,17 @@ contract VVVVCAlternateTokenDistributorFuzzTests is VVVVCTestBase {
             _kycAddress
         );
 
+        uint256 callerBalanaceBeforeClaim = ProjectTokenInstance.balanceOf(params.callerAddress);
+
         vm.startPrank(_callerAddress, _callerAddress);
         AlternateTokenDistributorInstance.claim(params);
         vm.stopPrank();
 
+        uint256 balanceDifference = ProjectTokenInstance.balanceOf(params.callerAddress) -
+            callerBalanaceBeforeClaim;
+
         //check that the project token was withdrawn from the proxy wallet to the caller address
-        assertEq(params.tokenAmountToClaim, ProjectTokenInstance.balanceOf(params.callerAddress));
+        assertEq(params.tokenAmountToClaim, balanceDifference);
     }
 
     /**
