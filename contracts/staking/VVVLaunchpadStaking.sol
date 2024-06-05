@@ -25,6 +25,9 @@ contract VVVLaunchpadStaking is VVVAuthorizationRegistryChecker {
     ///@notice the array of staking durations for each pool
     uint256[] public stakingDurations;
 
+    ///@notice the array of all stakes
+    Stake[] public allStakes;
+
     ///@notice maps users and pools (durations) to their stake details
     mapping(address => mapping(uint256 => Stake)) public userStakes;
 
@@ -70,6 +73,7 @@ contract VVVLaunchpadStaking is VVVAuthorizationRegistryChecker {
             thisStake.amount = msg.value;
             thisStake.startTimestamp = block.timestamp;
             thisStake.durationIndex = _poolId;
+            allStakes.push(thisStake);
         }
     }
 
@@ -130,5 +134,10 @@ contract VVVLaunchpadStaking is VVVAuthorizationRegistryChecker {
             }
         }
         return stakes;
+    }
+
+    ///@notice returns the Stake array of all stakes
+    function getAllStakes() public view returns (Stake[] memory) {
+        return allStakes;
     }
 }

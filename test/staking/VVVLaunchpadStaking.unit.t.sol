@@ -318,6 +318,43 @@ contract VVVLaunchpadStakingUnitTests is VVVStakingTestBase {
         }
     }
 
+    // tests getting the allStakes array
+    function testGetAllStakes() public {
+        vm.deal(sampleUser, 4 ether);
+        uint256 amountToStake = 1 ether;
+
+        uint256[] memory durationIndices = new uint256[](3);
+        durationIndices[0] = 0;
+        durationIndices[1] = 1;
+        durationIndices[2] = 2;
+
+        uint256[] memory amountsToStake = new uint256[](3);
+        amountsToStake[0] = amountToStake;
+        amountsToStake[1] = amountToStake + 1;
+        amountsToStake[2] = amountToStake + 2;
+
+        //stake in pool ids (stake duration indices) 0-2
+        //varying amounts and timestamps slightly to confirm written values
+        vm.startPrank(sampleUser, sampleUser);
+        advanceBlockNumberAndTimestampInSeconds(1);
+        uint256 startTimestamp = block.timestamp;
+        for (uint256 i = 0; i < durationIndices.length; ++i) {
+            LaunchpadStakingInstance.stake{ value: amountsToStake[i] }(durationIndices[i]);
+            advanceBlockNumberAndTimestampInSeconds(1);
+        }
+        vm.stopPrank();
+
+        VVVLaunchpadStaking.Stake[] memory allStakes = LaunchpadStakingInstance.getAllStakes();
+
+        //assert that the lengths and contents of the stake structs match that assigned above
+        assertEq(allStakes.length, 3);
+        for (uint256 i = 0; i < allStakes.length; ++i) {
+            assertEq(allStakes[i].durationIndex, durationIndices[i]);
+            assertEq(allStakes[i].amount, amountsToStake[i]);
+            assertEq(allStakes[i].startTimestamp, startTimestamp + i);
+        }
+    }
+
     //tests that the admin can set the array of staking durations
     function testAdminSetStakingDurations() public {
         vm.startPrank(launchpadStakingManager, launchpadStakingManager);
