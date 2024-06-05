@@ -185,13 +185,13 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
         uint256 amountsSum;
 
         for (uint256 i = 0; i < _tokenIds.length; i++) {
-            uint256 tokenId = _tokenIds[i];
-            TokenData storage token = tokenData[tokenId];
+            uint256 thisTokenId = _tokenIds[i];
+            TokenData storage thisToken = tokenData[thisTokenId];
 
-            if (token.amountToVestPerSecond == 0) revert UnmintedTokenId(tokenId);
+            if (thisToken.amountToVestPerSecond == 0) revert UnmintedTokenId(thisTokenId);
 
             uint256 thisAmount = _amounts[i];
-            token.claimableAmount += thisAmount;
+            thisToken.claimableAmount += thisAmount;
             amountsSum += thisAmount;
         }
 
@@ -204,24 +204,24 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
         uint256 _amountToUnlock
     ) external onlyAuthorized {
         for (uint256 i = 0; i < _tokenIds.length; ++i) {
-            uint256 tokenId = _tokenIds[i];
-            TokenData storage token = tokenData[tokenId];
+            uint256 thisTokenId = _tokenIds[i];
+            TokenData storage thisToken = tokenData[thisTokenId];
 
             //revert if a selected token has not been minted
-            if (token.amountToVestPerSecond == 0) revert UnmintedTokenId(tokenId);
+            if (thisToken.amountToVestPerSecond == 0) revert UnmintedTokenId(thisTokenId);
 
-            uint256 tokenLockedYield = token.lockedTransactionProcessingYield;
+            uint256 tokenLockedYield = thisToken.lockedTransactionProcessingYield;
 
             //revert if a selected token has no unlockable yield
-            if (tokenLockedYield == 0) revert NoRemainingUnlockableYield(tokenId);
+            if (tokenLockedYield == 0) revert NoRemainingUnlockableYield(thisTokenId);
 
             //unlock either _amountToUnlock or the remaining unlockable yield if _amountToUnlock is greater than the remaining unlockable yield
             uint256 yieldToUnlock = _amountToUnlock > tokenLockedYield
                 ? tokenLockedYield
                 : _amountToUnlock;
 
-            token.lockedTransactionProcessingYield -= yieldToUnlock;
-            token.claimableAmount += yieldToUnlock;
+            thisToken.lockedTransactionProcessingYield -= yieldToUnlock;
+            thisToken.claimableAmount += yieldToUnlock;
         }
     }
 
