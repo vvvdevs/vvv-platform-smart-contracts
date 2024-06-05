@@ -58,4 +58,13 @@ contract VVVLaunchpadStakingUnitTests is VVVStakingTestBase {
         LaunchpadStakingInstance.setStakingDurations(stakingDurations);
         vm.stopPrank();
     }
+
+    //tests that the StakingDurationsSet event is emitted when the staking durations are set
+    function testStakingDurationsSetEvent() public {
+        vm.startPrank(launchpadStakingManager, launchpadStakingManager);
+        vm.expectEmit(address(LaunchpadStakingInstance));
+        emit VVVLaunchpadStaking.StakingDurationsSet(stakingDurations);
+        LaunchpadStakingInstance.setStakingDurations(stakingDurations);
+        vm.stopPrank();
+    }
 }

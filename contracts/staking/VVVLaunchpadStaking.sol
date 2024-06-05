@@ -1,8 +1,6 @@
 ///SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { VVVAuthorizationRegistryChecker } from "contracts/auth/VVVAuthorizationRegistryChecker.sol";
 
 /**
@@ -11,11 +9,11 @@ import { VVVAuthorizationRegistryChecker } from "contracts/auth/VVVAuthorization
  */
 
 contract VVVLaunchpadStaking is VVVAuthorizationRegistryChecker {
-    using SafeERC20 for IERC20;
-
-    uint256 public constant DENOMINATOR = 10_000;
-
+    ///@notice the array of staking durations for each pool
     uint256[] public stakingDurations;
+
+    ///@notice emitted when the staking durations are set
+    event StakingDurationsSet(uint256[] indexed stakingDurations);
 
     constructor(
         uint256[] memory _stakingDurations,
@@ -26,5 +24,6 @@ contract VVVLaunchpadStaking is VVVAuthorizationRegistryChecker {
 
     function setStakingDurations(uint256[] memory _stakingDurations) external onlyAuthorized {
         stakingDurations = _stakingDurations;
+        emit StakingDurationsSet(_stakingDurations);
     }
 }
