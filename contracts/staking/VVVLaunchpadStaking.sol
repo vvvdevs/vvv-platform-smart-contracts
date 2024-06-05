@@ -22,6 +22,7 @@ contract VVVLaunchpadStaking is VVVAuthorizationRegistryChecker {
         stakingDurations = _stakingDurations;
     }
 
+    ///@notice allows an admin to set the full array of staking durations
     function setStakingDurations(uint256[] memory _stakingDurations) external onlyAuthorized {
         stakingDurations = _stakingDurations;
         emit StakingDurationsSet(_stakingDurations);
