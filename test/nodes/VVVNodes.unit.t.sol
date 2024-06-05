@@ -534,7 +534,7 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         vm.deal(deployer, amountsSum);
 
         vm.startPrank(deployer, deployer);
-        vm.expectRevert(VVVNodes.UnmintedTokenId.selector);
+        vm.expectRevert(abi.encodeWithSelector(VVVNodes.UnmintedTokenId.selector, nodesToMint));
         NodesInstance.depositLaunchpadYield{ value: amountsSum }(tokenIds, amounts);
         vm.stopPrank();
     }
@@ -605,9 +605,10 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         uint256 amountToUnlockPerNode;
         uint256 nodesToMint = 1;
         uint256[] memory tokenIds = new uint256[](nodesToMint);
+        tokenIds[0] = 1;
 
         vm.startPrank(deployer, deployer);
-        vm.expectRevert(VVVNodes.UnmintedTokenId.selector);
+        vm.expectRevert(abi.encodeWithSelector(VVVNodes.UnmintedTokenId.selector, nodesToMint));
         NodesInstance.unlockTransactionProcessingYield(tokenIds, amountToUnlockPerNode);
         vm.stopPrank();
     }
@@ -626,7 +627,7 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         (, , uint256 amountToUnlock, , , ) = NodesInstance.tokenData(1);
         NodesInstance.unlockTransactionProcessingYield(tokenIds, amountToUnlock);
 
-        vm.expectRevert(VVVNodes.NoRemainingUnlockableYield.selector);
+        vm.expectRevert(abi.encodeWithSelector(VVVNodes.NoRemainingUnlockableYield.selector, tokenIds[0]));
         //attempt to unlock one more token of yield
         NodesInstance.unlockTransactionProcessingYield(tokenIds, 1);
         vm.stopPrank();

@@ -50,7 +50,7 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
     error CallerIsNotTokenOwner();
 
     ///@notice Thrown when an operation is attempted on an unminted token
-    error UnmintedTokenId();
+    error UnmintedTokenId(uint256 tokenId);
 
     ///@notice Thrown when a mint is attempted past the total supply
     error MaxSupplyReached();
@@ -65,7 +65,7 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
     error NodesAreSoulbound();
 
     ///@notice Thrown when there is an attempt to unlock transaction processing yield when 0 yield remains to be unlocked
-    error NoRemainingUnlockableYield();
+    error NoRemainingUnlockableYield(uint256 tokenId);
 
     ///@notice Thrown when a native transfer fails
     error TransferFailed();
@@ -172,9 +172,10 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
         uint256 amountsSum;
 
         for (uint256 i = 0; i < _tokenIds.length; i++) {
-            TokenData storage token = tokenData[_tokenIds[i]];
+            uint256 tokenId = _tokenIds[i];
+            TokenData storage token = tokenData[tokenId];
 
-            if (token.amountToVestPerSecond == 0) revert UnmintedTokenId();
+            if (token.amountToVestPerSecond == 0) revert UnmintedTokenId(tokenId);
 
             uint256 thisAmount = _amounts[i];
             token.claimableAmount += thisAmount;
@@ -190,15 +191,16 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
         uint256 _amountToUnlock
     ) external onlyAuthorized {
         for (uint256 i = 0; i < _tokenIds.length; ++i) {
-            TokenData storage token = tokenData[_tokenIds[i]];
+            uint256 tokenId = _tokenIds[i];
+            TokenData storage token = tokenData[tokenId];
 
             //revert if a selected token has not been minted
-            if (token.amountToVestPerSecond == 0) revert UnmintedTokenId();
+            if (token.amountToVestPerSecond == 0) revert UnmintedTokenId(tokenId);
 
             uint256 tokenLockedYield = token.lockedTransactionProcessingYield;
 
             //revert if a selected token has no unlockable yield
-            if (tokenLockedYield == 0) revert NoRemainingUnlockableYield();
+            if (tokenLockedYield == 0) revert NoRemainingUnlockableYield(tokenId);
 
             //unlock either _amountToUnlock or the remaining unlockable yield if _amountToUnlock is greater than the remaining unlockable yield
             uint256 yieldToUnlock = _amountToUnlock > tokenLockedYield
