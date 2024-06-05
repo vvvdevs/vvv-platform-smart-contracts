@@ -6,12 +6,14 @@ pragma solidity 0.8.23;
  */
 
 import "lib/forge-std/src/Test.sol";
+import { NonReceivable } from "test/utils/NonReceivable.sol";
 import { VVVAuthorizationRegistry } from "contracts/auth/VVVAuthorizationRegistry.sol";
 import { VVVETHStaking } from "contracts/staking/VVVETHStaking.sol";
 import { VVVLaunchpadStaking } from "contracts/staking/VVVLaunchpadStaking.sol";
 import { VVVToken } from "contracts/tokens/VvvToken.sol";
 
 abstract contract VVVStakingTestBase is Test {
+    NonReceivable NonReceivableCaller;
     VVVAuthorizationRegistry AuthRegistry;
     VVVToken VvvTokenInstance;
     VVVETHStaking EthStakingInstance;
