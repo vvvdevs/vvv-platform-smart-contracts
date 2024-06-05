@@ -583,8 +583,10 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         vm.stopPrank();
 
         for (uint256 i = 0; i < nodesToMint; ++i) {
-            (, , , uint256 claimableAmount, , ) = NodesInstance.tokenData(i + 1);
+            (, , uint256 lockedTransactionProcessingYield, uint256 claimableAmount, , ) = NodesInstance
+                .tokenData(i + 1);
             assertEq(claimableAmount, amountToUnlockPerNode);
+            assertEq(lockedTransactionProcessingYield, 0);
         }
     }
 
