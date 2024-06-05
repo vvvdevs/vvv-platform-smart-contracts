@@ -782,4 +782,48 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         NodesInstance.withdraw(1);
         vm.stopPrank();
     }
+
+    //tests that the SetActivationThreshold event is emitted when the activation threshold is set
+    function testSetActivationThresholdEvent() public {
+        uint256 currentActivationThreshold = NodesInstance.activationThreshold();
+        uint256 newActivationThreshold = currentActivationThreshold + 1;
+
+        vm.startPrank(deployer, deployer);
+        vm.expectEmit(address(NodesInstance));
+        emit VVVNodes.SetActivationThreshold(newActivationThreshold);
+        NodesInstance.setActivationThreshold(newActivationThreshold);
+        vm.stopPrank();
+
+        assertEq(NodesInstance.activationThreshold(), newActivationThreshold);
+    }
+
+    //tests that the Stake event is emitted when $VVV is staked
+    function testEmitStakeEvent() public {
+        vm.deal(sampleUser, activationThreshold);
+
+        uint256 tokenId = 1;
+
+        vm.startPrank(sampleUser, sampleUser);
+        NodesInstance.mint(sampleUser); //mints tokenId 1
+        vm.expectEmit(address(NodesInstance));
+        emit VVVNodes.Stake(tokenId, activationThreshold);
+        NodesInstance.stake{ value: activationThreshold }(tokenId);
+        vm.stopPrank();
+    }
+
+    //tests that the Unstake event is emitted when $VVV is unstaked
+    function testEmitUnstakeEvent() public {
+        vm.deal(sampleUser, activationThreshold);
+
+        uint256 tokenId = 1;
+        uint256 amountToUnstake = 1;
+
+        vm.startPrank(sampleUser, sampleUser);
+        NodesInstance.mint(sampleUser); //mints tokenId 1
+        NodesInstance.stake{ value: activationThreshold }(tokenId);
+        vm.expectEmit(address(NodesInstance));
+        emit VVVNodes.Unstake(tokenId, amountToUnstake);
+        NodesInstance.unstake(tokenId, amountToUnstake);
+        vm.stopPrank();
+    }
 }
