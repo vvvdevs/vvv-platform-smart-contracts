@@ -188,7 +188,7 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
     function unlockTransactionProcessingYield(
         uint256[] calldata _tokenIds,
         uint256 _amountToUnlock
-    ) external payable onlyAuthorized {
+    ) external onlyAuthorized {
         for (uint256 i = 0; i < _tokenIds.length; ++i) {
             TokenData storage token = tokenData[_tokenIds[i]];
 
