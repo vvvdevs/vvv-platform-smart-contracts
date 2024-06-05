@@ -43,6 +43,15 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
     ///@notice Maps a TokenData struct to each tokenId
     mapping(uint256 => TokenData) public tokenData;
 
+    ///@notice Emitted when the node activation threshold is set
+    event SetActivationThreshold(uint256 indexed activationThreshold);
+
+    ///@notice Emitted when $VVV is staked
+    event Stake(uint256 indexed tokenId, uint256 amount);
+
+    ///@notice Emitted when $VVV is unstaked
+    event Unstake(uint256 indexed tokenId, uint256 amount);
+
     ///@notice Thrown when input array lengths are not matched
     error ArrayLengthMismatch();
 
@@ -116,6 +125,8 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
         }
 
         token.stakedAmount += msg.value;
+
+        emit Stake(_tokenId, msg.value);
     }
 
     ///@notice Unstakes $VVV, handles deactivation if amount removed causes total staked to fall below activation threshold
@@ -135,6 +146,8 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
 
         (bool success, ) = msg.sender.call{ value: _amount }("");
         if (!success) revert TransferFailed();
+
+        emit Unstake(_tokenId, _amount);
     }
 
     ///@notice Allows a node owner to claim accrued yield
@@ -239,6 +252,8 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
         }
 
         activationThreshold = _activationThreshold;
+
+        emit SetActivationThreshold(_activationThreshold);
     }
 
     ///@notice Sets the maximum staked $VVV which can be considered for launchpad yield points
