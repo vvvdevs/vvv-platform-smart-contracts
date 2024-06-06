@@ -13,6 +13,7 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
     struct TokenData {
         uint256 unvestedAmount; //Remaining tokens to be vested, starts at 60% of $VVV initially locked in each node
         uint256 vestingSince; //timestamp of most recent token activation or claim
+        uint256 lockedTransactionProcessingYield; //Remaining transaction yield to be unlocked, starts at 40% of the $VVV initially locked in each node.
         uint256 claimableAmount; //claimable $VVV across vesting, transaction, and launchpad yield sources
         uint256 amountToVestPerSecond; //amount of $VVV to vest per second
         uint256 stakedAmount; //total staked $VVV for the node
@@ -39,9 +40,6 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
     ///@notice The current tokenId
     uint256 public tokenId;
 
-    ///@notice Transaction processing reward
-    uint256 public transactionProcessingReward;
-
     ///@notice Maps a TokenData struct to each tokenId
     mapping(uint256 => TokenData) public tokenData;
 
@@ -61,7 +59,7 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
     error CallerIsNotTokenOwner();
 
     ///@notice Thrown when an operation is attempted on an unminted token
-    error UnmintedTokenId();
+    error UnmintedTokenId(uint256 tokenId);
 
     ///@notice Thrown when a mint is attempted past the total supply
     error MaxSupplyReached();
@@ -74,6 +72,9 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
 
     ///@notice Thrown when a node transfer is attempted while nodes are soulbound
     error NodesAreSoulbound();
+
+    ///@notice Thrown when there is an attempt to unlock transaction processing yield when 0 yield remains to be unlocked
+    error NoRemainingUnlockableYield(uint256 tokenId);
 
     ///@notice Thrown when a native transfer fails
     error TransferFailed();
@@ -91,7 +92,7 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
         baseURI = _newBaseURI;
     }
 
-    ///@notice Mints a node to the recipient (placeholder)
+    ///@notice Mints a node to the recipient (placeholder!!!)
     function mint(address _recipient) external {
         ++tokenId;
         if (tokenId > TOTAL_SUPPLY) revert MaxSupplyReached();
@@ -100,6 +101,7 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
         tokenData[tokenId] = TokenData({
             unvestedAmount: 63_113_904 * 1e18, //seconds in 2 years * 1e18 for easy math with amount to vest per second
             vestingSince: block.timestamp,
+            lockedTransactionProcessingYield: 42_075_936 * 1e18, //40% of $VVV initially locked in each node, given unvestedAmount as 60% of $VVV
             claimableAmount: 0,
             amountToVestPerSecond: 1e18,
             stakedAmount: 0
@@ -173,7 +175,7 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
         }
     }
 
-    ///@notice Deposits launchpad yield to each token
+    ///@notice Deposits launchpad yield to selectedtoken
     function depositLaunchpadYield(
         uint256[] calldata _tokenIds,
         uint256[] calldata _amounts
@@ -183,16 +185,44 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
         uint256 amountsSum;
 
         for (uint256 i = 0; i < _tokenIds.length; i++) {
-            TokenData storage token = tokenData[_tokenIds[i]];
+            uint256 thisTokenId = _tokenIds[i];
+            TokenData storage thisToken = tokenData[thisTokenId];
 
-            if (token.amountToVestPerSecond == 0) revert UnmintedTokenId();
+            if (thisToken.amountToVestPerSecond == 0) revert UnmintedTokenId(thisTokenId);
 
             uint256 thisAmount = _amounts[i];
-            token.claimableAmount += thisAmount;
+            thisToken.claimableAmount += thisAmount;
             amountsSum += thisAmount;
         }
 
         if (amountsSum != msg.value) revert MsgValueDistAmountMismatch();
+    }
+
+    ///@notice unlocks transaction processing yield for selected tokens
+    function unlockTransactionProcessingYield(
+        uint256[] calldata _tokenIds,
+        uint256 _amountToUnlock
+    ) external onlyAuthorized {
+        for (uint256 i = 0; i < _tokenIds.length; ++i) {
+            uint256 thisTokenId = _tokenIds[i];
+            TokenData storage thisToken = tokenData[thisTokenId];
+
+            //revert if a selected token has not been minted
+            if (thisToken.amountToVestPerSecond == 0) revert UnmintedTokenId(thisTokenId);
+
+            uint256 tokenLockedYield = thisToken.lockedTransactionProcessingYield;
+
+            //revert if a selected token has no unlockable yield
+            if (tokenLockedYield == 0) revert NoRemainingUnlockableYield(thisTokenId);
+
+            //unlock either _amountToUnlock or the remaining unlockable yield if _amountToUnlock is greater than the remaining unlockable yield
+            uint256 yieldToUnlock = _amountToUnlock > tokenLockedYield
+                ? tokenLockedYield
+                : _amountToUnlock;
+
+            thisToken.lockedTransactionProcessingYield -= yieldToUnlock;
+            thisToken.claimableAmount += yieldToUnlock;
+        }
     }
 
     ///@notice Sets the node activation threshold in staked $VVV
@@ -239,11 +269,6 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
     ///@notice Sets token URI for token of tokenId (placeholder)
     function setBaseURI(string calldata _newBaseURI) external onlyAuthorized {
         baseURI = _newBaseURI;
-    }
-
-    ///@notice Sets the transaction processing reward
-    function setTransactionProcessingReward(uint256 _transactionProcessingReward) external onlyAuthorized {
-        transactionProcessingReward = _transactionProcessingReward;
     }
 
     ///@notice Withdraws $VVV from the contract
