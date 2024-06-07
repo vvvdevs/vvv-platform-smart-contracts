@@ -89,11 +89,6 @@ contract VVVVCAlternateTokenDistributorFuzzTests is VVVVCTestBase {
         vm.assume(_kycAddress != address(0));
         vm.assume(_seed != 0);
 
-        //this combo reverts
-        _callerAddress = sampleUser;
-        _kycAddress = sampleKycAddress;
-        _seed = 18446744073709551617;
-
         VVVVCAlternateTokenDistributor.ClaimParams memory params = prepareAlternateDistributorClaimParams(
             _callerAddress,
             _kycAddress
