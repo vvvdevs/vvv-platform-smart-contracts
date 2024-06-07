@@ -573,7 +573,7 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         vm.deal(deployer, amountsSum);
 
         vm.startPrank(deployer, deployer);
-        vm.expectRevert(VVVNodes.UnmintedTokenId.selector);
+        vm.expectRevert(abi.encodeWithSelector(VVVNodes.UnmintedTokenId.selector, nodesToMint));
         NodesInstance.depositLaunchpadYield{ value: amountsSum }(tokenIds, amounts);
         vm.stopPrank();
     }
@@ -622,8 +622,10 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         vm.stopPrank();
 
         for (uint256 i = 0; i < nodesToMint; ++i) {
-            (, , , uint256 claimableAmount, , ) = NodesInstance.tokenData(i + 1);
+            (, , uint256 lockedTransactionProcessingYield, uint256 claimableAmount, , ) = NodesInstance
+                .tokenData(i + 1);
             assertEq(claimableAmount, amountToUnlockPerNode);
+            assertEq(lockedTransactionProcessingYield, 0);
         }
     }
 
@@ -644,9 +646,10 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         uint256 amountToUnlockPerNode;
         uint256 nodesToMint = 1;
         uint256[] memory tokenIds = new uint256[](nodesToMint);
+        tokenIds[0] = 1;
 
         vm.startPrank(deployer, deployer);
-        vm.expectRevert(VVVNodes.UnmintedTokenId.selector);
+        vm.expectRevert(abi.encodeWithSelector(VVVNodes.UnmintedTokenId.selector, nodesToMint));
         NodesInstance.unlockTransactionProcessingYield(tokenIds, amountToUnlockPerNode);
         vm.stopPrank();
     }
@@ -665,7 +668,7 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         (, , uint256 amountToUnlock, , , ) = NodesInstance.tokenData(1);
         NodesInstance.unlockTransactionProcessingYield(tokenIds, amountToUnlock);
 
-        vm.expectRevert(VVVNodes.NoRemainingUnlockableYield.selector);
+        vm.expectRevert(abi.encodeWithSelector(VVVNodes.NoRemainingUnlockableYield.selector, tokenIds[0]));
         //attempt to unlock one more token of yield
         NodesInstance.unlockTransactionProcessingYield(tokenIds, 1);
         vm.stopPrank();
@@ -876,6 +879,50 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         vm.startPrank(sampleUser, sampleUser);
         vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
         NodesInstance.withdraw(1);
+        vm.stopPrank();
+    }
+
+    //tests that the SetActivationThreshold event is emitted when the activation threshold is set
+    function testSetActivationThresholdEvent() public {
+        uint256 currentActivationThreshold = NodesInstance.activationThreshold();
+        uint256 newActivationThreshold = currentActivationThreshold + 1;
+
+        vm.startPrank(deployer, deployer);
+        vm.expectEmit(address(NodesInstance));
+        emit VVVNodes.SetActivationThreshold(newActivationThreshold);
+        NodesInstance.setActivationThreshold(newActivationThreshold);
+        vm.stopPrank();
+
+        assertEq(NodesInstance.activationThreshold(), newActivationThreshold);
+    }
+
+    //tests that the Stake event is emitted when $VVV is staked
+    function testEmitStakeEvent() public {
+        vm.deal(sampleUser, activationThreshold);
+
+        uint256 tokenId = 1;
+
+        vm.startPrank(sampleUser, sampleUser);
+        NodesInstance.mint(sampleUser); //mints tokenId 1
+        vm.expectEmit(address(NodesInstance));
+        emit VVVNodes.Stake(tokenId, activationThreshold);
+        NodesInstance.stake{ value: activationThreshold }(tokenId);
+        vm.stopPrank();
+    }
+
+    //tests that the Unstake event is emitted when $VVV is unstaked
+    function testEmitUnstakeEvent() public {
+        vm.deal(sampleUser, activationThreshold);
+
+        uint256 tokenId = 1;
+        uint256 amountToUnstake = 1;
+
+        vm.startPrank(sampleUser, sampleUser);
+        NodesInstance.mint(sampleUser); //mints tokenId 1
+        NodesInstance.stake{ value: activationThreshold }(tokenId);
+        vm.expectEmit(address(NodesInstance));
+        emit VVVNodes.Unstake(tokenId, amountToUnstake);
+        NodesInstance.unstake(tokenId, amountToUnstake);
         vm.stopPrank();
     }
 }
