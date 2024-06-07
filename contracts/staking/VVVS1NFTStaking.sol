@@ -44,9 +44,6 @@ contract VVVS1NFTStaking is IERC721Receiver {
     ///@notice thrown when a caller for stake or unstake is not the owner of the token
     error NotTokenOwner();
 
-    ///@notice thrown when setApprovalForAll is not called prior to staking
-    error TokenNotApprovedForAll();
-
     ///@notice thrown when a user attempts to unstake before the stake duration has elapsed
     error StakeLocked();
 
@@ -58,10 +55,6 @@ contract VVVS1NFTStaking is IERC721Receiver {
 
     ///@notice stakes an S1 NFT. setApprovalForAll must be called before this function
     function stake(uint256 _tokenId, StakeDuration _stakingDuration) external {
-        //ownership and approval checks for transparency
-        if (s1nft.ownerOf(_tokenId) != msg.sender) revert NotTokenOwner();
-        if (!s1nft.isApprovedForAll(msg.sender, address(this))) revert TokenNotApprovedForAll();
-
         stakes[msg.sender].push(StakeData(_tokenId, block.timestamp, _stakingDuration));
         stakerOfId[_tokenId] = msg.sender;
 
@@ -77,11 +70,12 @@ contract VVVS1NFTStaking is IERC721Receiver {
 
         //check if the stake is locked, if not remove the stake from the user's array and set the stakerOfId to address(0)
         for (uint256 i = 0; i < thisStakes.length; i++) {
-            if (thisStakes[i].tokenId == _tokenId) {
-                if (block.timestamp < thisStakes[i].startTime + stakeDurations[thisStakes[i].duration]) {
+            StakeData storage thisStake = thisStakes[i];
+            if (thisStake.tokenId == _tokenId) {
+                if (block.timestamp < thisStake.startTime + stakeDurations[thisStake.duration]) {
                     revert StakeLocked();
                 }
-                thisStakes[i] = thisStakes[thisStakes.length - 1];
+                thisStake = thisStakes[thisStakes.length - 1];
                 thisStakes.pop();
                 stakerOfId[_tokenId] = address(0);
                 break;
