@@ -5,7 +5,7 @@ import { VVVAuthorizationRegistryChecker } from "contracts/auth/VVVAuthorization
 
 /**
     @title VVVLaunchpadStaking
-    @notice Handles native and ERC20 staking for launchpad
+    @notice Handles native staking for launchpad
  */
 
 contract VVVLaunchpadStaking is VVVAuthorizationRegistryChecker {

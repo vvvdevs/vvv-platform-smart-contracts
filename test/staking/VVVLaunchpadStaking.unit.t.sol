@@ -42,12 +42,15 @@ contract VVVLaunchpadStakingUnitTests is VVVStakingTestBase {
 
     //tests that the admin can set the array of staking durations
     function testAdminSetStakingDurations() public {
+        //create new staking durations as all zero since default vaules set in constructor are all nonzero
+        uint256[] memory newStakingDurations = new uint256[](5);
+
         vm.startPrank(launchpadStakingManager, launchpadStakingManager);
-        LaunchpadStakingInstance.setStakingDurations(stakingDurations);
+        LaunchpadStakingInstance.setStakingDurations(newStakingDurations);
         vm.stopPrank();
 
         for (uint256 i = 0; i < stakingDurations.length; i++) {
-            assertEq(LaunchpadStakingInstance.stakingDurations(i), stakingDurations[i]);
+            assertEq(LaunchpadStakingInstance.stakingDurations(i), newStakingDurations[i]);
         }
     }
 
