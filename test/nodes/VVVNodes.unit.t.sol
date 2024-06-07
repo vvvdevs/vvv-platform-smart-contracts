@@ -82,7 +82,7 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         vm.stopPrank();
 
         bool isActive = NodesInstance.isNodeActive(1);
-        (, , , , uint256 stakedAmount) = NodesInstance.tokenData(1);
+        (, , , , , uint256 stakedAmount) = NodesInstance.tokenData(1);
         assertTrue(isActive);
         assertEq(stakedAmount, activationThreshold);
         assertEq(address(NodesInstance).balance, activationThreshold);
@@ -180,6 +180,7 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
             uint256 unvestedAmountPreDeactivation,
             uint256 vestingSince,
             ,
+            ,
             uint256 amountToVestPerSecond,
 
         ) = NodesInstance.tokenData(tokenId);
@@ -192,9 +193,8 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         vm.stopPrank();
 
         //post-deactivation unvested amount is slightly less, the difference has become claimable
-        (uint256 unvestedAmountPostDeactivation, , uint256 claimableAmount, , ) = NodesInstance.tokenData(
-            tokenId
-        );
+        (uint256 unvestedAmountPostDeactivation, , , uint256 claimableAmount, , ) = NodesInstance
+            .tokenData(tokenId);
 
         uint256 expectedVestedAmount = (block.timestamp - vestingSince) * amountToVestPerSecond; //2 weeks of vesting
 
@@ -219,7 +219,7 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         uint256 refTotalVestedTokens = vestingDuration * 1e18;
 
         //check pre-vesting unvested tokens and owner wallet balance for userTokenId
-        (uint256 unvestedAmountPreClaim, , , , ) = NodesInstance.tokenData(userTokenId);
+        (uint256 unvestedAmountPreClaim, , , , , ) = NodesInstance.tokenData(userTokenId);
 
         //stake the activation threshold to activate the node
         NodesInstance.stake{ value: activationThreshold }(userTokenId);
@@ -229,7 +229,7 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         NodesInstance.claim(userTokenId);
 
         //check post-vesting unvested tokens and owner wallet balance for userTokenId
-        (uint256 unvestedAmountPostClaim, , , , ) = NodesInstance.tokenData(userTokenId);
+        (uint256 unvestedAmountPostClaim, , , , , ) = NodesInstance.tokenData(userTokenId);
         uint256 balancePostClaim = sampleUser.balance;
         vm.stopPrank();
 
@@ -253,7 +253,7 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         uint256 refTotalVestedTokens = ((vestingDuration / 2 - startTimestamp + 1) * 1e18);
 
         //check pre-vesting unvested tokens and owner wallet balance for userTokenId
-        (uint256 unvestedAmountPreClaim, , , , ) = NodesInstance.tokenData(userTokenId);
+        (uint256 unvestedAmountPreClaim, , , , , ) = NodesInstance.tokenData(userTokenId);
 
         //stake the activation threshold to activate the node
         NodesInstance.stake{ value: activationThreshold }(userTokenId);
@@ -265,7 +265,7 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         NodesInstance.claim(userTokenId);
 
         //check post-vesting unvested tokens and owner wallet balance for userTokenId
-        (uint256 unvestedAmountPostClaim, , , , ) = NodesInstance.tokenData(userTokenId);
+        (uint256 unvestedAmountPostClaim, , , , , ) = NodesInstance.tokenData(userTokenId);
         uint256 balancePostClaim = sampleUser.balance;
         vm.stopPrank();
 
@@ -461,7 +461,7 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         vm.stopPrank();
 
         for (uint256 i = 0; i < nodesToMint; ++i) {
-            (, , uint256 claimableAmount, , ) = NodesInstance.tokenData(i + 1);
+            (, , , uint256 claimableAmount, , ) = NodesInstance.tokenData(i + 1);
             assertEq(claimableAmount, amounts[i]);
         }
     }
@@ -534,7 +534,7 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         vm.deal(deployer, amountsSum);
 
         vm.startPrank(deployer, deployer);
-        vm.expectRevert(VVVNodes.UnmintedTokenId.selector);
+        vm.expectRevert(abi.encodeWithSelector(VVVNodes.UnmintedTokenId.selector, nodesToMint));
         NodesInstance.depositLaunchpadYield{ value: amountsSum }(tokenIds, amounts);
         vm.stopPrank();
     }
@@ -553,6 +553,85 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         vm.startPrank(deployer, deployer);
         vm.expectRevert(VVVNodes.MsgValueDistAmountMismatch.selector);
         NodesInstance.depositLaunchpadYield{ value: 1 }(tokenIds, amounts);
+        vm.stopPrank();
+    }
+
+    //tests that an admin can unlock transaction processing yield
+    function testUnlockTransactionProcessingYield() public {
+        uint256 nodesToMint = NodesInstance.TOTAL_SUPPLY();
+        uint256[] memory tokenIds = new uint256[](nodesToMint);
+        address[] memory nodeOwners = new address[](nodesToMint);
+
+        for (uint256 i = 0; i < nodesToMint; ++i) {
+            address thisNodeOwner = address(uint160(uint256(keccak256(abi.encodePacked(i)))));
+            NodesInstance.mint(thisNodeOwner);
+
+            tokenIds[i] = i + 1;
+            nodeOwners[i] = thisNodeOwner;
+        }
+
+        //the locked amount per node is the same, and assigned at mint, so is equal to the amount to unlock per node if unlocking the full amount
+        (, , uint256 amountToUnlockPerNode, , , ) = NodesInstance.tokenData(1);
+
+        //deal the amount to unlock per node * nodesToMint to the contract to ensure all can claim
+        vm.deal(address(NodesInstance), amountToUnlockPerNode * nodesToMint);
+
+        vm.startPrank(deployer, deployer);
+        uint256 gasLeftBefore = gasleft();
+        NodesInstance.unlockTransactionProcessingYield(tokenIds, amountToUnlockPerNode);
+        uint256 gasUsed = gasLeftBefore - gasleft();
+        vm.stopPrank();
+
+        for (uint256 i = 0; i < nodesToMint; ++i) {
+            (, , uint256 lockedTransactionProcessingYield, uint256 claimableAmount, , ) = NodesInstance
+                .tokenData(i + 1);
+            assertEq(claimableAmount, amountToUnlockPerNode);
+            assertEq(lockedTransactionProcessingYield, 0);
+        }
+    }
+
+    //tests that a non-admin cannot unlock transaction processing yield
+    function testNonAdminCannotUnlockTransactionProcessingYield() public {
+        uint256 amountToUnlockPerNode;
+        uint256 nodesToMint = 1;
+        uint256[] memory tokenIds = new uint256[](nodesToMint);
+
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
+        NodesInstance.unlockTransactionProcessingYield(tokenIds, amountToUnlockPerNode);
+        vm.stopPrank();
+    }
+
+    //tests that tx processing yield cannot be unlocked for an unminted token id
+    function testUnlockTransactionProcessingYieldUnmintedTokenId() public {
+        uint256 amountToUnlockPerNode;
+        uint256 nodesToMint = 1;
+        uint256[] memory tokenIds = new uint256[](nodesToMint);
+        tokenIds[0] = 1;
+
+        vm.startPrank(deployer, deployer);
+        vm.expectRevert(abi.encodeWithSelector(VVVNodes.UnmintedTokenId.selector, nodesToMint));
+        NodesInstance.unlockTransactionProcessingYield(tokenIds, amountToUnlockPerNode);
+        vm.stopPrank();
+    }
+
+    //tests that unlockTransactionProcessingYield if trying to unlock yield in a
+    //token with 0 unlockable yield
+    function testUnlockTransactionProcessingYieldZeroUnlockable() public {
+        uint256 nodesToMint = 1;
+        uint256[] memory tokenIds = new uint256[](nodesToMint);
+        tokenIds[0] = 1;
+
+        vm.startPrank(deployer, deployer);
+        NodesInstance.mint(sampleUser);
+
+        //unlock all transaction processing yield
+        (, , uint256 amountToUnlock, , , ) = NodesInstance.tokenData(1);
+        NodesInstance.unlockTransactionProcessingYield(tokenIds, amountToUnlock);
+
+        vm.expectRevert(abi.encodeWithSelector(VVVNodes.NoRemainingUnlockableYield.selector, tokenIds[0]));
+        //attempt to unlock one more token of yield
+        NodesInstance.unlockTransactionProcessingYield(tokenIds, 1);
         vm.stopPrank();
     }
 
@@ -738,25 +817,6 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         vm.startPrank(sampleUser, sampleUser);
         vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
         NodesInstance.setSoulbound(true);
-        vm.stopPrank();
-    }
-
-    //tests that an admin can set transactionProcessingReward
-    function testSetTransactionProcessingReward() public {
-        uint256 currentTransactionProcessingReward = NodesInstance.transactionProcessingReward();
-        uint256 newTransactionProcessingReward = currentTransactionProcessingReward + 1;
-
-        vm.startPrank(deployer, deployer);
-        NodesInstance.setTransactionProcessingReward(newTransactionProcessingReward);
-        vm.stopPrank();
-        assertEq(NodesInstance.transactionProcessingReward(), newTransactionProcessingReward);
-    }
-
-    //tests than a non-admin cannot set transactionProcessingReward
-    function testNonAdminCannotSetTransactionProcessingReward() public {
-        vm.startPrank(sampleUser, sampleUser);
-        vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
-        NodesInstance.setTransactionProcessingReward(1);
         vm.stopPrank();
     }
 
