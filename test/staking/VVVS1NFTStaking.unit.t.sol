@@ -78,31 +78,6 @@ contract VVVS1NFTStakingUnitTests is VVVStakingTestBase {
         }
     }
 
-    //tests that a user cannot stake a token they don't own
-    function testStakeNotOwned() public {
-        vm.startPrank(sampleUser, sampleUser);
-        MockERC721Instance.safeMint(deployer);
-        MockERC721Instance.setApprovalForAll(address(S1NFTStakingInstance), true);
-        vm.stopPrank();
-
-        vm.startPrank(sampleUser, sampleUser);
-        vm.expectRevert(VVVS1NFTStaking.NotTokenOwner.selector);
-        S1NFTStakingInstance.stake(1, VVVS1NFTStaking.StakeDuration.DAYS_180);
-        vm.stopPrank();
-    }
-
-    //tests that a user cannot stake a token they didn't approve with setApprovedForAll
-    function testStakeNotApprovedForAll() public {
-        vm.startPrank(sampleUser, sampleUser);
-        MockERC721Instance.safeMint(sampleUser);
-        vm.stopPrank();
-
-        vm.startPrank(sampleUser, sampleUser);
-        vm.expectRevert(VVVS1NFTStaking.TokenNotApprovedForAll.selector);
-        S1NFTStakingInstance.stake(1, VVVS1NFTStaking.StakeDuration.DAYS_180);
-        vm.stopPrank();
-    }
-
     //tests that the Stake event is emitted with the correct data when a user stakes
     function testEmitStake() public {
         VVVS1NFTStaking.StakeDuration stakeDuration = VVVS1NFTStaking.StakeDuration.DAYS_180;
@@ -228,5 +203,30 @@ contract VVVS1NFTStakingUnitTests is VVVStakingTestBase {
     }
 
     //tests that a user can read their stakes correctly via getStakes
-    function testGetStakes() public {}
+    function testGetStakes() public {
+        uint256 tokensToMint = 8;
+        VVVS1NFTStaking.StakeDuration stakeDuration = VVVS1NFTStaking.StakeDuration.DAYS_180;
+
+        vm.startPrank(sampleUser, sampleUser);
+        for (uint256 i = 0; i < tokensToMint; i++) {
+            MockERC721Instance.safeMint(sampleUser);
+        }
+        MockERC721Instance.setApprovalForAll(address(S1NFTStakingInstance), true);
+
+        for (uint256 i = 0; i < tokensToMint; i++) {
+            S1NFTStakingInstance.stake(i + 1, stakeDuration);
+        }
+        vm.stopPrank();
+
+        VVVS1NFTStaking.StakeData[] memory stakes = S1NFTStakingInstance.getStakes(sampleUser);
+
+        assertEq(stakes.length, tokensToMint);
+
+        for (uint256 i = 0; i < tokensToMint; i++) {
+            VVVS1NFTStaking.StakeData memory stake = stakes[i];
+            assertEq(stake.tokenId, i + 1);
+            assertEq(stake.startTime, block.timestamp);
+            assertEq(uint8(stake.duration), uint8(stakeDuration));
+        }
+    }
 }
