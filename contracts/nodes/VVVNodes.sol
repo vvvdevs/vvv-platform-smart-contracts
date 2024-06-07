@@ -23,7 +23,7 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
     uint256 public constant TOTAL_SUPPLY = 5000;
 
     ///@notice The vesting duration in seconds (2 years)
-    uint256 public constant VESTING_DURATION = 63_113_904;
+    uint256 public constant VESTING_DURATION = 2 * 365 * 24 * 60 * 60;
 
     ///@notice The address of the authorization registry
     address public authorizationRegistry;
@@ -93,24 +93,6 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
         activationThreshold = _activationThreshold;
         authorizationRegistry = _authorizationRegistry;
         baseURI = _newBaseURI;
-    }
-
-    ///@notice Mints a node to the recipient (placeholder!!!)
-    function mint(address _recipient) external {
-        ++tokenId;
-        if (tokenId > TOTAL_SUPPLY) revert MaxSupplyReached();
-
-        //placeholder logic to set TokenData
-        tokenData[tokenId] = TokenData({
-            unvestedAmount: 63_113_904 * 1e18, //seconds in 2 years * 1e18 for easy math with amount to vest per second
-            vestingSince: block.timestamp,
-            lockedTransactionProcessingYield: 42_075_936 * 1e18, //40% of $VVV initially locked in each node, given unvestedAmount as 60% of $VVV
-            claimableAmount: 0,
-            amountToVestPerSecond: 1e18,
-            stakedAmount: 0
-        });
-
-        _mint(_recipient, tokenId);
     }
 
     ///@notice Mints a node of the input tier to the recipient
