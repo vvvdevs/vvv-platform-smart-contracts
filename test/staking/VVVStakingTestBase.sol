@@ -6,14 +6,18 @@ pragma solidity 0.8.23;
  */
 
 import "lib/forge-std/src/Test.sol";
+import { MockERC721 } from "contracts/mock/MockERC721.sol";
 import { VVVAuthorizationRegistry } from "contracts/auth/VVVAuthorizationRegistry.sol";
 import { VVVETHStaking } from "contracts/staking/VVVETHStaking.sol";
+import { VVVS1NFTStaking } from "contracts/staking/VVVS1NFTStaking.sol";
 import { VVVToken } from "contracts/tokens/VvvToken.sol";
 
-abstract contract VVVETHStakingTestBase is Test {
+abstract contract VVVStakingTestBase is Test {
+    MockERC721 MockERC721Instance;
     VVVAuthorizationRegistry AuthRegistry;
     VVVToken VvvTokenInstance;
     VVVETHStaking EthStakingInstance;
+    VVVS1NFTStaking S1NFTStakingInstance;
 
     uint256 deployerKey = 1234;
     uint256 ethStakingManagerKey = 1235;
