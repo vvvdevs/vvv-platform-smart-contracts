@@ -26,25 +26,56 @@ contract VVVS1NFTStakingUnitTests is VVVStakingTestBase {
 
     //tests that a user can stake a token with the desired duration and contract storage is updated correctly
     function testStake() public {
+        VVVS1NFTStaking.StakeDuration stakeDuration = VVVS1NFTStaking.StakeDuration.DAYS_180;
+
         //mint a token to the user (id 1)
         vm.startPrank(sampleUser, sampleUser);
         MockERC721Instance.safeMint(sampleUser);
         MockERC721Instance.setApprovalForAll(address(S1NFTStakingInstance), true);
 
         //stake the token for 180 days
-        S1NFTStakingInstance.stake(1, VVVS1NFTStaking.StakeDuration.DAYS_180);
+        S1NFTStakingInstance.stake(1, stakeDuration);
         vm.stopPrank();
 
         //check that the `stakes` mapping is updated correctly
         (
             uint256 tokenId,
             uint256 startTime,
-            VVVS1NFTStaking.StakeDuration stakeDuration
+            VVVS1NFTStaking.StakeDuration stakeDurationRead
         ) = S1NFTStakingInstance.stakes(sampleUser, 0);
 
         assertEq(tokenId, 1);
         assertEq(startTime, block.timestamp);
-        assertEq(uint8(stakeDuration), uint8(VVVS1NFTStaking.StakeDuration.DAYS_180));
+        assertEq(uint8(stakeDuration), uint8(stakeDurationRead));
+    }
+
+    //tests staking multiple tokens
+    function testStakeMultiple() public {
+        uint256 tokensToMint = 123;
+        VVVS1NFTStaking.StakeDuration stakeDuration = VVVS1NFTStaking.StakeDuration.DAYS_180;
+
+        vm.startPrank(sampleUser, sampleUser);
+        for (uint256 i = 0; i < tokensToMint; i++) {
+            MockERC721Instance.safeMint(sampleUser);
+        }
+        MockERC721Instance.setApprovalForAll(address(S1NFTStakingInstance), true);
+
+        for (uint256 i = 0; i < tokensToMint; i++) {
+            S1NFTStakingInstance.stake(i + 1, stakeDuration);
+        }
+        vm.stopPrank();
+
+        for (uint256 i = 0; i < tokensToMint; i++) {
+            (
+                uint256 tokenId,
+                uint256 startTime,
+                VVVS1NFTStaking.StakeDuration stakeDurationRead
+            ) = S1NFTStakingInstance.stakes(sampleUser, i);
+
+            assertEq(tokenId, i + 1);
+            assertEq(startTime, block.timestamp);
+            assertEq(uint8(stakeDuration), uint8(stakeDurationRead));
+        }
     }
 
     //tests that a user cannot stake a token they don't own
@@ -74,6 +105,8 @@ contract VVVS1NFTStakingUnitTests is VVVStakingTestBase {
 
     //tests that the Stake event is emitted with the correct data when a user stakes
     function testEmitStake() public {
+        VVVS1NFTStaking.StakeDuration stakeDuration = VVVS1NFTStaking.StakeDuration.DAYS_180;
+
         //mint a token to the user (id 1)
         vm.startPrank(sampleUser, sampleUser);
         MockERC721Instance.safeMint(sampleUser);
@@ -81,8 +114,8 @@ contract VVVS1NFTStakingUnitTests is VVVStakingTestBase {
 
         //stake the token for 180 days
         vm.expectEmit(address(S1NFTStakingInstance));
-        emit VVVS1NFTStaking.Stake(sampleUser, 1, VVVS1NFTStaking.StakeDuration.DAYS_180);
-        S1NFTStakingInstance.stake(1, VVVS1NFTStaking.StakeDuration.DAYS_180);
+        emit VVVS1NFTStaking.Stake(sampleUser, 1, stakeDuration);
+        S1NFTStakingInstance.stake(1, stakeDuration);
         vm.stopPrank();
     }
 
@@ -105,6 +138,32 @@ contract VVVS1NFTStakingUnitTests is VVVStakingTestBase {
 
         //assert that the user has the token of id 1 back and their stakes is length 0 indicating the token transfer succeeded, and the stake array entry was removed
         assertTrue(MockERC721Instance.ownerOf(tokenId) == sampleUser);
+        assertEq(S1NFTStakingInstance.getStakes(sampleUser).length, 0);
+    }
+
+    //test unstaking multiple tokens in a different order than that in which they were staked
+    function testUnstakeMultiple() public {
+        uint256 tokensToMint = 123;
+        VVVS1NFTStaking.StakeDuration stakeDuration = VVVS1NFTStaking.StakeDuration.DAYS_360;
+
+        vm.startPrank(sampleUser, sampleUser);
+        for (uint256 i = 0; i < tokensToMint; i++) {
+            MockERC721Instance.safeMint(sampleUser);
+        }
+        MockERC721Instance.setApprovalForAll(address(S1NFTStakingInstance), true);
+
+        for (uint256 i = 0; i < tokensToMint; i++) {
+            S1NFTStakingInstance.stake(i + 1, stakeDuration);
+        }
+
+        advanceBlockNumberAndTimestampInSeconds(S1NFTStakingInstance.stakeDurations(stakeDuration) + 1);
+
+        for (uint256 i = tokensToMint; i > 0; i--) {
+            S1NFTStakingInstance.unstake(i);
+            assertEq(MockERC721Instance.ownerOf(i), sampleUser);
+        }
+        vm.stopPrank();
+
         assertEq(S1NFTStakingInstance.getStakes(sampleUser).length, 0);
     }
 
