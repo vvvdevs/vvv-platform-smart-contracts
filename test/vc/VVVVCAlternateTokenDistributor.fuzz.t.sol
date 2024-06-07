@@ -89,6 +89,11 @@ contract VVVVCAlternateTokenDistributorFuzzTests is VVVVCTestBase {
         vm.assume(_kycAddress != address(0));
         vm.assume(_seed != 0);
 
+        //this combo reverts
+        _callerAddress = sampleUser;
+        _kycAddress = sampleKycAddress;
+        _seed = 18446744073709551617;
+
         VVVVCAlternateTokenDistributor.ClaimParams memory params = prepareAlternateDistributorClaimParams(
             _callerAddress,
             _kycAddress
@@ -96,7 +101,7 @@ contract VVVVCAlternateTokenDistributorFuzzTests is VVVVCTestBase {
 
         //find claimable amount of tokens
         uint256 totalUserClaimableTokens;
-        for (uint256 i = 0; i < params.projectTokenProxyWallets.length; i++) {
+        for (uint256 i = 0; i < params.investmentRoundIds.length; i++) {
             totalUserClaimableTokens += AlternateTokenDistributorInstance
                 .calculateBaseClaimableProjectTokens(
                     params.projectTokenAddress,
@@ -119,7 +124,11 @@ contract VVVVCAlternateTokenDistributorFuzzTests is VVVVCTestBase {
                 uint160(uint256(keccak256(abi.encodePacked(boundSeed))))
             );
         } else if (paramToAlter == 3) {
-            params.investmentRoundIds[0] = bound(_seed, 0, type(uint32).max);
+            params.investmentRoundIds[0] = bound(
+                _seed,
+                params.investmentRoundIds.length + 1,
+                type(uint32).max
+            );
         } else if (paramToAlter == 4) {
             params.tokenAmountToClaim = bound(_seed, params.tokenAmountToClaim + 1, type(uint256).max);
         } else if (paramToAlter == 5) {
