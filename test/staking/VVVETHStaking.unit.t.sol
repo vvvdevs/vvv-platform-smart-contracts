@@ -4,7 +4,7 @@ pragma solidity 0.8.23;
 import { VVVToken } from "contracts/tokens/VvvToken.sol";
 import { VVVAuthorizationRegistry } from "contracts/auth/VVVAuthorizationRegistry.sol";
 import { VVVAuthorizationRegistryChecker } from "contracts/auth/VVVAuthorizationRegistryChecker.sol";
-import { VVVETHStakingTestBase } from "test/staking/VVVETHStakingTestBase.sol";
+import { VVVStakingTestBase } from "test/staking/VVVStakingTestBase.sol";
 import { VVVETHStaking } from "contracts/staking/VVVETHStaking.sol";
 
 /**
@@ -12,7 +12,7 @@ import { VVVETHStaking } from "contracts/staking/VVVETHStaking.sol";
  * @dev use "forge test --match-contract VVVETHStakingUnitTests" to run tests
  * @dev use "forge coverage --match-contract VVVETHStaking" to run coverage
  */
-contract VVVETHStakingUnitTests is VVVETHStakingTestBase {
+contract VVVETHStakingUnitTests is VVVStakingTestBase {
     // Sets up project and payment tokens, and an instance of the ETH staking contract
     function setUp() public {
         vm.startPrank(deployer, deployer);
