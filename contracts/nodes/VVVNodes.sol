@@ -60,7 +60,7 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
 
     ///@notice Emitted when node is minted
     event Mint(
-        uint256 indexed tokenid,
+        uint256 indexed tokenId,
         address indexed recipient,
         uint256 unvestedAmount,
         uint256 lockedTransactionProcessingYield,
