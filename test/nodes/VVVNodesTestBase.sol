@@ -25,6 +25,10 @@ abstract contract VVVNodesTestBase is Test {
     //500 $VVV activation threshold for nodes
     uint256 activationThreshold = 500 * 1e18;
 
+    uint256 secondsInTwoYears = 2 * 365 * 24 * 60 * 60;
+
+    uint256 sampleLockedTokens = 17_500e18; //platinum locked tokens
+
     string defaultBaseURI = "http://localhost/nodes/";
 
     function advanceBlockNumberAndTimestampInBlocks(uint256 blocks) public {
