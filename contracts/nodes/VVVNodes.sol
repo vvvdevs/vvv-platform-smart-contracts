@@ -19,6 +19,12 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
         uint256 stakedAmount; //total staked $VVV for the node
     }
 
+    ///@notice The total number of nodes that can be minted
+    uint256 public constant TOTAL_SUPPLY = 5000;
+
+    ///@notice The vesting duration in seconds (2 years)
+    uint256 public constant VESTING_DURATION = 2 * 365 * 24 * 60 * 60;
+
     ///@notice The address of the authorization registry
     address public authorizationRegistry;
 
@@ -27,9 +33,6 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
 
     ///@notice The baseURI for the token metadata
     string public baseURI;
-
-    ///@notice The total number of nodes that can be minted
-    uint256 public constant TOTAL_SUPPLY = 5000;
 
     ///@notice Node activation threshold in staked $VVV
     uint256 public activationThreshold;
@@ -92,20 +95,26 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
         baseURI = _newBaseURI;
     }
 
-    ///@notice Mints a node to the recipient (placeholder!!!)
-    function mint(address _recipient) external {
+    ///@notice Mints a node of the input tier to the recipient
+    function adminMint(address _recipient, uint256 _lockedTokens) external onlyAuthorized {
         ++tokenId;
         if (tokenId > TOTAL_SUPPLY) revert MaxSupplyReached();
 
-        //placeholder logic to set TokenData
-        tokenData[tokenId] = TokenData({
-            unvestedAmount: 63_113_904 * 1e18, //seconds in 2 years * 1e18 for easy math with amount to vest per second
-            vestingSince: block.timestamp,
-            lockedTransactionProcessingYield: 42_075_936 * 1e18, //40% of $VVV initially locked in each node, given unvestedAmount as 60% of $VVV
-            claimableAmount: 0,
-            amountToVestPerSecond: 1e18,
-            stakedAmount: 0
-        });
+        uint256 unvestedAmount = (_lockedTokens * 60) / 100;
+        uint256 vestingSince;
+        uint256 lockedTransactionProcessingYield = _lockedTokens - unvestedAmount;
+        uint256 claimableAmount;
+        uint256 amountToVestPerSecond = unvestedAmount / VESTING_DURATION;
+        uint256 stakedAmount;
+
+        tokenData[tokenId] = TokenData(
+            unvestedAmount,
+            vestingSince,
+            lockedTransactionProcessingYield,
+            claimableAmount,
+            amountToVestPerSecond,
+            stakedAmount
+        );
 
         _mint(_recipient, tokenId);
     }
