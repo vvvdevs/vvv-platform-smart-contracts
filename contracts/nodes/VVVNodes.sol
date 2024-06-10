@@ -52,6 +52,9 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
     ///@notice Emitted when $VVV is unstaked
     event Unstake(uint256 indexed tokenId, uint256 amount);
 
+    //@notice Emitted when some transaction processing yield is unlocked
+    event UnlockTransactionProcessingYield(uint256 indexed tokenId, uint256 unlockedAmount);
+
     ///@notice Thrown when input array lengths are not matched
     error ArrayLengthMismatch();
 
@@ -222,6 +225,7 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
 
             thisToken.lockedTransactionProcessingYield -= yieldToUnlock;
             thisToken.claimableAmount += yieldToUnlock;
+            emit UnlockTransactionProcessingYield(thisTokenId, yieldToUnlock);
         }
     }
 
