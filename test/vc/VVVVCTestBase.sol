@@ -374,10 +374,6 @@ abstract contract VVVVCTestBase is Test {
             roots[i] = root;
             leaves[i] = leaf;
             proofs[i] = proof;
-
-            emit log_named_uint("leaf generation run", i);
-            emit log_named_uint("user index", _userIndices[i]);
-            emit log_named_bytes32("user leaf", leaf);
         }
 
         return (roots, leaves, proofs);
@@ -492,7 +488,6 @@ abstract contract VVVVCTestBase is Test {
         for (uint256 i = 0; i < details.investmentRounds; ++i) {
             details.userIndices[i] = _usersArrayIndex;
             details.investmentRoundIds[i] = i + 1;
-            emit log_named_uint("details.investmentRoundIds[i]", details.investmentRoundIds[i]);
         }
 
         (bytes32[] memory roots, , bytes32[][] memory proofs) = getMerkleRootLeafProofArrays(
