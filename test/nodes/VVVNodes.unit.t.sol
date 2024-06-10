@@ -29,6 +29,15 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         uint256 lockedTransactionProcessingYield = sampleLockedTokens - unvestedAmount;
         uint256 amountToVestPerSecond = unvestedAmount / NodesInstance.VESTING_DURATION();
 
+        vm.expectEmit(address(NodesInstance));
+        emit VVVNodes.Mint(
+            1,
+            sampleUser,
+            unvestedAmount,
+            lockedTransactionProcessingYield,
+            amountToVestPerSecond
+        );
+
         NodesInstance.adminMint(sampleUser, sampleLockedTokens);
         vm.stopPrank();
 

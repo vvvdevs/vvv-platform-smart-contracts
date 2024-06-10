@@ -129,6 +129,13 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
         );
 
         _mint(_recipient, tokenId);
+        emit Mint(
+            tokenId,
+            _recipient,
+            unvestedAmount,
+            lockedTransactionProcessingYield,
+            amountToVestPerSecond
+        );
     }
 
     ///@notice Stakes $VVV, handles activation if amount added causes total staked to surpass activation threshold
