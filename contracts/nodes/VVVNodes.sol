@@ -55,6 +55,18 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
     ///@notice Emitted when $VVV is unstaked
     event Unstake(uint256 indexed tokenId, uint256 amount);
 
+    ///@notice Emitted when some transaction processing yield is unlocked
+    event UnlockTransactionProcessingYield(uint256 indexed tokenId, uint256 unlockedAmount);
+
+    ///@notice Emitted when node is minted
+    event Mint(
+        uint256 indexed tokenId,
+        address indexed recipient,
+        uint256 unvestedAmount,
+        uint256 lockedTransactionProcessingYield,
+        uint256 amountToVestPerSecond
+    );
+
     ///@notice Thrown when input array lengths are not matched
     error ArrayLengthMismatch();
 
