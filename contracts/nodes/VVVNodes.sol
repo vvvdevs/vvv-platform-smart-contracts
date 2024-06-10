@@ -250,6 +250,7 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
 
             thisToken.lockedTransactionProcessingYield -= yieldToUnlock;
             thisToken.claimableAmount += yieldToUnlock;
+            emit UnlockTransactionProcessingYield(thisTokenId, yieldToUnlock);
         }
     }
 
