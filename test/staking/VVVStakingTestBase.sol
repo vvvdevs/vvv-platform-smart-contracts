@@ -7,17 +7,21 @@ pragma solidity 0.8.23;
 
 import "lib/forge-std/src/Test.sol";
 import { NonReceivable } from "test/utils/NonReceivable.sol";
+import { MockERC721 } from "contracts/mock/MockERC721.sol";
 import { VVVAuthorizationRegistry } from "contracts/auth/VVVAuthorizationRegistry.sol";
 import { VVVETHStaking } from "contracts/staking/VVVETHStaking.sol";
 import { VVVLaunchpadStaking } from "contracts/staking/VVVLaunchpadStaking.sol";
+import { VVVS1NFTStaking } from "contracts/staking/VVVS1NFTStaking.sol";
 import { VVVToken } from "contracts/tokens/VvvToken.sol";
 
 abstract contract VVVStakingTestBase is Test {
     NonReceivable NonReceivableCaller;
+    MockERC721 MockERC721Instance;
     VVVAuthorizationRegistry AuthRegistry;
     VVVToken VvvTokenInstance;
     VVVETHStaking EthStakingInstance;
     VVVLaunchpadStaking LaunchpadStakingInstance;
+    VVVS1NFTStaking S1NFTStakingInstance;
 
     uint256 deployerKey = 1234;
     uint256 ethStakingManagerKey = 1235;
