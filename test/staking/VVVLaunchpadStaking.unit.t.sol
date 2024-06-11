@@ -120,6 +120,19 @@ contract VVVLaunchpadStakingUnitTests is VVVStakingTestBase {
         vm.stopPrank();
     }
 
+    //tests that the Staked event is emitted when a user stakes
+    function testStakedEmit() public {
+        vm.deal(sampleUser, 1 ether);
+        uint256 amountToStake = 1 ether;
+        uint256 stakeDurationIndex = 1;
+
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectEmit(address(LaunchpadStakingInstance));
+        emit VVVLaunchpadStaking.Staked(sampleUser, stakeDurationIndex, amountToStake);
+        LaunchpadStakingInstance.stake{ value: amountToStake }(stakeDurationIndex);
+        vm.stopPrank();
+    }
+
     //tests that a user can unstake at the end of a stake duration
     function testUnstakeFullDuration() public {
         vm.deal(sampleUser, 1 ether);
@@ -197,6 +210,25 @@ contract VVVLaunchpadStakingUnitTests is VVVStakingTestBase {
             sampleUserBalanceBeforeStake - amountToStake + expectedUnstakeAmount
         );
         assertEq(address(0).balance, amountToStake - expectedUnstakeAmount);
+    }
+
+    //tests that the Unstaked event is emitted when a user unstakes
+    function testUnstakedEmit() public {
+        vm.deal(sampleUser, 1 ether);
+        uint256 amountToStake = 1 ether;
+        uint256 stakeDurationIndex = 1;
+        uint256 expectedUnstakeNumerator = 50;
+        uint256 expectedUnstakeDenominator = 100;
+
+        vm.startPrank(sampleUser, sampleUser);
+        LaunchpadStakingInstance.stake{ value: amountToStake }(stakeDurationIndex);
+
+        uint256 expectedPenalty = (amountToStake * expectedUnstakeNumerator) / expectedUnstakeDenominator;
+
+        vm.expectEmit(address(LaunchpadStakingInstance));
+        emit VVVLaunchpadStaking.Unstaked(sampleUser, stakeDurationIndex, amountToStake, expectedPenalty);
+        LaunchpadStakingInstance.unstake(stakeDurationIndex);
+        vm.stopPrank();
     }
 
     //tests that unstaking in a non-existent pool id causes a revert with the InvalidPoolId error
@@ -315,43 +347,6 @@ contract VVVLaunchpadStakingUnitTests is VVVStakingTestBase {
             assertEq(userStakes[i].durationIndex, durationIndices[i]);
             assertEq(userStakes[i].amount, amountsToStake[i]);
             assertEq(userStakes[i].startTimestamp, startTimestamp + i);
-        }
-    }
-
-    // tests getting the allStakes array
-    function testGetAllStakes() public {
-        vm.deal(sampleUser, 4 ether);
-        uint256 amountToStake = 1 ether;
-
-        uint256[] memory durationIndices = new uint256[](3);
-        durationIndices[0] = 0;
-        durationIndices[1] = 1;
-        durationIndices[2] = 2;
-
-        uint256[] memory amountsToStake = new uint256[](3);
-        amountsToStake[0] = amountToStake;
-        amountsToStake[1] = amountToStake + 1;
-        amountsToStake[2] = amountToStake + 2;
-
-        //stake in pool ids (stake duration indices) 0-2
-        //varying amounts and timestamps slightly to confirm written values
-        vm.startPrank(sampleUser, sampleUser);
-        advanceBlockNumberAndTimestampInSeconds(1);
-        uint256 startTimestamp = block.timestamp;
-        for (uint256 i = 0; i < durationIndices.length; ++i) {
-            LaunchpadStakingInstance.stake{ value: amountsToStake[i] }(durationIndices[i]);
-            advanceBlockNumberAndTimestampInSeconds(1);
-        }
-        vm.stopPrank();
-
-        VVVLaunchpadStaking.Stake[] memory allStakes = LaunchpadStakingInstance.getAllStakes();
-
-        //assert that the lengths and contents of the stake structs match that assigned above
-        assertEq(allStakes.length, 3);
-        for (uint256 i = 0; i < allStakes.length; ++i) {
-            assertEq(allStakes[i].durationIndex, durationIndices[i]);
-            assertEq(allStakes[i].amount, amountsToStake[i]);
-            assertEq(allStakes[i].startTimestamp, startTimestamp + i);
         }
     }
 

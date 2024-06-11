@@ -25,17 +25,20 @@ contract VVVLaunchpadStaking is VVVAuthorizationRegistryChecker {
     ///@notice the array of staking durations for each pool
     uint256[] public stakingDurations;
 
-    ///@notice the array of all stakes
-    Stake[] public allStakes;
-
     ///@notice maps users and pools (durations) to their stake details
     mapping(address => mapping(uint256 => Stake)) public userStakes;
 
     ///@notice emitted when the penalty numerator is set
     event PenaltyNumeratorSet(uint256 indexed newNumerator);
 
+    ///@notice emitted when a user stakes
+    event Staked(address indexed staker, uint256 indexed poolId, uint256 amount);
+
     ///@notice emitted when the staking durations are set
     event StakingDurationsSet(uint256[] indexed stakingDurations);
+
+    ///@notice emitted when a user unstakes
+    event Unstaked(address indexed staker, uint256 indexed poolId, uint256 amount, uint256 penaltyAmount);
 
     ///@notice thrown when an invalid poolId is provided
     error InvalidPoolId();
@@ -73,8 +76,9 @@ contract VVVLaunchpadStaking is VVVAuthorizationRegistryChecker {
             thisStake.amount = msg.value;
             thisStake.startTimestamp = block.timestamp;
             thisStake.durationIndex = _poolId;
-            allStakes.push(thisStake);
         }
+
+        emit Staked(msg.sender, _poolId, msg.value);
     }
 
     ///@notice unstakes the user's stake for a given pool and applies an early withdraw penalty if applicable
@@ -89,6 +93,11 @@ contract VVVLaunchpadStaking is VVVAuthorizationRegistryChecker {
         (bool transferSuccess, ) = msg.sender.call{ value: thisStake.amount - penaltyAmount }("");
 
         if (!burnSuccess || !transferSuccess) revert TransferFailed();
+
+        //remove the stake from the userStakes mapping
+        delete userStakes[msg.sender][_poolId];
+
+        emit Unstaked(msg.sender, _poolId, thisStake.amount, penaltyAmount);
     }
 
     ///@notice allows an admin to set the full array of staking durations
@@ -134,10 +143,5 @@ contract VVVLaunchpadStaking is VVVAuthorizationRegistryChecker {
             }
         }
         return stakes;
-    }
-
-    ///@notice returns the Stake array of all stakes
-    function getAllStakes() public view returns (Stake[] memory) {
-        return allStakes;
     }
 }
