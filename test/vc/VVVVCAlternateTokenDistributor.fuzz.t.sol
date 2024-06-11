@@ -67,14 +67,14 @@ contract VVVVCAlternateTokenDistributorFuzzTests is VVVVCTestBase {
             _kycAddress
         );
 
-        uint256 callerBalanaceBeforeClaim = ProjectTokenInstance.balanceOf(params.callerAddress);
+        uint256 callerBalanceBeforeClaim = ProjectTokenInstance.balanceOf(params.callerAddress);
 
         vm.startPrank(_callerAddress, _callerAddress);
         AlternateTokenDistributorInstance.claim(params);
         vm.stopPrank();
 
         uint256 balanceDifference = ProjectTokenInstance.balanceOf(params.callerAddress) -
-            callerBalanaceBeforeClaim;
+            callerBalanceBeforeClaim;
 
         //check that the project token was withdrawn from the proxy wallet to the caller address
         assertEq(params.tokenAmountToClaim, balanceDifference);
@@ -96,7 +96,7 @@ contract VVVVCAlternateTokenDistributorFuzzTests is VVVVCTestBase {
 
         //find claimable amount of tokens
         uint256 totalUserClaimableTokens;
-        for (uint256 i = 0; i < params.projectTokenProxyWallets.length; i++) {
+        for (uint256 i = 0; i < params.investmentRoundIds.length; i++) {
             totalUserClaimableTokens += AlternateTokenDistributorInstance
                 .calculateBaseClaimableProjectTokens(
                     params.projectTokenAddress,
@@ -119,7 +119,11 @@ contract VVVVCAlternateTokenDistributorFuzzTests is VVVVCTestBase {
                 uint160(uint256(keccak256(abi.encodePacked(boundSeed))))
             );
         } else if (paramToAlter == 3) {
-            params.investmentRoundIds[0] = bound(_seed, 0, type(uint32).max);
+            params.investmentRoundIds[0] = bound(
+                _seed,
+                params.investmentRoundIds.length + 1,
+                type(uint32).max
+            );
         } else if (paramToAlter == 4) {
             params.tokenAmountToClaim = bound(_seed, params.tokenAmountToClaim + 1, type(uint256).max);
         } else if (paramToAlter == 5) {
