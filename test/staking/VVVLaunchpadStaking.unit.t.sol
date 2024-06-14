@@ -424,7 +424,7 @@ contract VVVLaunchpadStakingUnitTests is VVVStakingTestBase {
 
     ///tests that the PenaltyNumeratorSet event is emitted when the penalty numerator is set
     function testEmitPenaltyNumeratorSet() public {
-        uint256 newPenaltyNumerator = 12345;
+        uint256 newPenaltyNumerator = 123;
         vm.startPrank(launchpadStakingManager, launchpadStakingManager);
         vm.expectEmit(address(LaunchpadStakingInstance));
         emit VVVLaunchpadStaking.PenaltyNumeratorSet(newPenaltyNumerator);
