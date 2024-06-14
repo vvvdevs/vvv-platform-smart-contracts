@@ -116,6 +116,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
                 sampleAmountsToInvest[0],
                 userPaymentTokenDefaultAllocation,
                 exchangeRateNumerator,
+                feeNumerator,
                 sampleKycAddress
             )
         );
@@ -150,6 +151,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
                 sampleAmountsToInvest[0],
                 userPaymentTokenDefaultAllocation,
                 exchangeRateNumerator,
+                feeNumerator,
                 sampleKycAddress
             )
         );
@@ -203,6 +205,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
                 sampleAmountsToInvest[0],
                 userPaymentTokenDefaultAllocation,
                 exchangeRateNumerator,
+                feeNumerator,
                 sampleKycAddress
             )
         );
@@ -265,6 +268,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
                 sampleAmountsToInvest[0],
                 userPaymentTokenDefaultAllocation,
                 exchangeRateNumerator,
+                feeNumerator,
                 sampleKycAddress
             )
         );
@@ -309,6 +313,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
                 sampleAmountsToInvest[0],
                 userPaymentTokenDefaultAllocation,
                 exchangeRateNumerator,
+                feeNumerator,
                 sampleKycAddress
             )
         );
@@ -363,6 +368,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
                     sampleAmountsToInvest[paymentTokenAmountIndex],
                     userPaymentTokenDefaultAllocation,
                     exchangeRateNumerator,
+                    feeNumerator,
                     thisInvestor
                 )
             );
@@ -411,6 +417,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
                 investmentAmount,
                 userPaymentTokenDefaultAllocation,
                 exchangeRateNumerator,
+                feeNumerator,
                 sampleKycAddress
             )
         );

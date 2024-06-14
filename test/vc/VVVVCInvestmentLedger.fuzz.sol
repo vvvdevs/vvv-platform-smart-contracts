@@ -57,6 +57,7 @@ contract VVVVCInvestmentLedgerFuzzTests is VVVVCTestBase {
             kycAddressAllocation: _kycAddressAllocation,
             amountToInvest: _amountToInvest,
             exchangeRateNumerator: exchangeRateNumerator,
+            feeNumerator: feeNumerator,
             deadline: _deadline,
             signature: bytes("placeholder")
         });
