@@ -242,6 +242,17 @@ contract VVVLaunchpadStakingUnitTests is VVVStakingTestBase {
         vm.stopPrank();
     }
 
+    //tests that unstaking for a pool with no staked balance reverts with the NoStakeForPool error
+    function testUnstakeNoStakeForPool() public {
+        vm.deal(sampleUser, 1 ether);
+        uint256 stakeDurationIndex = 1;
+
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVVLaunchpadStaking.NoStakeForPool.selector);
+        LaunchpadStakingInstance.unstake(stakeDurationIndex);
+        vm.stopPrank();
+    }
+
     //tests that a failed transfer of funds during unstake causes a revert with the FailedTransfer error
     function testUnstakeFailedTransfer() public {
         vm.deal(sampleUser, 1 ether);
@@ -397,6 +408,16 @@ contract VVVLaunchpadStakingUnitTests is VVVStakingTestBase {
         uint256 newPenaltyNumerator = 12345;
         vm.startPrank(deployer, deployer);
         vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
+        LaunchpadStakingInstance.setPenaltyNumerator(newPenaltyNumerator);
+        vm.stopPrank();
+    }
+
+    //tests that NumeratorCannotExceedDenominator is thrown correctly when attempting to set a numerator higher than the denominator
+    function testSetPenaltyNumeratorLargerThanDenominator() public {
+        uint256 newPenaltyNumerator = LaunchpadStakingInstance.PENALTY_DENOMINATOR() + 1;
+
+        vm.startPrank(launchpadStakingManager, launchpadStakingManager);
+        vm.expectRevert(VVVLaunchpadStaking.NumeratorCannotExceedDenominator.selector);
         LaunchpadStakingInstance.setPenaltyNumerator(newPenaltyNumerator);
         vm.stopPrank();
     }

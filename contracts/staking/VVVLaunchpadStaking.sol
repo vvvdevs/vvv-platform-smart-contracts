@@ -43,6 +43,9 @@ contract VVVLaunchpadStaking is VVVAuthorizationRegistryChecker {
     ///@notice thrown when an invalid poolId is provided
     error InvalidPoolId();
 
+    ///@notice thrown when a user has no stake for a given pool
+    error NoStakeForPool();
+
     ///@notice thrown when the penalty numerator is set to a value greater than the denominator
     error NumeratorCannotExceedDenominator();
 
@@ -67,16 +70,15 @@ contract VVVLaunchpadStaking is VVVAuthorizationRegistryChecker {
         //read in the current mapping entry for the user and pool which may or may not be initialized
         Stake storage thisStake = userStakes[msg.sender][_poolId];
 
-        //if the default values is not set, a prior stake exists. update to new amount and startTimestamp
-        //if the default values is set, a prior stake does not exist. set the amount and startTimestamp
+        //if the default values is not set, a prior stake exists. update to new amount
+        //if the default values is set, a prior stake does not exist. set the amount
         if (thisStake.amount > 0) {
             thisStake.amount += msg.value;
-            thisStake.startTimestamp = block.timestamp;
         } else {
             thisStake.amount = msg.value;
-            thisStake.startTimestamp = block.timestamp;
             thisStake.durationIndex = _poolId;
         }
+        thisStake.startTimestamp = block.timestamp;
 
         emit Staked(msg.sender, _poolId, msg.value);
     }
@@ -87,6 +89,10 @@ contract VVVLaunchpadStaking is VVVAuthorizationRegistryChecker {
 
         //read in the current mapping entry for the user and pool which may or may not be initialized
         Stake memory thisStake = userStakes[msg.sender][_poolId];
+
+        //revert if the user has no stake for the duration
+        if (thisStake.amount == 0) revert NoStakeForPool();
+
         uint256 penaltyAmount = calculatePenalty(thisStake);
 
         (bool burnSuccess, ) = address(0).call{ value: penaltyAmount }("");
