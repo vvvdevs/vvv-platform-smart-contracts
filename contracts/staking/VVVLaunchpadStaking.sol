@@ -10,7 +10,7 @@ import { VVVAuthorizationRegistryChecker } from "contracts/auth/VVVAuthorization
 
 contract VVVLaunchpadStaking is VVVAuthorizationRegistryChecker {
     ///@notice denominator for calculating early unstake penalties
-    uint256 public constant PENALTY_DENOMINATOR = 1e18;
+    uint256 public constant PENALTY_DENOMINATOR = 10_000;
 
     ///@notice contains details for each stake action made by a user
     struct Stake {
@@ -20,7 +20,7 @@ contract VVVLaunchpadStaking is VVVAuthorizationRegistryChecker {
     }
 
     ///@notice numerator for calculating early unstake penalties
-    uint256 public penaltyNumerator = 5e17;
+    uint256 public penaltyNumerator = 5_000;
 
     ///@notice the array of staking durations for each pool
     uint256[] public stakingDurations;
@@ -114,7 +114,7 @@ contract VVVLaunchpadStaking is VVVAuthorizationRegistryChecker {
 
     ///@notice allows an admin to set the penalty numerator
     function setPenaltyNumerator(uint256 _newNumerator) external onlyAuthorized {
-        if (_newNumerator > penaltyNumerator) revert NumeratorCannotExceedDenominator();
+        if (_newNumerator > PENALTY_DENOMINATOR) revert NumeratorCannotExceedDenominator();
         penaltyNumerator = _newNumerator;
         emit PenaltyNumeratorSet(_newNumerator);
     }

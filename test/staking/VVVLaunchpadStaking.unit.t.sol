@@ -394,7 +394,7 @@ contract VVVLaunchpadStakingUnitTests is VVVStakingTestBase {
 
     //tests that the penalty numerator can be set by the admin
     function testAdminSetPenaltyNumerator() public {
-        uint256 newPenaltyNumerator = 12345;
+        uint256 newPenaltyNumerator = LaunchpadStakingInstance.PENALTY_DENOMINATOR();
 
         vm.startPrank(launchpadStakingManager, launchpadStakingManager);
         LaunchpadStakingInstance.setPenaltyNumerator(newPenaltyNumerator);
