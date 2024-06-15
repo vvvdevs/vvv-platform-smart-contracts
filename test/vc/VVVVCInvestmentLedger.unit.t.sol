@@ -127,6 +127,29 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         assertTrue(PaymentTokenInstance.balanceOf(sampleUser) + params.amountToInvest == preInvestBalance);
     }
 
+    ///@notice same as above, just with zero fee to confirm this works as well
+    function testInvestZeroFee() public {
+        uint256 feeNumerator = 0;
+
+        VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
+            sampleInvestmentRoundIds[0],
+            investmentRoundSampleLimit,
+            sampleAmountsToInvest[0],
+            userPaymentTokenDefaultAllocation,
+            exchangeRateNumerator,
+            feeNumerator,
+            sampleKycAddress
+        );
+
+        uint256 preInvestBalance = PaymentTokenInstance.balanceOf(sampleUser);
+
+        investAsUser(sampleUser, params);
+
+        //confirm that contract and user balances reflect the invested params.amountToInvest
+        assertTrue(PaymentTokenInstance.balanceOf(address(LedgerInstance)) == params.amountToInvest);
+        assertTrue(PaymentTokenInstance.balanceOf(sampleUser) + params.amountToInvest == preInvestBalance);
+    }
+
     /**
         @notice Tests investment function call by user with two exchange rates to confirm the invested amount reflects the exchange rate
      */
