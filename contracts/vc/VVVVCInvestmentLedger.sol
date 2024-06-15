@@ -78,6 +78,7 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
      * @param kycAddress The address of the kyc address
      * @param exchangeRateNumerator The numerator of the conversion of payment token to stablecoin
      * @param exchangeRateDenominator The denominator of the conversion of payment token to stablecoin
+     * @param feeNumerator The numerator of the fee subtracted from the investment stable-equivalent amount
      * @param investmentAmount The amount invested in stablecoin terms
      */
     event VCInvestment(
@@ -86,6 +87,7 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
         address indexed kycAddress,
         uint256 exchangeRateNumerator,
         uint256 exchangeRateDenominator,
+        uint256 feeNumerator,
         uint256 investmentAmount
     );
 
@@ -211,6 +213,7 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
             _params.kycAddress,
             _params.exchangeRateNumerator,
             exchangeRateDenominator,
+            _params.feeNumerator,
             postFeeStableAmountEquivalent
         );
     }
@@ -271,7 +274,7 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
     ) external onlyAuthorized {
         kycAddressInvestedPerRound[_kycAddress][_investmentRound] += _amountToInvest;
         totalInvestedPerRound[_investmentRound] += _amountToInvest;
-        emit VCInvestment(_investmentRound, address(0), _kycAddress, 0, 0, _amountToInvest);
+        emit VCInvestment(_investmentRound, address(0), _kycAddress, 0, 0, 0, _amountToInvest);
     }
 
     /**

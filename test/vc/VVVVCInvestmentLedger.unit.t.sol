@@ -348,6 +348,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             params.kycAddress,
             params.exchangeRateNumerator,
             LedgerInstance.exchangeRateDenominator(),
+            params.feeNumerator,
             params.amountToInvest - tokenFee
         );
         LedgerInstance.invest(params);
@@ -369,6 +370,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             investmentRoundId,
             address(0),
             sampleKycAddress,
+            0,
             0,
             0,
             amountToInvest
