@@ -128,7 +128,7 @@ contract VVVLaunchpadStakingUnitTests is VVVStakingTestBase {
 
         vm.startPrank(sampleUser, sampleUser);
         vm.expectEmit(address(LaunchpadStakingInstance));
-        emit VVVLaunchpadStaking.Staked(sampleUser, stakeDurationIndex, amountToStake);
+        emit VVVLaunchpadStaking.Stake(sampleUser, stakeDurationIndex, amountToStake);
         LaunchpadStakingInstance.stake{ value: amountToStake }(stakeDurationIndex);
         vm.stopPrank();
     }
@@ -226,7 +226,7 @@ contract VVVLaunchpadStakingUnitTests is VVVStakingTestBase {
         uint256 expectedPenalty = (amountToStake * expectedUnstakeNumerator) / expectedUnstakeDenominator;
 
         vm.expectEmit(address(LaunchpadStakingInstance));
-        emit VVVLaunchpadStaking.Unstaked(sampleUser, stakeDurationIndex, amountToStake, expectedPenalty);
+        emit VVVLaunchpadStaking.Unstake(sampleUser, stakeDurationIndex, amountToStake, expectedPenalty);
         LaunchpadStakingInstance.unstake(stakeDurationIndex);
         vm.stopPrank();
     }
@@ -273,7 +273,7 @@ contract VVVLaunchpadStakingUnitTests is VVVStakingTestBase {
         uint256 stakeDuration = stakingDurations[stakeDurationIndex];
         uint256 referencePenalty = 0;
 
-        VVVLaunchpadStaking.Stake memory stake = VVVLaunchpadStaking.Stake({
+        VVVLaunchpadStaking.StakeData memory stake = VVVLaunchpadStaking.StakeData({
             durationIndex: stakeDurationIndex,
             amount: 1 ether,
             startTimestamp: block.timestamp
@@ -293,7 +293,7 @@ contract VVVLaunchpadStakingUnitTests is VVVStakingTestBase {
         uint256 stakeDurationDivisor = 2;
         uint256 referencePenalty = 0.25 ether;
 
-        VVVLaunchpadStaking.Stake memory stake = VVVLaunchpadStaking.Stake({
+        VVVLaunchpadStaking.StakeData memory stake = VVVLaunchpadStaking.StakeData({
             durationIndex: stakeDurationIndex,
             amount: 1 ether,
             startTimestamp: block.timestamp
@@ -311,7 +311,7 @@ contract VVVLaunchpadStakingUnitTests is VVVStakingTestBase {
         uint256 stakeDurationIndex = 1;
         uint256 referencePenalty = 0.5 ether;
 
-        VVVLaunchpadStaking.Stake memory stake = VVVLaunchpadStaking.Stake({
+        VVVLaunchpadStaking.StakeData memory stake = VVVLaunchpadStaking.StakeData({
             durationIndex: stakeDurationIndex,
             amount: 1 ether,
             startTimestamp: block.timestamp
@@ -348,7 +348,7 @@ contract VVVLaunchpadStakingUnitTests is VVVStakingTestBase {
         }
         vm.stopPrank();
 
-        VVVLaunchpadStaking.Stake[] memory userStakes = LaunchpadStakingInstance.getStakesByAddress(
+        VVVLaunchpadStaking.StakeData[] memory userStakes = LaunchpadStakingInstance.getStakesByAddress(
             sampleUser
         );
 

@@ -13,7 +13,7 @@ contract VVVLaunchpadStaking is VVVAuthorizationRegistryChecker {
     uint256 public constant PENALTY_DENOMINATOR = 10_000;
 
     ///@notice contains details for each stake action made by a user
-    struct Stake {
+    struct StakeData {
         uint256 durationIndex;
         uint256 amount;
         uint256 startTimestamp;
@@ -26,19 +26,19 @@ contract VVVLaunchpadStaking is VVVAuthorizationRegistryChecker {
     uint256[] public stakingDurations;
 
     ///@notice maps users and pools (durations) to their stake details
-    mapping(address => mapping(uint256 => Stake)) public userStakes;
+    mapping(address => mapping(uint256 => StakeData)) public userStakes;
 
     ///@notice emitted when the penalty numerator is set
     event PenaltyNumeratorSet(uint256 indexed newNumerator);
 
     ///@notice emitted when a user stakes
-    event Staked(address indexed staker, uint256 indexed poolId, uint256 amount);
+    event Stake(address indexed staker, uint256 indexed poolId, uint256 amount);
 
     ///@notice emitted when the staking durations are set
     event StakingDurationsSet(uint256[] indexed stakingDurations);
 
     ///@notice emitted when a user unstakes
-    event Unstaked(address indexed staker, uint256 indexed poolId, uint256 amount, uint256 penaltyAmount);
+    event Unstake(address indexed staker, uint256 indexed poolId, uint256 amount, uint256 penaltyAmount);
 
     ///@notice thrown when an invalid poolId is provided
     error InvalidPoolId();
@@ -68,7 +68,7 @@ contract VVVLaunchpadStaking is VVVAuthorizationRegistryChecker {
         if (msg.value == 0) revert ZeroStakeAmount();
 
         //read in the current mapping entry for the user and pool which may or may not be initialized
-        Stake storage thisStake = userStakes[msg.sender][_poolId];
+        StakeData storage thisStake = userStakes[msg.sender][_poolId];
 
         //if the default values is not set, a prior stake exists. update to new amount
         //if the default values is set, a prior stake does not exist. set the amount
@@ -80,7 +80,7 @@ contract VVVLaunchpadStaking is VVVAuthorizationRegistryChecker {
         }
         thisStake.startTimestamp = block.timestamp;
 
-        emit Staked(msg.sender, _poolId, msg.value);
+        emit Stake(msg.sender, _poolId, msg.value);
     }
 
     ///@notice unstakes the user's stake for a given pool and applies an early withdraw penalty if applicable
@@ -88,7 +88,7 @@ contract VVVLaunchpadStaking is VVVAuthorizationRegistryChecker {
         if (_poolId >= stakingDurations.length) revert InvalidPoolId();
 
         //read in the current mapping entry for the user and pool which may or may not be initialized
-        Stake memory thisStake = userStakes[msg.sender][_poolId];
+        StakeData memory thisStake = userStakes[msg.sender][_poolId];
 
         //revert if the user has no stake for the duration
         if (thisStake.amount == 0) revert NoStakeForPool();
@@ -103,7 +103,7 @@ contract VVVLaunchpadStaking is VVVAuthorizationRegistryChecker {
         //remove the stake from the userStakes mapping
         delete userStakes[msg.sender][_poolId];
 
-        emit Unstaked(msg.sender, _poolId, thisStake.amount, penaltyAmount);
+        emit Unstake(msg.sender, _poolId, thisStake.amount, penaltyAmount);
     }
 
     ///@notice allows an admin to set the full array of staking durations
@@ -120,7 +120,7 @@ contract VVVLaunchpadStaking is VVVAuthorizationRegistryChecker {
     }
 
     ///@notice returns the penalty amount for an early withdraw based on 50% penalty for immediate withdraw and 0% penalty for withdraw at full duration
-    function calculatePenalty(Stake memory _stake) public view returns (uint256) {
+    function calculatePenalty(StakeData memory _stake) public view returns (uint256) {
         uint256 timeElapsed = block.timestamp - _stake.startTimestamp;
         uint256 duration = stakingDurations[_stake.durationIndex];
 
@@ -133,14 +133,14 @@ contract VVVLaunchpadStaking is VVVAuthorizationRegistryChecker {
     }
 
     ///@notice returns an array of a staker's active (amount > 0) stakes
-    function getStakesByAddress(address _staker) public view returns (Stake[] memory) {
+    function getStakesByAddress(address _staker) public view returns (StakeData[] memory) {
         uint256 stakesLength;
         for (uint256 i = 0; i < stakingDurations.length; i++) {
             if (userStakes[_staker][i].amount > 0) {
                 ++stakesLength;
             }
         }
-        Stake[] memory stakes = new Stake[](stakesLength);
+        StakeData[] memory stakes = new StakeData[](stakesLength);
         uint256 j = 0;
         for (uint256 i = 0; i < stakingDurations.length; i++) {
             if (userStakes[_staker][i].amount > 0) {
