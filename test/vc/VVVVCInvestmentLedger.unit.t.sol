@@ -76,6 +76,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleAmountsToInvest[0],
             userPaymentTokenDefaultAllocation,
             exchangeRateNumerator,
+            feeNumerator,
             sampleKycAddress
         );
         assertTrue(LedgerInstance.isSignatureValid(params));
@@ -92,6 +93,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleAmountsToInvest[0],
             userPaymentTokenDefaultAllocation,
             exchangeRateNumerator,
+            feeNumerator,
             sampleKycAddress
         );
 
@@ -112,6 +114,30 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleAmountsToInvest[0],
             userPaymentTokenDefaultAllocation,
             exchangeRateNumerator,
+            feeNumerator,
+            sampleKycAddress
+        );
+
+        uint256 preInvestBalance = PaymentTokenInstance.balanceOf(sampleUser);
+
+        investAsUser(sampleUser, params);
+
+        //confirm that contract and user balances reflect the invested params.amountToInvest
+        assertTrue(PaymentTokenInstance.balanceOf(address(LedgerInstance)) == params.amountToInvest);
+        assertTrue(PaymentTokenInstance.balanceOf(sampleUser) + params.amountToInvest == preInvestBalance);
+    }
+
+    ///@notice same as above, just with zero fee to confirm this works as well
+    function testInvestZeroFee() public {
+        uint256 feeNumerator = 0;
+
+        VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
+            sampleInvestmentRoundIds[0],
+            investmentRoundSampleLimit,
+            sampleAmountsToInvest[0],
+            userPaymentTokenDefaultAllocation,
+            exchangeRateNumerator,
+            feeNumerator,
             sampleKycAddress
         );
 
@@ -134,6 +160,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleAmountsToInvest[0],
             userPaymentTokenDefaultAllocation,
             exchangeRateNumerator,
+            feeNumerator,
             sampleKycAddress
         );
         investAsUser(sampleUser, params);
@@ -151,6 +178,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleAmountsToInvest[0],
             userPaymentTokenDefaultAllocation,
             newExchangeRateNumerator,
+            feeNumerator,
             sampleKycAddress
         );
         investAsUser(sampleUser, params2);
@@ -181,6 +209,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleAmountsToInvest[0],
             userPaymentTokenDefaultAllocation,
             exchangeRateNumerator,
+            feeNumerator,
             sampleKycAddress
         );
 
@@ -199,7 +228,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
     /**
      * @notice Tests that a user cannot invest multiple times in a single round to exceed their limits
      * @dev in generateInvestParamsWithSignature, the user is allocated 1000 tokens, and the round limit is 10000 tokens
-     * @dev so 10 investments work, but 11 won't
+     * @dev given a 10% fee as a sample, 11 investments work but the 12th will revert
      */
     function testTooManyInvestmentsInSingleRound() public {
         VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
@@ -208,10 +237,12 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleAmountsToInvest[0],
             userPaymentTokenDefaultAllocation,
             exchangeRateNumerator,
+            feeNumerator,
             sampleKycAddress
         );
 
-        uint256 numberOfInvestments = 10;
+        uint256 numberOfInvestments = 11;
+        PaymentTokenInstance.mint(sampleUser, params.amountToInvest * numberOfInvestments);
 
         for (uint256 i = 0; i < numberOfInvestments; i++) {
             investAsUser(sampleUser, params);
@@ -239,6 +270,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleAmountsToInvest[0],
             userPaymentTokenDefaultAllocation,
             exchangeRateNumerator,
+            feeNumerator,
             sampleKycAddress
         );
 
@@ -261,6 +293,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleAmountsToInvest[0],
             userPaymentTokenDefaultAllocation,
             exchangeRateNumerator,
+            feeNumerator,
             sampleKycAddress
         );
 
@@ -294,6 +327,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleAmountsToInvest[0],
             userPaymentTokenDefaultAllocation,
             exchangeRateNumerator,
+            feeNumerator,
             sampleKycAddress
         );
 
@@ -319,10 +353,15 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleAmountsToInvest[0],
             userPaymentTokenDefaultAllocation,
             exchangeRateNumerator,
+            feeNumerator,
             sampleKycAddress
         );
 
         vm.startPrank(sampleUser, sampleUser);
+
+        //this only works because in VVVVCTestBase, the exchange rate numerator and denominator are both 1e6
+        uint256 tokenFee = ((params.amountToInvest * params.feeNumerator) /
+            LedgerInstance.FEE_DENOMINATOR());
 
         PaymentTokenInstance.approve(address(LedgerInstance), params.amountToInvest);
         vm.expectEmit(address(LedgerInstance));
@@ -332,7 +371,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             params.kycAddress,
             params.exchangeRateNumerator,
             LedgerInstance.exchangeRateDenominator(),
-            params.amountToInvest
+            params.feeNumerator,
+            params.amountToInvest - tokenFee
         );
         LedgerInstance.invest(params);
         vm.stopPrank();
@@ -353,6 +393,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             investmentRoundId,
             address(0),
             sampleKycAddress,
+            0,
             0,
             0,
             amountToInvest
@@ -411,6 +452,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleAmountsToInvest[0],
             userPaymentTokenDefaultAllocation, //1e6
             exchangeRateNumerator,
+            feeNumerator,
             sampleKycAddress
         );
 
@@ -420,17 +462,24 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         //refund same investment as admin
         vm.startPrank(ledgerManager, ledgerManager);
         uint256 stablecoinEquivalent = params.amountToInvest; //1:1 in this case
+
+        //calculate fees
+        uint256 tokenFee = (params.amountToInvest * params.feeNumerator) /
+            LedgerInstance.FEE_DENOMINATOR();
+        uint256 stablecoinEquivalentFee = (stablecoinEquivalent * params.feeNumerator) /
+            LedgerInstance.FEE_DENOMINATOR();
+
         LedgerInstance.refundUserInvestment(
             sampleKycAddress,
             sampleUser,
             params.investmentRound,
             address(PaymentTokenInstance),
-            params.amountToInvest,
-            stablecoinEquivalent
+            params.amountToInvest - tokenFee,
+            stablecoinEquivalent - stablecoinEquivalentFee
         );
 
         //confirm user is refunded, and no record of investment remains on the ledger contract
-        assertTrue(PaymentTokenInstance.balanceOf(sampleUser) == preInvestBalance);
+        assertTrue(PaymentTokenInstance.balanceOf(sampleUser) == preInvestBalance - tokenFee);
         assertTrue(
             LedgerInstance.kycAddressInvestedPerRound(sampleKycAddress, params.investmentRound) == 0
         );
@@ -448,6 +497,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleAmountsToInvest[0],
             userPaymentTokenDefaultAllocation, //1e6
             exchangeRateNumerator,
+            feeNumerator,
             sampleKycAddress
         );
 
@@ -509,6 +559,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleAmountsToInvest[0],
             userPaymentTokenDefaultAllocation,
             exchangeRateNumerator,
+            feeNumerator,
             sampleKycAddress
         );
         investAsUser(sampleUser, params);
