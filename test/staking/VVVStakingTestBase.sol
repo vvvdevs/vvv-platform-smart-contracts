@@ -10,6 +10,7 @@ import { NonReceivable } from "test/utils/NonReceivable.sol";
 import { MockERC721 } from "contracts/mock/MockERC721.sol";
 import { VVVAuthorizationRegistry } from "contracts/auth/VVVAuthorizationRegistry.sol";
 import { VVVETHStaking } from "contracts/staking/VVVETHStaking.sol";
+import { VVVERC20LaunchpadStaking } from "contracts/staking/VVVERC20LaunchpadStaking.sol";
 import { VVVLaunchpadStaking } from "contracts/staking/VVVLaunchpadStaking.sol";
 import { VVVS1NFTStaking } from "contracts/staking/VVVS1NFTStaking.sol";
 import { VVVToken } from "contracts/tokens/VvvToken.sol";
@@ -20,6 +21,7 @@ abstract contract VVVStakingTestBase is Test {
     VVVAuthorizationRegistry AuthRegistry;
     VVVToken VvvTokenInstance;
     VVVETHStaking EthStakingInstance;
+    VVVERC20LaunchpadStaking ERC20LaunchpadStakingInstance;
     VVVLaunchpadStaking LaunchpadStakingInstance;
     VVVS1NFTStaking S1NFTStakingInstance;
 
@@ -27,7 +29,8 @@ abstract contract VVVStakingTestBase is Test {
     uint256 ethStakingManagerKey = 1235;
     uint256 launchpadStakingManagerKey = 1236;
     uint256 sampleUserKey = 1234567;
-
+    
+    address DEAD_ADDRESS = 0x000000000000000000000000000000000000dEaD;
     address deployer = vm.addr(deployerKey);
     address ethStakingManager = vm.addr(ethStakingManagerKey);
     address launchpadStakingManager = vm.addr(launchpadStakingManagerKey);

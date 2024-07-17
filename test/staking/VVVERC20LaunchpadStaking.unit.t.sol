@@ -1,267 +1,245 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import { NonReceivable } from "test/utils/NonReceivable.sol";
 import { VVVToken } from "contracts/tokens/VvvToken.sol";
 import { VVVAuthorizationRegistry } from "contracts/auth/VVVAuthorizationRegistry.sol";
 import { VVVAuthorizationRegistryChecker } from "contracts/auth/VVVAuthorizationRegistryChecker.sol";
 import { VVVStakingTestBase } from "test/staking/VVVStakingTestBase.sol";
-import { VVVLaunchpadStaking } from "contracts/staking/VVVLaunchpadStaking.sol";
+import { VVVERC20LaunchpadStaking } from "contracts/staking/VVVERC20LaunchpadStaking.sol";
 
 /**
- * @title VVVLaunchpadStaking Unit Tests
- * @dev use "forge test --match-contract VVVLaunchpadStakingUnitTests" to run tests
- * @dev use "forge coverage --match-contract VVVLaunchpadStaking" to run coverage
+ * @title VVVERC20LaunchpadStaking Unit Tests
+ * @dev use "forge test --match-contract VVVERC20LaunchpadStakingUnitTests" to run tests
+ * @dev use "forge coverage --match-contract VVVERC20LaunchpadStaking" to run coverage
  */
-contract VVVLaunchpadStakingUnitTests is VVVStakingTestBase {
+contract VVVERC20LaunchpadStakingUnitTests is VVVStakingTestBase {
     function setUp() public {
         vm.startPrank(deployer, deployer);
-
-        //deploy a non-receivable address with 1 ether
-        vm.deal(deployer, 1 ether);
-        NonReceivableCaller = new NonReceivable{ value: 1 ether }();
-
-        //set default staking durations
         setDefaultLaunchpadStakingDurations();
 
         AuthRegistry = new VVVAuthorizationRegistry(defaultAdminTransferDelay, deployer);
-        LaunchpadStakingInstance = new VVVLaunchpadStaking(stakingDurations, address(AuthRegistry));
+
         VvvTokenInstance = new VVVToken(type(uint256).max, 0, address(AuthRegistry));
+
+        ERC20LaunchpadStakingInstance = new VVVERC20LaunchpadStaking(address(VvvTokenInstance), stakingDurations, address(AuthRegistry));
 
         //set auth registry permissions
         AuthRegistry.grantRole(launchpadStakingManagerRole, launchpadStakingManager);
-        bytes4 setStakingDurationsSelector = LaunchpadStakingInstance.setStakingDurations.selector;
-        bytes4 setPenaltyNumeratorSelector = LaunchpadStakingInstance.setPenaltyNumerator.selector;
+        bytes4 setStakingDurationsSelector = ERC20LaunchpadStakingInstance.setStakingDurations.selector;
+        bytes4 setPenaltyNumeratorSelector = ERC20LaunchpadStakingInstance.setPenaltyNumerator.selector;
         AuthRegistry.setPermission(
-            address(LaunchpadStakingInstance),
+            address(ERC20LaunchpadStakingInstance),
             setStakingDurationsSelector,
             launchpadStakingManagerRole
         );
         AuthRegistry.setPermission(
-            address(LaunchpadStakingInstance),
+            address(ERC20LaunchpadStakingInstance),
             setPenaltyNumeratorSelector,
             launchpadStakingManagerRole
         );
 
+        VvvTokenInstance.mint(deployer, type(uint96).max);
+        VvvTokenInstance.mint(sampleUser, type(uint96).max);
+        VvvTokenInstance.approve(address(ERC20LaunchpadStakingInstance), type(uint256).max);
+        vm.stopPrank();
+
+        vm.startPrank(sampleUser, sampleUser);
+        VvvTokenInstance.approve(address(ERC20LaunchpadStakingInstance), type(uint256).max);
         vm.stopPrank();
     }
 
     function testDeployment() public {
-        assertTrue(address(LaunchpadStakingInstance) != address(0));
+        assertTrue(address(ERC20LaunchpadStakingInstance) != address(0));
     }
 
     //tests that a user can stake in a pool with msg.value for duration according to pool index
     function testStake() public {
-        vm.deal(sampleUser, 1 ether);
-        uint256 amountToStake = 1 ether;
+        uint256 tokenAmountToStake = 1 ether;
         uint256 stakeDurationIndex = 1;
 
         vm.startPrank(sampleUser, sampleUser);
         //90 day stake based on default duration values
-        LaunchpadStakingInstance.stake{ value: amountToStake }(stakeDurationIndex);
+        ERC20LaunchpadStakingInstance.stake(stakeDurationIndex, tokenAmountToStake);
         vm.stopPrank();
 
         //check that the user stake mapping correctly indicates the above stake
-        (, uint256 amountStaked, ) = LaunchpadStakingInstance.userStakes(sampleUser, stakeDurationIndex);
+        (, uint256 amountStaked, ) = ERC20LaunchpadStakingInstance.userStakes(sampleUser, stakeDurationIndex);
 
-        assertEq(amountStaked, amountToStake);
+        assertEq(amountStaked, tokenAmountToStake);
     }
 
     //tests that a user can add to an existing stake in a given pool
     function testAddToStake() public {
-        vm.deal(sampleUser, 2 ether);
-        uint256 amountToStake = 1 ether;
+        uint256 tokenAmountToStake = 1 ether;
         uint256 stakeDurationIndex = 1;
         uint256 stakeDurationInSeconds = stakingDurations[stakeDurationIndex];
         uint256 secondsToAdvance = stakeDurationInSeconds / 2;
 
         vm.startPrank(sampleUser, sampleUser);
         //90 day stake based on default duration values
-        LaunchpadStakingInstance.stake{ value: amountToStake }(stakeDurationIndex);
-        (, , uint256 startTimestamp1) = LaunchpadStakingInstance.userStakes(sampleUser, stakeDurationIndex);
+        ERC20LaunchpadStakingInstance.stake(stakeDurationIndex, tokenAmountToStake);
+        (, , uint256 startTimestamp1) = ERC20LaunchpadStakingInstance.userStakes(sampleUser, stakeDurationIndex);
 
         advanceBlockNumberAndTimestampInSeconds(secondsToAdvance);
 
         //add to stake of the same pool ID (i.e. duration array index)
-        LaunchpadStakingInstance.stake{ value: amountToStake }(stakeDurationIndex);
-        (, uint256 amountStaked2, uint256 startTimestamp2) = LaunchpadStakingInstance.userStakes(
+        ERC20LaunchpadStakingInstance.stake(stakeDurationIndex, tokenAmountToStake);
+        (, uint256 amountStaked2, uint256 startTimestamp2) = ERC20LaunchpadStakingInstance.userStakes(
             sampleUser,
             stakeDurationIndex
         );
         vm.stopPrank();
 
-        assertEq(amountStaked2, amountToStake * 2);
+        assertEq(amountStaked2, tokenAmountToStake * 2);
         assertEq(startTimestamp2, startTimestamp1 + secondsToAdvance - 1);
     }
-    
+
     //tests that staking in a non-existent pool id causes a revert with the InvalidPoolId error
     function testStakeNonExistentPoolId() public {
-        vm.deal(sampleUser, 1 ether);
-        uint256 amountToStake = 1 ether;
+        uint256 tokenAmountToStake = 1 ether;
         uint256 nonExistentPoolId = stakingDurations.length + 1;
 
         vm.startPrank(sampleUser, sampleUser);
-        vm.expectRevert(VVVLaunchpadStaking.InvalidPoolId.selector);
-        LaunchpadStakingInstance.stake{ value: amountToStake }(nonExistentPoolId);
+        vm.expectRevert(VVVERC20LaunchpadStaking.InvalidPoolId.selector);
+        ERC20LaunchpadStakingInstance.stake(nonExistentPoolId, tokenAmountToStake);
         vm.stopPrank();
     }
 
-    //tests that staking with zero msg.value causes revert with ZeroStakeAmount error
-    function testStakeZeroMsgValue() public {
-        vm.deal(sampleUser, 1 ether);
-        uint256 amountToStake = 0;
+    //tests that staking with zero token amount causes revert with ZeroStakeAmount error
+    function testStakeZeroTokenAmount() public {
+        uint256 tokenAmountToStake = 0;
         uint256 stakeDurationIndex = 1;
 
         vm.startPrank(sampleUser, sampleUser);
-        vm.expectRevert(VVVLaunchpadStaking.ZeroStakeAmount.selector);
-        LaunchpadStakingInstance.stake{ value: amountToStake }(stakeDurationIndex);
+        vm.expectRevert(VVVERC20LaunchpadStaking.ZeroStakeAmount.selector);
+        ERC20LaunchpadStakingInstance.stake(stakeDurationIndex, tokenAmountToStake);
         vm.stopPrank();
     }
 
     //tests that the Staked event is emitted when a user stakes
     function testStakedEmit() public {
         vm.deal(sampleUser, 1 ether);
-        uint256 amountToStake = 1 ether;
+        uint256 tokenAmountToStake = 1 ether;
         uint256 stakeDurationIndex = 1;
 
         vm.startPrank(sampleUser, sampleUser);
-        vm.expectEmit(address(LaunchpadStakingInstance));
-        emit VVVLaunchpadStaking.Stake(sampleUser, stakeDurationIndex, amountToStake);
-        LaunchpadStakingInstance.stake{ value: amountToStake }(stakeDurationIndex);
+        vm.expectEmit(address(ERC20LaunchpadStakingInstance));
+        emit VVVERC20LaunchpadStaking.Stake(sampleUser, stakeDurationIndex, tokenAmountToStake);
+        ERC20LaunchpadStakingInstance.stake(stakeDurationIndex, tokenAmountToStake);
         vm.stopPrank();
     }
 
     //tests that a user can unstake at the end of a stake duration
     function testUnstakeFullDuration() public {
-        vm.deal(sampleUser, 1 ether);
-        uint256 amountToStake = 1 ether;
+        uint256 tokenAmountToStake = 1 ether;
         uint256 stakeDurationIndex = 1;
         uint256 stakeDurationInSeconds = stakingDurations[stakeDurationIndex];
-        uint256 sampleUserBalanceBeforeStake = sampleUser.balance;
+        uint256 sampleUserBalanceBeforeStake = VvvTokenInstance.balanceOf(sampleUser);
         uint256 sampleUserBalanceAfterStake;
         uint256 sampleUserBalanceAfterUnstake;
 
         vm.startPrank(sampleUser, sampleUser);
         //90 day stake based on default duration values
-        LaunchpadStakingInstance.stake{ value: amountToStake }(stakeDurationIndex);
-        sampleUserBalanceAfterStake = sampleUser.balance;
+        ERC20LaunchpadStakingInstance.stake(stakeDurationIndex, tokenAmountToStake);
+        sampleUserBalanceAfterStake = VvvTokenInstance.balanceOf(sampleUser);
         advanceBlockNumberAndTimestampInSeconds(stakeDurationInSeconds + 1);
-        LaunchpadStakingInstance.unstake(stakeDurationIndex);
-        sampleUserBalanceAfterUnstake = sampleUser.balance;
+        ERC20LaunchpadStakingInstance.unstake(stakeDurationIndex);
+        sampleUserBalanceAfterUnstake = VvvTokenInstance.balanceOf(sampleUser);
         vm.stopPrank();
 
-        assertEq(sampleUserBalanceAfterStake, sampleUserBalanceBeforeStake - amountToStake);
+        assertEq(sampleUserBalanceAfterStake, sampleUserBalanceBeforeStake - tokenAmountToStake);
         assertEq(sampleUserBalanceAfterUnstake, sampleUserBalanceBeforeStake);
     }
 
     //tests that a user can unstake at 1/2 the duration with a penalty of penaltyNumerator/(PENALTY_DENOMINATOR*2)
     function testUnstakeHalfDuration() public {
-        vm.deal(sampleUser, 1 ether);
-        uint256 amountToStake = 1 ether;
+        uint256 tokenAmountToStake = 1 ether;
         uint256 stakeDurationIndex = 1;
         uint256 stakeDurationInSeconds = stakingDurations[stakeDurationIndex];
         uint256 stakeDurationDivisor = 2;
-        uint256 sampleUserBalanceBeforeStake = sampleUser.balance;
+        uint256 sampleUserBalanceBeforeStake = VvvTokenInstance.balanceOf(sampleUser);
         uint256 sampleUserBalanceAfterUnstake;
         uint256 expectedUnstakeNumerator = 75;
         uint256 expectedUnstakeDenominator = 100;
 
         vm.startPrank(sampleUser, sampleUser);
         //90 day stake based on default duration values
-        LaunchpadStakingInstance.stake{ value: amountToStake }(stakeDurationIndex);
+        ERC20LaunchpadStakingInstance.stake(stakeDurationIndex, tokenAmountToStake);
         advanceBlockNumberAndTimestampInSeconds((stakeDurationInSeconds / stakeDurationDivisor) + 1);
-        LaunchpadStakingInstance.unstake(stakeDurationIndex);
-        sampleUserBalanceAfterUnstake = sampleUser.balance;
+        ERC20LaunchpadStakingInstance.unstake(stakeDurationIndex);
+        sampleUserBalanceAfterUnstake = VvvTokenInstance.balanceOf(sampleUser);
         vm.stopPrank();
 
         //75% of staked funds should be returned if withdrawing at 50% of the stake duration
-        uint256 expectedUnstakeAmount = (amountToStake * expectedUnstakeNumerator) /
+        uint256 expectedUnstakeAmount = (tokenAmountToStake * expectedUnstakeNumerator) /
             expectedUnstakeDenominator;
         assertEq(
             sampleUserBalanceAfterUnstake,
-            sampleUserBalanceBeforeStake - amountToStake + expectedUnstakeAmount
+            sampleUserBalanceBeforeStake - tokenAmountToStake + expectedUnstakeAmount
         );
-        assertEq(address(0).balance, amountToStake - expectedUnstakeAmount);
+        assertEq(VvvTokenInstance.balanceOf(DEAD_ADDRESS), tokenAmountToStake - expectedUnstakeAmount);
     }
 
     //tests that a user can unstake immediately with a penalty of penaltyNumerator/PENALTY_DENOMINATOR
     function testUnstakeImmediate() public {
-        vm.deal(sampleUser, 1 ether);
-        uint256 amountToStake = 1 ether;
+        uint256 tokenAmountToStake = 1 ether;
         uint256 stakeDurationIndex = 1;
-        uint256 sampleUserBalanceBeforeStake = sampleUser.balance;
+        uint256 sampleUserBalanceBeforeStake = VvvTokenInstance.balanceOf(sampleUser);
         uint256 sampleUserBalanceAfterUnstake;
         uint256 expectedUnstakeNumerator = 50;
         uint256 expectedUnstakeDenominator = 100;
 
         vm.startPrank(sampleUser, sampleUser);
-        LaunchpadStakingInstance.stake{ value: amountToStake }(stakeDurationIndex);
-        LaunchpadStakingInstance.unstake(stakeDurationIndex);
-        sampleUserBalanceAfterUnstake = sampleUser.balance;
+        ERC20LaunchpadStakingInstance.stake(stakeDurationIndex, tokenAmountToStake);
+        ERC20LaunchpadStakingInstance.unstake(stakeDurationIndex);
+        sampleUserBalanceAfterUnstake = VvvTokenInstance.balanceOf(sampleUser);
         vm.stopPrank();
 
         //50% of staked funds should be returned if withdrawing at 0% of the stake duration
-        uint256 expectedUnstakeAmount = (amountToStake * expectedUnstakeNumerator) /
+        uint256 expectedUnstakeAmount = (tokenAmountToStake * expectedUnstakeNumerator) /
             expectedUnstakeDenominator;
         assertEq(
             sampleUserBalanceAfterUnstake,
-            sampleUserBalanceBeforeStake - amountToStake + expectedUnstakeAmount
+            sampleUserBalanceBeforeStake - tokenAmountToStake + expectedUnstakeAmount
         );
-        assertEq(address(0).balance, amountToStake - expectedUnstakeAmount);
+        assertEq(VvvTokenInstance.balanceOf(DEAD_ADDRESS), tokenAmountToStake - expectedUnstakeAmount);
     }
 
     //tests that the Unstaked event is emitted when a user unstakes
     function testUnstakedEmit() public {
-        vm.deal(sampleUser, 1 ether);
-        uint256 amountToStake = 1 ether;
+        uint256 tokenAmountToStake = 1 ether;
         uint256 stakeDurationIndex = 1;
         uint256 expectedUnstakeNumerator = 50;
         uint256 expectedUnstakeDenominator = 100;
 
         vm.startPrank(sampleUser, sampleUser);
-        LaunchpadStakingInstance.stake{ value: amountToStake }(stakeDurationIndex);
+        ERC20LaunchpadStakingInstance.stake(stakeDurationIndex, tokenAmountToStake);
 
-        uint256 expectedPenalty = (amountToStake * expectedUnstakeNumerator) / expectedUnstakeDenominator;
+        uint256 expectedPenalty = (tokenAmountToStake * expectedUnstakeNumerator) / expectedUnstakeDenominator;
 
-        vm.expectEmit(address(LaunchpadStakingInstance));
-        emit VVVLaunchpadStaking.Unstake(sampleUser, stakeDurationIndex, amountToStake, expectedPenalty);
-        LaunchpadStakingInstance.unstake(stakeDurationIndex);
+        vm.expectEmit(address(ERC20LaunchpadStakingInstance));
+        emit VVVERC20LaunchpadStaking.Unstake(sampleUser, stakeDurationIndex, tokenAmountToStake, expectedPenalty);
+        ERC20LaunchpadStakingInstance.unstake(stakeDurationIndex);
         vm.stopPrank();
     }
 
     //tests that unstaking in a non-existent pool id causes a revert with the InvalidPoolId error
     function testUnstakeNonExistentPoolId() public {
-        vm.deal(sampleUser, 1 ether);
         uint256 nonExistentPoolId = stakingDurations.length + 1;
 
         vm.startPrank(sampleUser, sampleUser);
-        vm.expectRevert(VVVLaunchpadStaking.InvalidPoolId.selector);
-        LaunchpadStakingInstance.unstake(nonExistentPoolId);
+        vm.expectRevert(VVVERC20LaunchpadStaking.InvalidPoolId.selector);
+        ERC20LaunchpadStakingInstance.unstake(nonExistentPoolId);
         vm.stopPrank();
     }
 
     //tests that unstaking for a pool with no staked balance reverts with the NoStakeForPool error
     function testUnstakeNoStakeForPool() public {
-        vm.deal(sampleUser, 1 ether);
         uint256 stakeDurationIndex = 1;
 
         vm.startPrank(sampleUser, sampleUser);
-        vm.expectRevert(VVVLaunchpadStaking.NoStakeForPool.selector);
-        LaunchpadStakingInstance.unstake(stakeDurationIndex);
-        vm.stopPrank();
-    }
-
-    //tests that a failed transfer of funds during unstake causes a revert with the FailedTransfer error
-    function testUnstakeFailedTransfer() public {
-        vm.deal(sampleUser, 1 ether);
-        uint256 amountToStake = 1 ether;
-        uint256 stakeDurationIndex = 1;
-        address nonReceivable = address(NonReceivableCaller);
-
-        vm.startPrank(nonReceivable, nonReceivable);
-        LaunchpadStakingInstance.stake{ value: amountToStake }(stakeDurationIndex);
-        vm.expectRevert(VVVLaunchpadStaking.TransferFailed.selector);
-        LaunchpadStakingInstance.unstake(stakeDurationIndex);
+        vm.expectRevert(VVVERC20LaunchpadStaking.NoStakeForPool.selector);
+        ERC20LaunchpadStakingInstance.unstake(stakeDurationIndex);
         vm.stopPrank();
     }
 
@@ -271,7 +249,7 @@ contract VVVLaunchpadStakingUnitTests is VVVStakingTestBase {
         uint256 stakeDuration = stakingDurations[stakeDurationIndex];
         uint256 referencePenalty = 0;
 
-        VVVLaunchpadStaking.StakeData memory stake = VVVLaunchpadStaking.StakeData({
+        VVVERC20LaunchpadStaking.StakeData memory stake = VVVERC20LaunchpadStaking.StakeData({
             durationIndex: stakeDurationIndex,
             amount: 1 ether,
             startTimestamp: block.timestamp
@@ -279,7 +257,7 @@ contract VVVLaunchpadStakingUnitTests is VVVStakingTestBase {
 
         advanceBlockNumberAndTimestampInSeconds(stakeDuration + 1);
 
-        uint256 calculatedPenalty = LaunchpadStakingInstance.calculatePenalty(stake);
+        uint256 calculatedPenalty = ERC20LaunchpadStakingInstance.calculatePenalty(stake);
 
         assertEq(calculatedPenalty, referencePenalty);
     }
@@ -291,7 +269,7 @@ contract VVVLaunchpadStakingUnitTests is VVVStakingTestBase {
         uint256 stakeDurationDivisor = 2;
         uint256 referencePenalty = 0.25 ether;
 
-        VVVLaunchpadStaking.StakeData memory stake = VVVLaunchpadStaking.StakeData({
+        VVVERC20LaunchpadStaking.StakeData memory stake = VVVERC20LaunchpadStaking.StakeData({
             durationIndex: stakeDurationIndex,
             amount: 1 ether,
             startTimestamp: block.timestamp
@@ -299,7 +277,7 @@ contract VVVLaunchpadStakingUnitTests is VVVStakingTestBase {
 
         advanceBlockNumberAndTimestampInSeconds((stakeDuration / stakeDurationDivisor) + 1);
 
-        uint256 calculatedPenalty = LaunchpadStakingInstance.calculatePenalty(stake);
+        uint256 calculatedPenalty = ERC20LaunchpadStakingInstance.calculatePenalty(stake);
 
         assertEq(calculatedPenalty, referencePenalty);
     }
@@ -309,21 +287,20 @@ contract VVVLaunchpadStakingUnitTests is VVVStakingTestBase {
         uint256 stakeDurationIndex = 1;
         uint256 referencePenalty = 0.5 ether;
 
-        VVVLaunchpadStaking.StakeData memory stake = VVVLaunchpadStaking.StakeData({
+        VVVERC20LaunchpadStaking.StakeData memory stake = VVVERC20LaunchpadStaking.StakeData({
             durationIndex: stakeDurationIndex,
             amount: 1 ether,
             startTimestamp: block.timestamp
         });
 
-        uint256 calculatedPenalty = LaunchpadStakingInstance.calculatePenalty(stake);
+        uint256 calculatedPenalty = ERC20LaunchpadStakingInstance.calculatePenalty(stake);
 
         assertEq(calculatedPenalty, referencePenalty);
     }
 
     //tests that after staking, the stake array is read via getStakesByAddress
     function testGetStakesByAddress() public {
-        vm.deal(sampleUser, 4 ether);
-        uint256 amountToStake = 1 ether;
+        uint256 tokenAmountToStake = 1 ether;
 
         uint256[] memory durationIndices = new uint256[](3);
         durationIndices[0] = 0;
@@ -331,9 +308,9 @@ contract VVVLaunchpadStakingUnitTests is VVVStakingTestBase {
         durationIndices[2] = 2;
 
         uint256[] memory amountsToStake = new uint256[](3);
-        amountsToStake[0] = amountToStake;
-        amountsToStake[1] = amountToStake + 1;
-        amountsToStake[2] = amountToStake + 2;
+        amountsToStake[0] = tokenAmountToStake;
+        amountsToStake[1] = tokenAmountToStake + 1;
+        amountsToStake[2] = tokenAmountToStake + 2;
 
         //stake in pool ids (stake duration indices) 0-2
         //varying amounts and timestamps slightly to confirm written values
@@ -341,12 +318,12 @@ contract VVVLaunchpadStakingUnitTests is VVVStakingTestBase {
         advanceBlockNumberAndTimestampInSeconds(1);
         uint256 startTimestamp = block.timestamp;
         for (uint256 i = 0; i < durationIndices.length; ++i) {
-            LaunchpadStakingInstance.stake{ value: amountsToStake[i] }(durationIndices[i]);
+            ERC20LaunchpadStakingInstance.stake(durationIndices[i], amountsToStake[i]);
             advanceBlockNumberAndTimestampInSeconds(1);
         }
         vm.stopPrank();
 
-        VVVLaunchpadStaking.StakeData[] memory userStakes = LaunchpadStakingInstance.getStakesByAddress(
+        VVVERC20LaunchpadStaking.StakeData[] memory userStakes = ERC20LaunchpadStakingInstance.getStakesByAddress(
             sampleUser
         );
 
@@ -365,11 +342,11 @@ contract VVVLaunchpadStakingUnitTests is VVVStakingTestBase {
         uint256[] memory newStakingDurations = new uint256[](5);
 
         vm.startPrank(launchpadStakingManager, launchpadStakingManager);
-        LaunchpadStakingInstance.setStakingDurations(newStakingDurations);
+        ERC20LaunchpadStakingInstance.setStakingDurations(newStakingDurations);
         vm.stopPrank();
 
         for (uint256 i = 0; i < stakingDurations.length; i++) {
-            assertEq(LaunchpadStakingInstance.stakingDurations(i), newStakingDurations[i]);
+            assertEq(ERC20LaunchpadStakingInstance.stakingDurations(i), newStakingDurations[i]);
         }
     }
 
@@ -377,28 +354,28 @@ contract VVVLaunchpadStakingUnitTests is VVVStakingTestBase {
     function testNonAdminCannotSetStakingDurations() public {
         vm.startPrank(deployer, deployer);
         vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
-        LaunchpadStakingInstance.setStakingDurations(stakingDurations);
+        ERC20LaunchpadStakingInstance.setStakingDurations(stakingDurations);
         vm.stopPrank();
     }
 
     //tests that the StakingDurationsSet event is emitted when the staking durations are set
     function testStakingDurationsSetEvent() public {
         vm.startPrank(launchpadStakingManager, launchpadStakingManager);
-        vm.expectEmit(address(LaunchpadStakingInstance));
-        emit VVVLaunchpadStaking.StakingDurationsSet(stakingDurations);
-        LaunchpadStakingInstance.setStakingDurations(stakingDurations);
+        vm.expectEmit(address(ERC20LaunchpadStakingInstance));
+        emit VVVERC20LaunchpadStaking.StakingDurationsSet(stakingDurations);
+        ERC20LaunchpadStakingInstance.setStakingDurations(stakingDurations);
         vm.stopPrank();
     }
 
     //tests that the penalty numerator can be set by the admin
     function testAdminSetPenaltyNumerator() public {
-        uint256 newPenaltyNumerator = LaunchpadStakingInstance.PENALTY_DENOMINATOR();
+        uint256 newPenaltyNumerator = ERC20LaunchpadStakingInstance.PENALTY_DENOMINATOR();
 
         vm.startPrank(launchpadStakingManager, launchpadStakingManager);
-        LaunchpadStakingInstance.setPenaltyNumerator(newPenaltyNumerator);
+        ERC20LaunchpadStakingInstance.setPenaltyNumerator(newPenaltyNumerator);
         vm.stopPrank();
 
-        assertEq(LaunchpadStakingInstance.penaltyNumerator(), newPenaltyNumerator);
+        assertEq(ERC20LaunchpadStakingInstance.penaltyNumerator(), newPenaltyNumerator);
     }
 
     //test that a non-admin cannot set the penalty numerator
@@ -406,17 +383,17 @@ contract VVVLaunchpadStakingUnitTests is VVVStakingTestBase {
         uint256 newPenaltyNumerator = 12345;
         vm.startPrank(deployer, deployer);
         vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
-        LaunchpadStakingInstance.setPenaltyNumerator(newPenaltyNumerator);
+        ERC20LaunchpadStakingInstance.setPenaltyNumerator(newPenaltyNumerator);
         vm.stopPrank();
     }
 
     //tests that NumeratorCannotExceedDenominator is thrown correctly when attempting to set a numerator higher than the denominator
     function testSetPenaltyNumeratorLargerThanDenominator() public {
-        uint256 newPenaltyNumerator = LaunchpadStakingInstance.PENALTY_DENOMINATOR() + 1;
+        uint256 newPenaltyNumerator = ERC20LaunchpadStakingInstance.PENALTY_DENOMINATOR() + 1;
 
         vm.startPrank(launchpadStakingManager, launchpadStakingManager);
-        vm.expectRevert(VVVLaunchpadStaking.NumeratorCannotExceedDenominator.selector);
-        LaunchpadStakingInstance.setPenaltyNumerator(newPenaltyNumerator);
+        vm.expectRevert(VVVERC20LaunchpadStaking.NumeratorCannotExceedDenominator.selector);
+        ERC20LaunchpadStakingInstance.setPenaltyNumerator(newPenaltyNumerator);
         vm.stopPrank();
     }
 
@@ -424,9 +401,9 @@ contract VVVLaunchpadStakingUnitTests is VVVStakingTestBase {
     function testEmitPenaltyNumeratorSet() public {
         uint256 newPenaltyNumerator = 123;
         vm.startPrank(launchpadStakingManager, launchpadStakingManager);
-        vm.expectEmit(address(LaunchpadStakingInstance));
-        emit VVVLaunchpadStaking.PenaltyNumeratorSet(newPenaltyNumerator);
-        LaunchpadStakingInstance.setPenaltyNumerator(newPenaltyNumerator);
+        vm.expectEmit(address(ERC20LaunchpadStakingInstance));
+        emit VVVERC20LaunchpadStaking.PenaltyNumeratorSet(newPenaltyNumerator);
+        ERC20LaunchpadStakingInstance.setPenaltyNumerator(newPenaltyNumerator);
         vm.stopPrank();
     }
 }
