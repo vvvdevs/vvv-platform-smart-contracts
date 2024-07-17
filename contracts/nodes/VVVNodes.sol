@@ -46,6 +46,21 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
     ///@notice Maps a TokenData struct to each tokenId
     mapping(uint256 => TokenData) public tokenData;
 
+    ///@notice Emitted when accrued yield is claimed
+    event Claim(uint256 indexed tokenId, uint256 amount);
+
+    ///@notice Emitted when launchpad yield is deposited
+    event DepositLaunchpadYield(uint256 indexed tokenId, uint256 amount);
+
+    ///@notice Emitted when node is minted
+    event Mint(
+        uint256 indexed tokenId,
+        address indexed recipient,
+        uint256 unvestedAmount,
+        uint256 lockedTransactionProcessingYield,
+        uint256 amountToVestPerSecond
+    );
+
     ///@notice Emitted when the node activation threshold is set
     event SetActivationThreshold(uint256 indexed activationThreshold);
 
@@ -58,14 +73,8 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
     ///@notice Emitted when some transaction processing yield is unlocked
     event UnlockTransactionProcessingYield(uint256 indexed tokenId, uint256 unlockedAmount);
 
-    ///@notice Emitted when node is minted
-    event Mint(
-        uint256 indexed tokenId,
-        address indexed recipient,
-        uint256 unvestedAmount,
-        uint256 lockedTransactionProcessingYield,
-        uint256 amountToVestPerSecond
-    );
+    ///@notice Emitted when a token's vestingSince is updated
+    event VestingSinceUpdated(uint256 indexed tokenId, uint256 newVestingSince);
 
     ///@notice Thrown when input array lengths are not matched
     error ArrayLengthMismatch();
@@ -150,6 +159,7 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
             _isNodeActive(msg.value + token.stakedAmount, activationThreshold)
         ) {
             token.vestingSince = block.timestamp;
+            emit VestingSinceUpdated(_tokenId, token.vestingSince);
         }
 
         token.stakedAmount += msg.value;
@@ -194,6 +204,9 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
 
         (bool success, ) = msg.sender.call{ value: amountToClaim }("");
         if (!success) revert TransferFailed();
+
+        emit VestingSinceUpdated(_tokenId, token.vestingSince);
+        emit Claim(_tokenId, amountToClaim);
     }
 
     ///@notice Claims for all input tokenIds
@@ -221,6 +234,8 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
             uint256 thisAmount = _amounts[i];
             thisToken.claimableAmount += thisAmount;
             amountsSum += thisAmount;
+
+            emit DepositLaunchpadYield(thisTokenId, thisAmount);
         }
 
         if (amountsSum != msg.value) revert MsgValueDistAmountMismatch();
@@ -276,6 +291,7 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
                     !_isNodeActive(token.stakedAmount, activationThreshold)
                 ) {
                     token.vestingSince = block.timestamp;
+                    emit VestingSinceUpdated(i, token.vestingSince);
                 }
             }
         }
