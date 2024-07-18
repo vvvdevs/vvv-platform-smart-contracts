@@ -65,6 +65,7 @@ abstract contract VVVVCTestBase is Test {
     uint48 defaultAdminTransferDelay = 1 days;
     uint256 exchangeRateNumerator = 1e6;
     uint256 exchangeRateDenominator = 1e6;
+    uint256 feeNumerator = 1000; //10% fee sample
 
     //claim contract-specific values
     uint256 projectTokenAmountToProxyWallet = 1_000_000 * 1e18; //1 million tokens
@@ -169,6 +170,7 @@ abstract contract VVVVCTestBase is Test {
                         _params.kycAddress,
                         _params.kycAddressAllocation,
                         _params.exchangeRateNumerator,
+                        _params.feeNumerator,
                         _params.deadline
                     )
                 )
@@ -187,6 +189,7 @@ abstract contract VVVVCTestBase is Test {
         uint256 _investmentAmount,
         uint256 _investmentAllocation,
         uint256 _exchangeRateNumerator,
+        uint256 _feeNumerator,
         address _kycAddress
     ) public view returns (VVVVCInvestmentLedger.InvestParams memory) {
         VVVVCInvestmentLedger.InvestParams memory params = VVVVCInvestmentLedger.InvestParams({
@@ -199,6 +202,7 @@ abstract contract VVVVCTestBase is Test {
             kycAddressAllocation: _investmentAllocation,
             amountToInvest: _investmentAmount,
             exchangeRateNumerator: _exchangeRateNumerator,
+            feeNumerator: _feeNumerator,
             deadline: block.timestamp + 1 hours,
             signature: bytes("placeholder")
         });
@@ -230,6 +234,7 @@ abstract contract VVVVCTestBase is Test {
                 _amountsToInvest[i],
                 userPaymentTokenDefaultAllocation,
                 exchangeRateNumerator,
+                feeNumerator,
                 sampleKycAddress
             );
             investAsUser(_investor, investParams);
