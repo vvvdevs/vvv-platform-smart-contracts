@@ -1102,7 +1102,6 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         uint256 nodesToMint = NodesInstance.TOTAL_SUPPLY();
         uint256[] memory tokenIds = new uint256[](nodesToMint);
         uint256[] memory amounts = new uint256[](nodesToMint);
-        address[] memory nodeOwners = new address[](nodesToMint);
         uint256 amountsSum;
 
         vm.startPrank(deployer, deployer);
@@ -1113,7 +1112,6 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
             tokenIds[i] = i + 1;
             amounts[i] = (uint256(keccak256(abi.encodePacked(i))) % 10 ether) + 1;
             amountsSum += amounts[i];
-            nodeOwners[i] = thisNodeOwner;
         }
 
         vm.deal(deployer, amountsSum);
