@@ -101,6 +101,7 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
                     testParams.tokenAmountsToInvest[i], // invested amounts
                     type(uint256).max, //sample very high allocation
                     exchangeRateNumerator,
+                    feeNumerator,
                     _kycAddress
                 )
             );
@@ -216,6 +217,7 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
                 investedAmount, // invested amounts
                 type(uint256).max, //sample very high allocation
                 exchangeRateNumerator,
+                feeNumerator,
                 _caller
             )
         );
