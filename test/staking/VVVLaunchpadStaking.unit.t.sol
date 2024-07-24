@@ -78,7 +78,10 @@ contract VVVLaunchpadStakingUnitTests is VVVStakingTestBase {
         vm.startPrank(sampleUser, sampleUser);
         //90 day stake based on default duration values
         LaunchpadStakingInstance.stake{ value: amountToStake }(stakeDurationIndex);
-        (, , uint256 startTimestamp1) = LaunchpadStakingInstance.userStakes(sampleUser, stakeDurationIndex);
+        (, , uint256 startTimestamp1) = LaunchpadStakingInstance.userStakes(
+            sampleUser,
+            stakeDurationIndex
+        );
 
         advanceBlockNumberAndTimestampInSeconds(secondsToAdvance);
 
@@ -93,7 +96,7 @@ contract VVVLaunchpadStakingUnitTests is VVVStakingTestBase {
         assertEq(amountStaked2, amountToStake * 2);
         assertEq(startTimestamp2, startTimestamp1 + secondsToAdvance - 1);
     }
-    
+
     //tests that staking in a non-existent pool id causes a revert with the InvalidPoolId error
     function testStakeNonExistentPoolId() public {
         vm.deal(sampleUser, 1 ether);

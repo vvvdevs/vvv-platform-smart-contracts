@@ -29,7 +29,7 @@ abstract contract VVVStakingTestBase is Test {
     uint256 ethStakingManagerKey = 1235;
     uint256 launchpadStakingManagerKey = 1236;
     uint256 sampleUserKey = 1234567;
-    
+
     address DEAD_ADDRESS = 0x000000000000000000000000000000000000dEaD;
     address deployer = vm.addr(deployerKey);
     address ethStakingManager = vm.addr(ethStakingManagerKey);

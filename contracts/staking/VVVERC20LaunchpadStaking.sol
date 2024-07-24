@@ -10,7 +10,7 @@ import { VVVAuthorizationRegistryChecker } from "contracts/auth/VVVAuthorization
     @notice Handles ERC20 staking for launchpad on non-VVV EVM chains
  */
 
- contract VVVERC20LaunchpadStaking is VVVAuthorizationRegistryChecker {
+contract VVVERC20LaunchpadStaking is VVVAuthorizationRegistryChecker {
     using SafeERC20 for IERC20;
 
     ///@notice the address of the dead address for burning tokens
