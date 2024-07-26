@@ -991,4 +991,134 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         NodesInstance.unstake(tokenId, amountToUnstake);
         vm.stopPrank();
     }
+
+    //tests that VestingSinceUpdated is emitted properly if a node claims accrued yield
+    function testEmitVestingSinceUpdated_OnClaim() public {
+        vm.deal(sampleUser, activationThreshold);
+        vm.deal(address(NodesInstance), type(uint128).max);
+
+        vm.startPrank(deployer, deployer);
+        NodesInstance.adminMint(sampleUser, sampleLockedTokens); //mints token of ID 1
+        vm.stopPrank();
+
+        vm.startPrank(sampleUser, sampleUser);
+        uint256 userTokenId = 1;
+
+        uint256 vestingDuration = secondsInTwoYears;
+
+        //stake the activation threshold to activate the node
+        NodesInstance.stake{ value: activationThreshold }(userTokenId);
+
+        advanceBlockNumberAndTimestampInSeconds(vestingDuration * 2);
+
+        vm.expectEmit(address(NodesInstance));
+        emit VVVNodes.VestingSinceUpdated(userTokenId, block.timestamp);
+        NodesInstance.claim(userTokenId);
+    }
+
+    //tests that VestingSinceUpdated is emitted properly if a stake activates a node
+    function testEmitVestingSinceUpdated_StakeActivatesNode() public {
+        vm.deal(sampleUser, activationThreshold);
+        uint256 tokenId = 1;
+
+        vm.startPrank(deployer, deployer);
+        NodesInstance.adminMint(sampleUser, sampleLockedTokens); //mints tokenId 1
+        vm.stopPrank();
+
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectEmit(address(NodesInstance));
+        emit VVVNodes.VestingSinceUpdated(tokenId, block.timestamp);
+        NodesInstance.stake{ value: activationThreshold }(1);
+        vm.stopPrank();
+
+        assertTrue(NodesInstance.isNodeActive(tokenId));
+    }
+
+    //tests that VestingSinceUpdated is emitted properly if a threshold change activates nodes
+    function testEmitVestingSinceUpdated_ThresholdChangeActivatesNode() public {
+        uint256 tokensToMint = 50;
+        vm.deal(sampleUser, tokensToMint * activationThreshold);
+        uint256 newThreshold = activationThreshold - 1;
+
+        vm.startPrank(deployer, deployer);
+        for (uint256 i = 0; i < tokensToMint; i++) {
+            NodesInstance.adminMint(sampleUser, sampleLockedTokens);
+        }
+        vm.stopPrank();
+
+        vm.startPrank(sampleUser, sampleUser);
+        for (uint256 i = 0; i < tokensToMint; i++) {
+            assertFalse(NodesInstance.isNodeActive(i + 1));
+        }
+
+        //stake one less than the activation threshold so the node does not activate
+        for (uint256 i = 0; i < tokensToMint; i++) {
+            NodesInstance.stake{ value: newThreshold }(i + 1);
+            assertFalse(NodesInstance.isNodeActive(i + 1));
+        }
+        vm.stopPrank();
+
+        vm.startPrank(deployer, deployer);
+        for (uint256 i = 0; i < tokensToMint; i++) {
+            vm.expectEmit(address(NodesInstance));
+            emit VVVNodes.VestingSinceUpdated(i + 1, block.timestamp);
+        }
+        vm.expectEmit(address(NodesInstance));
+        emit VVVNodes.SetActivationThreshold(newThreshold);
+        NodesInstance.setActivationThreshold(newThreshold);
+        vm.stopPrank();
+
+        for (uint256 i = 0; i < tokensToMint; i++) {
+            assertTrue(NodesInstance.isNodeActive(i + 1));
+        }
+    }
+
+    //tests that the Claim event is emitted when accrued yield is claimed
+    function testEmitClaim() public {
+        vm.deal(sampleUser, activationThreshold);
+        vm.deal(address(NodesInstance), type(uint128).max);
+
+        vm.startPrank(deployer, deployer);
+        NodesInstance.adminMint(sampleUser, sampleLockedTokens); //mints token of ID 1
+        vm.stopPrank();
+
+        vm.startPrank(sampleUser, sampleUser);
+        uint256 userTokenId = 1;
+        uint256 refTotalVestedTokens = (sampleLockedTokens * 60) / 100;
+        uint256 vestingDuration = secondsInTwoYears;
+
+        //stake the activation threshold to activate the node
+        NodesInstance.stake{ value: activationThreshold }(userTokenId);
+
+        advanceBlockNumberAndTimestampInSeconds(vestingDuration * 2);
+
+        vm.expectEmit(address(NodesInstance));
+        emit VVVNodes.Claim(userTokenId, refTotalVestedTokens);
+        NodesInstance.claim(userTokenId);
+    }
+
+    //tests that the DepositLaunchpadYield is emitted when the launchpad yield is deposited
+    function testEmitDepositLaunchpadYield() public {
+        uint256 nodesToMint = NodesInstance.TOTAL_SUPPLY();
+        uint256[] memory tokenIds = new uint256[](nodesToMint);
+        uint256[] memory amounts = new uint256[](nodesToMint);
+        uint256 amountsSum;
+
+        vm.startPrank(deployer, deployer);
+        for (uint256 i = 0; i < nodesToMint; ++i) {
+            address thisNodeOwner = address(uint160(uint256(keccak256(abi.encodePacked(i)))));
+            NodesInstance.adminMint(thisNodeOwner, sampleLockedTokens);
+
+            tokenIds[i] = i + 1;
+            amounts[i] = (uint256(keccak256(abi.encodePacked(i))) % 10 ether) + 1;
+            amountsSum += amounts[i];
+        }
+
+        vm.deal(deployer, amountsSum);
+        for (uint256 i = 0; i < nodesToMint; ++i) {
+            vm.expectEmit(address(NodesInstance));
+            emit VVVNodes.DepositLaunchpadYield(tokenIds[i], amounts[i]);
+        }
+        NodesInstance.depositLaunchpadYield{ value: amountsSum }(tokenIds, amounts);
+    }
 }
