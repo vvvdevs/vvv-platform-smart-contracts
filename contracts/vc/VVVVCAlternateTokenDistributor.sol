@@ -6,8 +6,9 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IVVVVCReadOnlyInvestmentLedger } from "./IVVVVCReadOnlyInvestmentLedger.sol";
 import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { VVVAuthorizationRegistryChecker } from "contracts/auth/VVVAuthorizationRegistryChecker.sol";
 
-contract VVVVCAlternateTokenDistributor {
+contract VVVVCAlternateTokenDistributor is VVVAuthorizationRegistryChecker {
     using SafeERC20 for IERC20;
 
     IVVVVCReadOnlyInvestmentLedger public readOnlyLedger;
@@ -83,7 +84,12 @@ contract VVVVCAlternateTokenDistributor {
     ///@notice Error thrown when the merkle proof is invalid
     error InvalidMerkleProof();
 
-    constructor(address _signer, address _readOnlyLedger, string memory _environmentTag) {
+    constructor(
+        address _authRegistry,
+        address _signer,
+        address _readOnlyLedger,
+        string memory _environmentTag
+    ) VVVAuthorizationRegistryChecker(_authRegistry) {
         signer = _signer;
         readOnlyLedger = IVVVVCReadOnlyInvestmentLedger(_readOnlyLedger);
 
@@ -274,5 +280,22 @@ contract VVVVCAlternateTokenDistributor {
         }
 
         return true;
+    }
+
+    /**
+     * @notice Adds a claim to the distributor
+     * @param _claimant The address of the claimant
+     * @param _investmentRound The investment round ID
+     * @param _amount The amount of tokens to claim
+     */
+    function addClaim(
+        address _claimant,
+        uint256 _investmentRound,
+        uint256 _amount
+    ) external onlyAuthorized {
+        userClaimedTokensForRound[_claimant][_investmentRound] += _amount;
+        totalClaimedTokensForRound[_investmentRound] += _amount;
+
+        emit VCClaim(_claimant, msg.sender, address(0), new address[](0), _amount);
     }
 }

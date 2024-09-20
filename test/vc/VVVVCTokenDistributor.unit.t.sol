@@ -3,6 +3,8 @@ pragma solidity ^0.8.23;
 
 import { MockERC20 } from "contracts/mock/MockERC20.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { VVVAuthorizationRegistry } from "contracts/auth/VVVAuthorizationRegistry.sol";
+import { VVVAuthorizationRegistryChecker } from "contracts/auth/VVVAuthorizationRegistryChecker.sol";
 import { VVVVCInvestmentLedger } from "contracts/vc/VVVVCInvestmentLedger.sol";
 import { VVVVCTokenDistributor } from "contracts/vc/VVVVCTokenDistributor.sol";
 import { VVVVCTestBase } from "test/vc/VVVVCTestBase.sol";
@@ -16,11 +18,12 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
     function setUp() public {
         vm.startPrank(deployer, deployer);
 
-        //placeholder address(0) for VVVAuthorizationRegistry
+        AuthRegistry = new VVVAuthorizationRegistry(defaultAdminTransferDelay, deployer);
+
         LedgerInstance = new VVVVCInvestmentLedger(
             testSigner,
             environmentTag,
-            address(0),
+            address(AuthRegistry),
             exchangeRateDenominator
         );
         ledgerDomainSeparator = LedgerInstance.DOMAIN_SEPARATOR();
@@ -32,10 +35,21 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
         PaymentTokenInstance.mint(sampleKycAddress, 1_000_000 * 1e6);
 
         TokenDistributorInstance = new VVVVCTokenDistributor(
+            address(AuthRegistry),
             testSigner,
             address(LedgerInstance),
             environmentTag
         );
+
+        //set auth permissions for tokenDistributor
+        AuthRegistry.grantRole(tokenDistributorManagerRole, tokenDistributorManager);
+        bytes4 addClaimSelector = TokenDistributorInstance.addClaim.selector;
+        AuthRegistry.setPermission(
+            address(TokenDistributorInstance),
+            addClaimSelector,
+            tokenDistributorManagerRole
+        );
+
         distributorDomainSeparator = TokenDistributorInstance.DOMAIN_SEPARATOR();
         claimTypehash = TokenDistributorInstance.CLAIM_TYPEHASH();
 
@@ -442,6 +456,51 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             claimAmount
         );
         TokenDistributorInstance.claim(claimParams);
+        vm.stopPrank();
+    }
+
+    //tests that an admin can add claims to the distributor
+    function testAddClaim() public {
+        address claimant = users[0];
+        uint256 investmentRound = sampleInvestmentRoundIds[0];
+        uint256 claimAmount = sampleTokenAmountsToClaim[0];
+
+        vm.startPrank(tokenDistributorManager, tokenDistributorManager);
+        TokenDistributorInstance.addClaim(claimant, investmentRound, claimAmount);
+        assertTrue(
+            TokenDistributorInstance.userClaimedTokensForRound(claimant, investmentRound) == claimAmount
+        );
+        assertTrue(TokenDistributorInstance.totalClaimedTokensForRound(investmentRound) == claimAmount);
+        vm.stopPrank();
+    }
+
+    // tests that the VCClaim event is emitted when a claim is manually added by an admin
+    function testAddClaimEmitVCClaim() public {
+        address claimant = users[0];
+        uint256 investmentRound = sampleInvestmentRoundIds[0];
+        uint256 claimAmount = sampleTokenAmountsToClaim[0];
+
+        vm.startPrank(tokenDistributorManager, tokenDistributorManager);
+        vm.expectEmit(address(TokenDistributorInstance));
+        emit VVVVCTokenDistributor.VCClaim(
+            claimant,
+            tokenDistributorManager,
+            address(0),
+            new address[](0),
+            claimAmount
+        );
+        TokenDistributorInstance.addClaim(claimant, investmentRound, claimAmount);
+    }
+
+    //tests that a non-admin cannot add claims to the distributor
+    function testAddClaimNonAdmin() public {
+        address claimant = users[0];
+        uint256 investmentRound = sampleInvestmentRoundIds[0];
+        uint256 claimAmount = sampleTokenAmountsToClaim[0];
+
+        vm.startPrank(claimant, claimant);
+        vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
+        TokenDistributorInstance.addClaim(claimant, investmentRound, claimAmount);
         vm.stopPrank();
     }
 }
