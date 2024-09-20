@@ -4,6 +4,8 @@ pragma solidity ^0.8.23;
 import { MockERC20 } from "contracts/mock/MockERC20.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { VVVAuthorizationRegistry } from "contracts/auth/VVVAuthorizationRegistry.sol";
+import { VVVAuthorizationRegistryChecker } from "contracts/auth/VVVAuthorizationRegistryChecker.sol";
 import { VVVVCInvestmentLedger } from "contracts/vc/VVVVCInvestmentLedger.sol";
 import { VVVVCTokenDistributor } from "contracts/vc/VVVVCTokenDistributor.sol";
 import { VVVVCTestBase } from "test/vc/VVVVCTestBase.sol";
@@ -38,11 +40,24 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
             ProjectTokenInstance.mint(projectTokenProxyWallets[i], projectTokenAmountToProxyWallet);
         }
 
+        AuthRegistry = new VVVAuthorizationRegistry(defaultAdminTransferDelay, deployer);
+
         TokenDistributorInstance = new VVVVCTokenDistributor(
+            address(AuthRegistry),
             testSigner,
             address(LedgerInstance),
             environmentTag
         );
+
+        //set auth permissions for tokenDistributor
+        AuthRegistry.grantRole(tokenDistributorManagerRole, address(TokenDistributorInstance));
+        bytes4 addClaimSelector = TokenDistributorInstance.addClaim.selector;
+        AuthRegistry.setPermission(
+            address(TokenDistributorInstance),
+            addClaimSelector,
+            tokenDistributorManagerRole
+        );
+
         distributorDomainSeparator = TokenDistributorInstance.DOMAIN_SEPARATOR();
         claimTypehash = TokenDistributorInstance.CLAIM_TYPEHASH();
 

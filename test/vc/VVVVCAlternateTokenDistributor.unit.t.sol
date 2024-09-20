@@ -4,6 +4,8 @@ pragma solidity ^0.8.23;
 import { CompleteMerkle } from "lib/murky/src/CompleteMerkle.sol";
 import { MockERC20 } from "contracts/mock/MockERC20.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { VVVAuthorizationRegistry } from "contracts/auth/VVVAuthorizationRegistry.sol";
+import { VVVAuthorizationRegistryChecker } from "contracts/auth/VVVAuthorizationRegistryChecker.sol";
 import { VVVVCInvestmentLedger } from "contracts/vc/VVVVCInvestmentLedger.sol";
 import { VVVVCReadOnlyInvestmentLedger } from "contracts/vc/VVVVCReadOnlyInvestmentLedger.sol";
 import { VVVVCAlternateTokenDistributor } from "contracts/vc/VVVVCAlternateTokenDistributor.sol";
@@ -21,16 +23,28 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
         //instance of contract for creating merkle trees/proofs
         m = new CompleteMerkle();
 
-        //placeholder address(0) for VVVAuthorizationRegistry
         ReadOnlyLedgerInstance = new VVVVCReadOnlyInvestmentLedger(testSignerArray, environmentTag);
         readOnlyLedgerDomainSeparator = ReadOnlyLedgerInstance.DOMAIN_SEPARATOR();
         setInvestmentRoundStateTypehash = ReadOnlyLedgerInstance.STATE_TYPEHASH();
 
+        AuthRegistry = new VVVAuthorizationRegistry(defaultAdminTransferDelay, deployer);
+
         AlternateTokenDistributorInstance = new VVVVCAlternateTokenDistributor(
+            address(AuthRegistry),
             testSigner,
             address(ReadOnlyLedgerInstance),
             environmentTag
         );
+
+        //set auth permissions for tokenDistributor
+        AuthRegistry.grantRole(tokenDistributorManagerRole, tokenDistributorManager);
+        bytes4 addClaimSelector = AlternateTokenDistributorInstance.addClaim.selector;
+        AuthRegistry.setPermission(
+            address(AlternateTokenDistributorInstance),
+            addClaimSelector,
+            tokenDistributorManagerRole
+        );
+
         alternateTokenDistributorDomainSeparator = AlternateTokenDistributorInstance.DOMAIN_SEPARATOR();
         alternateClaimTypehash = AlternateTokenDistributorInstance.CLAIM_TYPEHASH();
 
@@ -343,6 +357,54 @@ contract VVVVCAlternateTokenDistributorUnitTests is VVVVCTestBase {
             params.tokenAmountToClaim
         );
         AlternateTokenDistributorInstance.claim(params);
+        vm.stopPrank();
+    }
+
+    //tests that an admin can add claims to the distributor
+    function testAddClaim() public {
+        address claimant = users[0];
+        uint256 investmentRound = sampleInvestmentRoundIds[0];
+        uint256 claimAmount = sampleTokenAmountsToClaim[0];
+
+        vm.startPrank(tokenDistributorManager, tokenDistributorManager);
+        AlternateTokenDistributorInstance.addClaim(claimant, investmentRound, claimAmount);
+        assertTrue(
+            AlternateTokenDistributorInstance.userClaimedTokensForRound(claimant, investmentRound) ==
+                claimAmount
+        );
+        assertTrue(
+            AlternateTokenDistributorInstance.totalClaimedTokensForRound(investmentRound) == claimAmount
+        );
+        vm.stopPrank();
+    }
+
+    // tests that the VCClaim event is emitted when a claim is manually added by an admin
+    function testAddClaimEmitVCClaim() public {
+        address claimant = users[0];
+        uint256 investmentRound = sampleInvestmentRoundIds[0];
+        uint256 claimAmount = sampleTokenAmountsToClaim[0];
+
+        vm.startPrank(tokenDistributorManager, tokenDistributorManager);
+        vm.expectEmit(address(AlternateTokenDistributorInstance));
+        emit VVVVCAlternateTokenDistributor.VCClaim(
+            claimant,
+            tokenDistributorManager,
+            address(0),
+            new address[](0),
+            claimAmount
+        );
+        AlternateTokenDistributorInstance.addClaim(claimant, investmentRound, claimAmount);
+    }
+
+    //tests that a non-admin cannot add claims to the distributor
+    function testAddClaimNonAdmin() public {
+        address claimant = users[0];
+        uint256 investmentRound = sampleInvestmentRoundIds[0];
+        uint256 claimAmount = sampleTokenAmountsToClaim[0];
+
+        vm.startPrank(claimant, claimant);
+        vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
+        AlternateTokenDistributorInstance.addClaim(claimant, investmentRound, claimAmount);
         vm.stopPrank();
     }
 }

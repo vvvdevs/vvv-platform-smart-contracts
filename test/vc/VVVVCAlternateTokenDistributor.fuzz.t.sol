@@ -4,6 +4,8 @@ pragma solidity ^0.8.23;
 import { CompleteMerkle } from "lib/murky/src/CompleteMerkle.sol";
 import { MockERC20 } from "contracts/mock/MockERC20.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { VVVAuthorizationRegistry } from "contracts/auth/VVVAuthorizationRegistry.sol";
+import { VVVAuthorizationRegistryChecker } from "contracts/auth/VVVAuthorizationRegistryChecker.sol";
 import { VVVVCInvestmentLedger } from "contracts/vc/VVVVCInvestmentLedger.sol";
 import { VVVVCReadOnlyInvestmentLedger } from "contracts/vc/VVVVCReadOnlyInvestmentLedger.sol";
 import { VVVVCAlternateTokenDistributor } from "contracts/vc/VVVVCAlternateTokenDistributor.sol";
@@ -21,16 +23,28 @@ contract VVVVCAlternateTokenDistributorFuzzTests is VVVVCTestBase {
         //instance of contract for creating merkle trees/proofs
         m = new CompleteMerkle();
 
-        //placeholder address(0) for VVVAuthorizationRegistry
         ReadOnlyLedgerInstance = new VVVVCReadOnlyInvestmentLedger(testSignerArray, environmentTag);
         readOnlyLedgerDomainSeparator = ReadOnlyLedgerInstance.DOMAIN_SEPARATOR();
         setInvestmentRoundStateTypehash = ReadOnlyLedgerInstance.STATE_TYPEHASH();
 
+        AuthRegistry = new VVVAuthorizationRegistry(defaultAdminTransferDelay, deployer);
+
         AlternateTokenDistributorInstance = new VVVVCAlternateTokenDistributor(
+            address(AuthRegistry),
             testSigner,
             address(ReadOnlyLedgerInstance),
             environmentTag
         );
+
+        //set auth permissions for tokenDistributor
+        AuthRegistry.grantRole(tokenDistributorManagerRole, tokenDistributorManager);
+        bytes4 addClaimSelector = AlternateTokenDistributorInstance.addClaim.selector;
+        AuthRegistry.setPermission(
+            address(AlternateTokenDistributorInstance),
+            addClaimSelector,
+            tokenDistributorManagerRole
+        );
+
         alternateTokenDistributorDomainSeparator = AlternateTokenDistributorInstance.DOMAIN_SEPARATOR();
         alternateClaimTypehash = AlternateTokenDistributorInstance.CLAIM_TYPEHASH();
 

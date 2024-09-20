@@ -37,6 +37,7 @@ abstract contract VVVVCTestBase is Test {
     //wallet setup
     uint256 deployerKey = 1234;
     uint256 ledgerManagerKey = 1235;
+    uint256 tokenDistributorManagerKey = 1236;
     uint256 testSignerKey = 12345;
     uint256 sampleUserKey = 1234567;
     uint256 sampleKycAddressKey = 12345678;
@@ -44,6 +45,7 @@ abstract contract VVVVCTestBase is Test {
 
     address deployer = vm.addr(deployerKey);
     address ledgerManager = vm.addr(ledgerManagerKey);
+    address tokenDistributorManager = vm.addr(tokenDistributorManagerKey);
     address testSigner = vm.addr(testSignerKey);
     address[] testSignerArray = [testSigner];
     address sampleUser = vm.addr(sampleUserKey);
@@ -62,6 +64,7 @@ abstract contract VVVVCTestBase is Test {
 
     //ledger contract-specific values
     bytes32 ledgerManagerRole = keccak256("LEDGER_MANAGER_ROLE");
+    bytes32 tokenDistributorManagerRole = keccak256("TOKEN_DISTRIBUTOR_MANAGER_ROLE");
     uint48 defaultAdminTransferDelay = 1 days;
     uint256 exchangeRateNumerator = 1e6;
     uint256 exchangeRateDenominator = 1e6;
