@@ -266,7 +266,7 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
         IERC20(_tokenAddress).safeTransfer(_to, _amount);
     }
 
-    /** 
+    /**
         @notice Allows admin to add multiple investment records to the ledger
         @dev does not account for a nominal payment token / exchange rate - only modifies stablecoin equivalent invested
      */
@@ -283,17 +283,13 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
         }
 
         for (uint256 i = 0; i < _kycAddresses.length; i++) {
-            kycAddressInvestedPerRound[_kycAddresses[i]][_investmentRounds[i]] += _amountsToInvest[i];
-            totalInvestedPerRound[_investmentRounds[i]] += _amountsToInvest[i];
-            emit VCInvestment(
-                _investmentRounds[i],
-                address(0),
-                _kycAddresses[i],
-                0,
-                0,
-                0,
-                _amountsToInvest[i]
-            );
+            address kycAddress = _kycAddresses[i];
+            uint256 investmentRound = _investmentRounds[i];
+            uint256 amountToInvest = _amountsToInvest[i];
+
+            kycAddressInvestedPerRound[kycAddress][investmentRound] += amountToInvest;
+            totalInvestedPerRound[investmentRound] += amountToInvest;
+            emit VCInvestment(investmentRound, address(0), kycAddress, 0, 0, 0, amountToInvest);
         }
     }
 
