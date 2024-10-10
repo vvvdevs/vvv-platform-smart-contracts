@@ -109,6 +109,9 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
         uint256 stablecoinEquivalent
     );
 
+    /// @notice Error thrown when the input arrays do not have the same length
+    error ArrayLengthMismatch();
+
     /// @notice Error thrown when the caller or investment round allocation has been exceeded
     error ExceedsAllocation();
 
@@ -264,17 +267,34 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
     }
 
     /** 
-        @notice Allows admin to add an investment record to the ledger
+        @notice Allows admin to add multiple investment records to the ledger
         @dev does not account for a nominal payment token / exchange rate - only modifies stablecoin equivalent invested
      */
-    function addInvestmentRecord(
-        address _kycAddress,
-        uint256 _investmentRound,
-        uint256 _amountToInvest
+    function addInvestmentRecords(
+        address[] calldata _kycAddresses,
+        uint256[] calldata _investmentRounds,
+        uint256[] calldata _amountsToInvest
     ) external onlyAuthorized {
-        kycAddressInvestedPerRound[_kycAddress][_investmentRound] += _amountToInvest;
-        totalInvestedPerRound[_investmentRound] += _amountToInvest;
-        emit VCInvestment(_investmentRound, address(0), _kycAddress, 0, 0, 0, _amountToInvest);
+        if (
+            _kycAddresses.length != _investmentRounds.length ||
+            _investmentRounds.length != _amountsToInvest.length
+        ) {
+            revert ArrayLengthMismatch();
+        }
+
+        for (uint256 i = 0; i < _kycAddresses.length; i++) {
+            kycAddressInvestedPerRound[_kycAddresses[i]][_investmentRounds[i]] += _amountsToInvest[i];
+            totalInvestedPerRound[_investmentRounds[i]] += _amountsToInvest[i];
+            emit VCInvestment(
+                _investmentRounds[i],
+                address(0),
+                _kycAddresses[i],
+                0,
+                0,
+                0,
+                _amountsToInvest[i]
+            );
+        }
     }
 
     /**

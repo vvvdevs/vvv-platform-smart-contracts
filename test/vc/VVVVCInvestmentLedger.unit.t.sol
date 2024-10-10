@@ -34,13 +34,13 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
 
         //add permissions to ledgerManagerRole for withdraw and addInvestmentRecord on the LedgerInstance
         bytes4 withdrawSelector = LedgerInstance.withdraw.selector;
-        bytes4 addInvestmentRecordSelector = LedgerInstance.addInvestmentRecord.selector;
+        bytes4 addInvestmentRecordsSelector = LedgerInstance.addInvestmentRecords.selector;
         bytes4 refundSelector = LedgerInstance.refundUserInvestment.selector;
         bytes4 setInvestmentPausedSelector = LedgerInstance.setInvestmentIsPaused.selector;
         AuthRegistry.setPermission(address(LedgerInstance), withdrawSelector, ledgerManagerRole);
         AuthRegistry.setPermission(
             address(LedgerInstance),
-            addInvestmentRecordSelector,
+            addInvestmentRecordsSelector,
             ledgerManagerRole
         );
         AuthRegistry.setPermission(address(LedgerInstance), refundSelector, ledgerManagerRole);
@@ -385,59 +385,78 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
     function testEmitVCInvestmentAdmin() public {
         vm.startPrank(ledgerManager, ledgerManager);
 
-        uint256 amountToInvest = sampleAmountsToInvest[0];
-        uint256 investmentRoundId = sampleInvestmentRoundIds[0];
+        uint256 numRecords = users.length;
+        address[] memory kycAddresses = new address[](numRecords);
+        uint256[] memory investmentRounds = new uint256[](numRecords);
+        uint256[] memory amountsToInvest = new uint256[](numRecords);
 
-        vm.expectEmit(address(LedgerInstance));
-        emit VVVVCInvestmentLedger.VCInvestment(
-            investmentRoundId,
-            address(0),
-            sampleKycAddress,
-            0,
-            0,
-            0,
-            amountToInvest
-        );
-        LedgerInstance.addInvestmentRecord(sampleKycAddress, investmentRoundId, amountToInvest);
+        for (uint256 i = 0; i < numRecords; i++) {
+            kycAddresses[i] = users[i];
+            investmentRounds[i] = sampleInvestmentRoundIds[0];
+            amountsToInvest[i] = 1e8 + i;
+
+            vm.expectEmit(address(LedgerInstance));
+            emit VVVVCInvestmentLedger.VCInvestment(
+                investmentRounds[i],
+                address(0),
+                kycAddresses[i],
+                0,
+                0,
+                0,
+                amountsToInvest[i]
+            );
+        }
+        LedgerInstance.addInvestmentRecords(kycAddresses, investmentRounds, amountsToInvest);
         vm.stopPrank();
     }
 
     /**
-     * @notice Tests addition of investment record by admin
+     * @notice Tests addition of investment records by admin
      */
-    function testAdminAddInvestmentRecord() public {
-        address kycAddress = sampleUser;
-        uint256 investmentRound = sampleInvestmentRoundIds[0];
-        uint256 investmentAmount = 1000;
+    function testAdminAddMultipleInvestmentRecords() public {
+        uint256 numRecords = users.length;
+        address[] memory kycAddresses = new address[](numRecords);
+        uint256[] memory investmentRounds = new uint256[](numRecords);
+        uint256[] memory amountsToInvest = new uint256[](numRecords);
 
-        uint256 userInvested = LedgerInstance.kycAddressInvestedPerRound(kycAddress, investmentRound);
-        uint256 totalInvested = LedgerInstance.totalInvestedPerRound(investmentRound);
+        uint256[] memory userInvestedAfter = new uint256[](numRecords);
+        uint256 totalInvestedAfter;
+        uint256 expectedTotalInvested;
+
+        for (uint256 i = 0; i < numRecords; i++) {
+            kycAddresses[i] = users[i];
+            investmentRounds[i] = sampleInvestmentRoundIds[0];
+            amountsToInvest[i] = 1e8 + i;
+            expectedTotalInvested += amountsToInvest[i];
+        }
 
         vm.startPrank(ledgerManager, ledgerManager);
-        LedgerInstance.addInvestmentRecord(kycAddress, investmentRound, investmentAmount);
+        LedgerInstance.addInvestmentRecords(kycAddresses, investmentRounds, amountsToInvest);
         vm.stopPrank();
 
-        assertTrue(
-            LedgerInstance.kycAddressInvestedPerRound(kycAddress, investmentRound) ==
-                userInvested + investmentAmount
-        );
+        for (uint256 i = 0; i < numRecords; i++) {
+            userInvestedAfter[i] = LedgerInstance.kycAddressInvestedPerRound(
+                kycAddresses[i],
+                investmentRounds[i]
+            );
+            assertTrue(userInvestedAfter[i] == amountsToInvest[i]);
+        }
 
-        assertTrue(
-            LedgerInstance.totalInvestedPerRound(investmentRound) == totalInvested + investmentAmount
-        );
+        totalInvestedAfter = LedgerInstance.totalInvestedPerRound(investmentRounds[0]);
+        assertTrue(totalInvestedAfter == expectedTotalInvested);
     }
 
     /**
      * @notice Tests that a non-admin cannot add an investment record
      */
     function testUserCantAddInvestmentRecord() public {
-        address kycAddress = sampleUser;
-        uint256 investmentRound = sampleInvestmentRoundIds[0];
-        uint256 investmentAmount = 1000;
+        address[] memory kycAddresses = new address[](1);
+        uint256[] memory investmentRounds = new uint256[](1);
+        uint256[] memory amountsToInvest = new uint256[](1);
 
         vm.startPrank(sampleUser, sampleUser);
         vm.expectRevert();
-        LedgerInstance.addInvestmentRecord(kycAddress, investmentRound, investmentAmount);
+        LedgerInstance.addInvestmentRecords(kycAddresses, investmentRounds, amountsToInvest);
         vm.stopPrank();
     }
 
@@ -522,28 +541,32 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
      * @dev manually adds record, then "refunds" it, by only erasing the record of investment on the ledger (transfers 0 tokens)
      */
     function testEmitVCRefund() public {
-        uint256 investmentRoundId = sampleInvestmentRoundIds[0];
-        uint256 amountToInvest = 1000; //stablecoin amount in this case
+        address[] memory kycAddresses = new address[](1);
+        uint256[] memory investmentRounds = new uint256[](1);
+        uint256[] memory amountsToInvest = new uint256[](1);
+        kycAddresses[0] = sampleKycAddress;
+        investmentRounds[0] = sampleInvestmentRoundIds[0];
+        amountsToInvest[0] = 1000;
 
         vm.startPrank(ledgerManager, ledgerManager);
-        LedgerInstance.addInvestmentRecord(sampleKycAddress, investmentRoundId, amountToInvest);
+        LedgerInstance.addInvestmentRecords(kycAddresses, investmentRounds, amountsToInvest);
         vm.expectEmit(address(LedgerInstance));
         emit VVVVCInvestmentLedger.VCRefund(
             sampleKycAddress,
             sampleUser,
-            investmentRoundId,
+            investmentRounds[0],
             address(PaymentTokenInstance),
             0,
-            amountToInvest
+            amountsToInvest[0]
         );
         //transfers 0 tokens, but erases the investment record
         LedgerInstance.refundUserInvestment(
             sampleKycAddress,
             sampleUser,
-            investmentRoundId,
+            investmentRounds[0],
             address(PaymentTokenInstance),
             0,
-            amountToInvest
+            amountsToInvest[0]
         );
         vm.stopPrank();
     }
