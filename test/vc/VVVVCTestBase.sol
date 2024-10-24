@@ -8,13 +8,11 @@ import { VVVVCInvestmentLedger } from "contracts/vc/VVVVCInvestmentLedger.sol";
 import { VVVVCTokenDistributor } from "contracts/vc/VVVVCTokenDistributor.sol";
 import { VVVAuthorizationRegistry } from "contracts/auth/VVVAuthorizationRegistry.sol";
 import { VVVVCReadOnlyInvestmentLedger } from "contracts/vc/VVVVCReadOnlyInvestmentLedger.sol";
-import { VVVVCAlternateTokenDistributor } from "contracts/vc/VVVVCAlternateTokenDistributor.sol";
 
 /**
     @title VVVVC Test Base
  */
 abstract contract VVVVCTestBase is Test {
-    VVVVCAlternateTokenDistributor AlternateTokenDistributorInstance;
     VVVAuthorizationRegistry AuthRegistry;
     VVVVCInvestmentLedger LedgerInstance;
     CompleteMerkle m;
@@ -28,11 +26,9 @@ abstract contract VVVVCTestBase is Test {
     bytes32 ledgerDomainSeparator;
     bytes32 distributorDomainSeparator;
     bytes32 readOnlyLedgerDomainSeparator;
-    bytes32 alternateTokenDistributorDomainSeparator;
     bytes32 investmentTypehash;
     bytes32 claimTypehash;
     bytes32 setInvestmentRoundStateTypehash;
-    bytes32 alternateClaimTypehash;
 
     //wallet setup
     uint256 deployerKey = 1234;
@@ -84,28 +80,11 @@ abstract contract VVVVCTestBase is Test {
     uint256 userPaymentTokenDefaultAllocation = 10_000 * 1e6;
     uint256 investmentRoundSampleLimit = 1_000_000 * 1e6;
 
-    //alternate distributor test values
-    address altDistributorTestKycAddress;
-
     struct TestParams {
         uint256[] investmentRoundIds;
         uint256[] tokenAmountsToInvest;
         address[] projectTokenProxyWallets;
         uint256 claimAmount;
-    }
-
-    //used in VVVVCAlternateTokenDistributor Tests involving merkle proofs of prior investment, to avoid stack-too-deep
-    struct AlternateDistributorInvestmentDetails {
-        uint256[] investedAmounts;
-        uint256[] userIndices;
-        uint256[] investmentRoundIds;
-        uint256 totalInvested;
-        uint256 investmentRounds;
-        uint256 deadline;
-        uint256 userIndex;
-        address selectedUser;
-        address selectedUserKyc;
-        uint256 tokenAmountToClaim;
     }
 
     // generate list of random addresses and deal them payment tokens and ETH
@@ -343,206 +322,5 @@ abstract contract VVVVCTestBase is Test {
         bytes memory signature = toBytesConcat(r, s, v);
 
         return signature;
-    }
-
-    //Alternate claim helpers
-    //Obtains merkle leaf and proof from array of addresses and amounts for a given address index
-    //following: https://github.com/dmfxyz/murky as recommended by foundry docs
-    function getMerkleRootLeafProof(
-        address[] memory _addresses,
-        uint256[] memory _amounts,
-        uint256 _index
-    ) public returns (bytes32, bytes32, bytes32[] memory) {
-        bytes32[] memory leaves = new bytes32[](_addresses.length);
-        for (uint256 i = 0; i < _addresses.length; i++) {
-            leaves[i] = keccak256(abi.encodePacked(_addresses[i], _amounts[i]));
-        }
-        bytes32 root = m.getRoot(leaves);
-        bytes32[] memory proof = m.getProof(leaves, _index);
-        assertTrue(m.verifyProof(root, proof, leaves[_index]));
-        return (root, leaves[_index], proof);
-    }
-
-    //creates arrays of roots, leaves, and proofs for a set of investment rounds, described by the length of _userIndices, outputs array according to user index in "users" array of addresses. Assuming same user for all rounds, and user is at same index, _userIndices could be something like [1 1 1] for example.
-    function getMerkleRootLeafProofArrays(
-        address[] memory _addresses,
-        uint256[] memory _amounts,
-        uint256[] memory _userIndices
-    ) public returns (bytes32[] memory, bytes32[] memory, bytes32[][] memory) {
-        bytes32[] memory roots = new bytes32[](_userIndices.length);
-        bytes32[] memory leaves = new bytes32[](_userIndices.length);
-        bytes32[][] memory proofs = new bytes32[][](_userIndices.length);
-
-        for (uint256 i = 0; i < _userIndices.length; i++) {
-            (bytes32 root, bytes32 leaf, bytes32[] memory proof) = getMerkleRootLeafProof(
-                _addresses,
-                _amounts,
-                _userIndices[i]
-            );
-            roots[i] = root;
-            leaves[i] = leaf;
-            proofs[i] = proof;
-        }
-
-        return (roots, leaves, proofs);
-    }
-
-    //generates signature for VVVVCAlternateTokenDistributor.claim()
-    function getEIP712SignatureForAlternateClaim(
-        bytes32 _domainSeparator,
-        bytes32 _alternateClaimTypehash,
-        VVVVCAlternateTokenDistributor.ClaimParams memory _params
-    ) public view returns (bytes memory) {
-        bytes32 digest = keccak256(
-            abi.encodePacked(
-                "\x19\x01",
-                _domainSeparator,
-                keccak256(
-                    abi.encode(
-                        _alternateClaimTypehash,
-                        _params.callerAddress,
-                        _params.userKycAddress,
-                        _params.projectTokenAddress,
-                        _params.projectTokenProxyWallets,
-                        _params.investmentRoundIds,
-                        _params.deadline
-                    )
-                )
-            )
-        );
-
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(testSignerKey, digest);
-        bytes memory signature = toBytesConcat(r, s, v);
-
-        return signature;
-    }
-
-    //generates params for VVVVCAlternateTokenDistributor.claim() to keep tests a bit cleaner
-    function generateAlternateClaimParamsWithSignature(
-        address _callerAddress,
-        address _kycAddress,
-        address[] memory _projectTokenProxyWallets,
-        uint256[] memory _investmentRoundIds,
-        uint256 _tokenAmountToClaim,
-        uint256[] memory _investedPerRound,
-        bytes32[][] memory _investmentProofs
-    ) public view returns (VVVVCAlternateTokenDistributor.ClaimParams memory) {
-        VVVVCAlternateTokenDistributor.ClaimParams memory params = VVVVCAlternateTokenDistributor
-            .ClaimParams({
-                callerAddress: _callerAddress,
-                userKycAddress: _kycAddress,
-                projectTokenAddress: address(ProjectTokenInstance),
-                projectTokenProxyWallets: _projectTokenProxyWallets,
-                investmentRoundIds: _investmentRoundIds,
-                tokenAmountToClaim: _tokenAmountToClaim,
-                deadline: block.timestamp + 1 hours,
-                signature: bytes("placeholder"),
-                investedPerRound: _investedPerRound,
-                investmentProofs: _investmentProofs
-            });
-
-        bytes memory sig = getEIP712SignatureForAlternateClaim(
-            alternateTokenDistributorDomainSeparator,
-            alternateClaimTypehash,
-            params
-        );
-
-        params.signature = sig;
-
-        return params;
-    }
-
-    //functions to prepare token claim params and avoid duplicating code. for a set of investment rounds: creates trees, sets roots on read-only ledger, creates merkle proofs for the given user indices (position in that investment round's array of investor kyc addresses), creates valid claim signature for that user, and returns a ClaimParams object containing all info to validate a user's prior investment(s) and currently permitted claim(s)
-    function prepareAlternateDistributorClaimParams(
-        address _callerAddress,
-        address _callerKycAddress
-    ) public returns (VVVVCAlternateTokenDistributor.ClaimParams memory) {
-        return prepareAlternateDistributorClaimParams(_callerAddress, _callerKycAddress, 1);
-    }
-
-    function prepareAlternateDistributorClaimParams(
-        address _callerAddress,
-        address _callerKycAddress,
-        uint256 _usersArrayIndex
-    ) public returns (VVVVCAlternateTokenDistributor.ClaimParams memory) {
-        uint256[] memory investedAmountsArray = new uint256[](users.length);
-        uint256[] memory placeholderArray = new uint256[](projectTokenProxyWallets.length);
-        uint256[] memory placeholderArray2 = new uint256[](projectTokenProxyWallets.length);
-        uint256[] memory userInvestedAmounts = new uint256[](projectTokenProxyWallets.length);
-
-        //set the caller kyc address to the user array at the index of _usersArrayIndex
-        users[_usersArrayIndex] = _callerKycAddress;
-
-        AlternateDistributorInvestmentDetails memory details = AlternateDistributorInvestmentDetails({
-            investedAmounts: investedAmountsArray, //all users in users array, not just selected user
-            userIndices: placeholderArray,
-            investmentRoundIds: placeholderArray2,
-            totalInvested: 0,
-            investmentRounds: placeholderArray.length,
-            deadline: block.timestamp + 1000,
-            userIndex: _usersArrayIndex,
-            selectedUser: _callerAddress,
-            selectedUserKyc: _callerKycAddress,
-            tokenAmountToClaim: 1e18 // test amount
-        });
-
-        //give each user in users a sample invested amount, applies to all rounds
-        for (uint256 i = 0; i < users.length; ++i) {
-            details.investedAmounts[i] = i * 1e18;
-            details.totalInvested += i * 1e18;
-        }
-
-        //the user whose investments are being proven occupies an index for each round. user is assumed to occupy same index for all rounds, so that same address of users[i] is obtained for all rounds
-        for (uint256 i = 0; i < details.investmentRounds; ++i) {
-            details.userIndices[i] = _usersArrayIndex;
-            details.investmentRoundIds[i] = i + 1;
-        }
-
-        (bytes32[] memory roots, , bytes32[][] memory proofs) = getMerkleRootLeafProofArrays(
-            users,
-            details.investedAmounts,
-            details.userIndices
-        );
-
-        //set merkle roots on read-only ledger for all rounds
-        vm.startPrank(deployer, deployer);
-        for (uint256 i = 0; i < details.investmentRounds; i++) {
-            //Generate signature for the round state
-            bytes memory setStateSignature = getEIP712SignatureForSetInvestmentRoundState(
-                readOnlyLedgerDomainSeparator,
-                setInvestmentRoundStateTypehash,
-                details.investmentRoundIds[i],
-                roots[i],
-                details.totalInvested,
-                details.deadline
-            );
-
-            ReadOnlyLedgerInstance.setInvestmentRoundState(
-                details.investmentRoundIds[i],
-                roots[i],
-                details.totalInvested,
-                testSigner,
-                setStateSignature,
-                details.deadline
-            );
-
-            //add the amount that user has invested based on _usersArrayIndex
-            userInvestedAmounts[i] = details.investedAmounts[_usersArrayIndex];
-        }
-        vm.stopPrank();
-
-        //create ClaimParams for VVVVCAlternateTokenDistributor.areMerkleProofsValid()
-        VVVVCAlternateTokenDistributor.ClaimParams
-            memory params = generateAlternateClaimParamsWithSignature(
-                details.selectedUser,
-                details.selectedUserKyc,
-                projectTokenProxyWallets,
-                details.investmentRoundIds,
-                details.tokenAmountToClaim,
-                userInvestedAmounts,
-                proofs
-            );
-
-        return params;
     }
 }
