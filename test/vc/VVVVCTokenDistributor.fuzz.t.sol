@@ -43,19 +43,9 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
         AuthRegistry = new VVVAuthorizationRegistry(defaultAdminTransferDelay, deployer);
 
         TokenDistributorInstance = new VVVVCTokenDistributor(
-            address(AuthRegistry),
             testSigner,
             address(LedgerInstance),
             environmentTag
-        );
-
-        //set auth permissions for tokenDistributor
-        AuthRegistry.grantRole(tokenDistributorManagerRole, address(TokenDistributorInstance));
-        bytes4 addClaimSelector = TokenDistributorInstance.addClaim.selector;
-        AuthRegistry.setPermission(
-            address(TokenDistributorInstance),
-            addClaimSelector,
-            tokenDistributorManagerRole
         );
 
         distributorDomainSeparator = TokenDistributorInstance.DOMAIN_SEPARATOR();

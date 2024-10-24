@@ -35,19 +35,9 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
         PaymentTokenInstance.mint(sampleKycAddress, 1_000_000 * 1e6);
 
         TokenDistributorInstance = new VVVVCTokenDistributor(
-            address(AuthRegistry),
             testSigner,
             address(LedgerInstance),
             environmentTag
-        );
-
-        //set auth permissions for tokenDistributor
-        AuthRegistry.grantRole(tokenDistributorManagerRole, tokenDistributorManager);
-        bytes4 addClaimSelector = TokenDistributorInstance.addClaim.selector;
-        AuthRegistry.setPermission(
-            address(TokenDistributorInstance),
-            addClaimSelector,
-            tokenDistributorManagerRole
         );
 
         distributorDomainSeparator = TokenDistributorInstance.DOMAIN_SEPARATOR();
@@ -456,51 +446,6 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             claimAmount
         );
         TokenDistributorInstance.claim(claimParams);
-        vm.stopPrank();
-    }
-
-    //tests that an admin can add claims to the distributor
-    function testAddClaim() public {
-        address claimant = users[0];
-        uint256 investmentRound = sampleInvestmentRoundIds[0];
-        uint256 claimAmount = sampleTokenAmountsToClaim[0];
-
-        vm.startPrank(tokenDistributorManager, tokenDistributorManager);
-        TokenDistributorInstance.addClaim(claimant, investmentRound, claimAmount);
-        assertTrue(
-            TokenDistributorInstance.userClaimedTokensForRound(claimant, investmentRound) == claimAmount
-        );
-        assertTrue(TokenDistributorInstance.totalClaimedTokensForRound(investmentRound) == claimAmount);
-        vm.stopPrank();
-    }
-
-    // tests that the VCClaim event is emitted when a claim is manually added by an admin
-    function testAddClaimEmitVCClaim() public {
-        address claimant = users[0];
-        uint256 investmentRound = sampleInvestmentRoundIds[0];
-        uint256 claimAmount = sampleTokenAmountsToClaim[0];
-
-        vm.startPrank(tokenDistributorManager, tokenDistributorManager);
-        vm.expectEmit(address(TokenDistributorInstance));
-        emit VVVVCTokenDistributor.VCClaim(
-            claimant,
-            tokenDistributorManager,
-            address(0),
-            new address[](0),
-            claimAmount
-        );
-        TokenDistributorInstance.addClaim(claimant, investmentRound, claimAmount);
-    }
-
-    //tests that a non-admin cannot add claims to the distributor
-    function testAddClaimNonAdmin() public {
-        address claimant = users[0];
-        uint256 investmentRound = sampleInvestmentRoundIds[0];
-        uint256 claimAmount = sampleTokenAmountsToClaim[0];
-
-        vm.startPrank(claimant, claimant);
-        vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
-        TokenDistributorInstance.addClaim(claimant, investmentRound, claimAmount);
         vm.stopPrank();
     }
 }

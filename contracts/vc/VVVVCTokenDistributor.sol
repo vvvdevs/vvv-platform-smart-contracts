@@ -5,9 +5,8 @@ import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IVVVVCInvestmentLedger } from "./IVVVVCInvestmentLedger.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { VVVAuthorizationRegistryChecker } from "contracts/auth/VVVAuthorizationRegistryChecker.sol";
 
-contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
+contract VVVVCTokenDistributor {
     using SafeERC20 for IERC20;
 
     IVVVVCInvestmentLedger public ledger;
@@ -76,12 +75,7 @@ contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
     /// @notice Error thrown when the signer address is not recovered from the provided signature
     error InvalidSignature();
 
-    constructor(
-        address _authRegistry,
-        address _signer,
-        address _ledger,
-        string memory _environmentTag
-    ) VVVAuthorizationRegistryChecker(_authRegistry) {
+    constructor(address _signer, address _ledger, string memory _environmentTag) {
         signer = _signer;
         ledger = IVVVVCInvestmentLedger(_ledger);
 
@@ -239,22 +233,5 @@ contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
         bool isSigner = recoveredAddress == signer;
         bool isExpired = block.timestamp > _params.deadline;
         return isSigner && !isExpired;
-    }
-
-    /**
-     * @notice Adds a claim to the distributor
-     * @param _claimant The address of the claimant
-     * @param _investmentRound The investment round ID
-     * @param _amount The amount of tokens to claim
-     */
-    function addClaim(
-        address _claimant,
-        uint256 _investmentRound,
-        uint256 _amount
-    ) external onlyAuthorized {
-        userClaimedTokensForRound[_claimant][_investmentRound] += _amount;
-        totalClaimedTokensForRound[_investmentRound] += _amount;
-
-        emit VCClaim(_claimant, msg.sender, address(0), new address[](0), _amount);
     }
 }
