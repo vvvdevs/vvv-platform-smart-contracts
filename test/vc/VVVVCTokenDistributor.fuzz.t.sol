@@ -10,6 +10,8 @@ import { VVVVCInvestmentLedger } from "contracts/vc/VVVVCInvestmentLedger.sol";
 import { VVVVCTokenDistributor } from "contracts/vc/VVVVCTokenDistributor.sol";
 import { VVVVCTestBase } from "test/vc/VVVVCTestBase.sol";
 
+uint256 constant PLACEHOLDER = uint256(keccak256("GET TO FIXING THIS"));
+
 /**
  * @title VVVVCTokenDistributor Fuzz Tests
  * @dev use "forge test --match-contract VVVVCTokenDistributorFuzzTests" to run tests
@@ -42,11 +44,7 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
 
         AuthRegistry = new VVVAuthorizationRegistry(defaultAdminTransferDelay, deployer);
 
-        TokenDistributorInstance = new VVVVCTokenDistributor(
-            testSigner,
-            address(LedgerInstance),
-            environmentTag
-        );
+        TokenDistributorInstance = new VVVVCTokenDistributor(testSigner, environmentTag);
 
         distributorDomainSeparator = TokenDistributorInstance.DOMAIN_SEPARATOR();
         claimTypehash = TokenDistributorInstance.CLAIM_TYPEHASH();
@@ -111,12 +109,7 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
                 )
             );
 
-            testParams.claimAmount += TokenDistributorInstance.calculateBaseClaimableProjectTokens(
-                _kycAddress,
-                address(ProjectTokenInstance),
-                testParams.projectTokenProxyWallets[i],
-                testParams.investmentRoundIds[i]
-            );
+            testParams.claimAmount = PLACEHOLDER;
         }
 
         uint256 balanceTotalBefore = ProjectTokenInstance.balanceOf(_callerAddress);
@@ -180,60 +173,5 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
         // Expect any revert
         vm.expectRevert();
         claimAsUser(_callerAddress, claimParams);
-    }
-
-    // Tests that the distributor always returns zero when there is not an investment made + project token balance in "claim from" or proxy wallet
-    function testFuzz_CalculateBaseClaimableProjectTokensAlwaysZero(
-        address _caller,
-        uint256 _seed
-    ) public {
-        vm.assume(_caller != address(0));
-        vm.assume(_seed != 0);
-        uint256 investmentRoundId = bound(_seed, 0, type(uint256).max);
-
-        uint256 claimableAmount = TokenDistributorInstance.calculateBaseClaimableProjectTokens(
-            _caller,
-            address(ProjectTokenInstance),
-            _caller,
-            investmentRoundId
-        );
-
-        assertTrue(claimableAmount == 0);
-    }
-
-    // Tests that distributor returns correct amount in proportion to invested amount in all cases
-    function testFuzz_CalculateBaseClaimableProjectTokens(address _caller, uint256 _seed) public {
-        vm.assume(_caller != address(0));
-        // should avoid overflow and still be a reasonable upper bound
-        // must be > 0 to make assertion true
-        uint256 investedAmount = bound(_seed, 1, type(uint128).max);
-
-        uint256 thisInvestmentRoundId = sampleInvestmentRoundIds[0];
-        address thisProjectTokenProxyWallet = projectTokenProxyWallets[0];
-        uint256 projectTokenWalletBalance = ProjectTokenInstance.balanceOf(thisProjectTokenProxyWallet);
-
-        PaymentTokenInstance.mint(_caller, investedAmount);
-
-        investAsUser(
-            _caller,
-            generateInvestParamsWithSignature(
-                thisInvestmentRoundId,
-                type(uint256).max, //sample very high round limit to avoid this error
-                investedAmount, // invested amounts
-                type(uint256).max, //sample very high allocation
-                exchangeRateNumerator,
-                feeNumerator,
-                _caller
-            )
-        );
-
-        uint256 claimableAmount = TokenDistributorInstance.calculateBaseClaimableProjectTokens(
-            _caller,
-            address(ProjectTokenInstance),
-            thisProjectTokenProxyWallet,
-            thisInvestmentRoundId
-        );
-
-        assertTrue(claimableAmount == projectTokenWalletBalance);
     }
 }

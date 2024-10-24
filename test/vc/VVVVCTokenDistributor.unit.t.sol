@@ -34,11 +34,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
         PaymentTokenInstance.mint(sampleUser, 1_000_000 * 1e6);
         PaymentTokenInstance.mint(sampleKycAddress, 1_000_000 * 1e6);
 
-        TokenDistributorInstance = new VVVVCTokenDistributor(
-            testSigner,
-            address(LedgerInstance),
-            environmentTag
-        );
+        TokenDistributorInstance = new VVVVCTokenDistributor(testSigner, environmentTag);
 
         distributorDomainSeparator = TokenDistributorInstance.DOMAIN_SEPARATOR();
         claimTypehash = TokenDistributorInstance.CLAIM_TYPEHASH();
@@ -440,7 +436,6 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
         vm.expectEmit(address(TokenDistributorInstance));
         emit VVVVCTokenDistributor.VCClaim(
             sampleKycAddress,
-            sampleUser,
             address(ProjectTokenInstance),
             projectTokenProxyWallets,
             claimAmount
