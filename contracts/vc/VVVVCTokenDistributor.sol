@@ -51,12 +51,14 @@ contract VVVVCTokenDistributor {
         @param projectTokenAddress Address of the project token to be claimed
         @param projectTokenProxyWallets Addresses of the wallets from which the project token is to be claimed
         @param tokenAmountsToClaim Amounts of project tokens claimed from each wallet
+        @param nonce KYC-wallet-based nonce
      */
     event VCClaim(
         address indexed kycAddress,
         address indexed projectTokenAddress,
         address[] projectTokenProxyWallets,
-        uint256[] tokenAmountsToClaim
+        uint256[] tokenAmountsToClaim,
+        uint256 nonce
     );
 
     /// @notice Error thrown when the signer address is not recovered from the provided signature
@@ -104,20 +106,19 @@ contract VVVVCTokenDistributor {
         IERC20 projectToken = IERC20(_params.projectTokenAddress);
 
         for (uint256 i = 0; i < _params.projectTokenProxyWallets.length; i++) {
-            if (_params.tokenAmountsToClaim[i] > 0) {
-                projectToken.safeTransferFrom(
-                    _params.projectTokenProxyWallets[i],
-                    msg.sender,
-                    _params.tokenAmountsToClaim[i]
-                );
-            }
+            projectToken.safeTransferFrom(
+                _params.projectTokenProxyWallets[i],
+                msg.sender,
+                _params.tokenAmountsToClaim[i]
+            );
         }
 
         emit VCClaim(
             _params.kycAddress,
             _params.projectTokenAddress,
             _params.projectTokenProxyWallets,
-            _params.tokenAmountsToClaim
+            _params.tokenAmountsToClaim,
+            _params.nonce
         );
     }
 
