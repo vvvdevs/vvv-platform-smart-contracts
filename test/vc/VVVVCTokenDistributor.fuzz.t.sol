@@ -11,8 +11,6 @@ import { VVVVCInvestmentLedger } from "contracts/vc/VVVVCInvestmentLedger.sol";
 import { VVVVCTokenDistributor } from "contracts/vc/VVVVCTokenDistributor.sol";
 import { VVVVCTestBase } from "test/vc/VVVVCTestBase.sol";
 
-uint256 constant PLACEHOLDER = uint256(keccak256("GET TO FIXING THIS"));
-
 /**
  * @title VVVVCTokenDistributor Fuzz Tests
  * @dev use "forge test --match-contract VVVVCTokenDistributorFuzzTests" to run tests
