@@ -2,6 +2,7 @@
 pragma solidity ^0.8.23;
 
 import { MockERC20 } from "contracts/mock/MockERC20.sol";
+import { IERC20Errors } from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { VVVAuthorizationRegistry } from "contracts/auth/VVVAuthorizationRegistry.sol";
@@ -106,6 +107,10 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
                 uint160(uint256(keccak256(abi.encodePacked(_callerAddress, i))))
             );
             tokenAmountsToClaim[i] = bound(_seed, 1, 1000 * 1e18);
+            vm.startPrank(projectTokenProxyWallets[i]);
+            ProjectTokenInstance.mint(projectTokenProxyWallets[i], tokenAmountsToClaim[i]);
+            ProjectTokenInstance.approve(address(TokenDistributorInstance), type(uint256).max);
+            vm.stopPrank();
         }
 
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
@@ -118,21 +123,30 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
 
         if (testCase == 0) {
             // Invalid signature
-            claimParams.signature = abi.encodePacked(bytes32(0), bytes32(0), uint8(0));
+            claimParams.tokenAmountsToClaim = new uint256[](projectTokenProxyWallets.length);
+            vm.expectRevert(VVVVCTokenDistributor.InvalidSignature.selector);
         } else if (testCase == 1) {
             // Invalid nonce
-            claimParams.nonce = TokenDistributorInstance.nonces(_kycAddress) + 2;
+            claimParams.nonce = 0;
+            vm.expectRevert(VVVVCTokenDistributor.InvalidNonce.selector);
         } else {
             // Insufficient token balance
-            for (uint256 i = 0; i < arrayLength; i++) {
-                ProjectTokenInstance.mint(projectTokenProxyWallets[i], tokenAmountsToClaim[i] - 1);
-                vm.prank(projectTokenProxyWallets[i]);
-                ProjectTokenInstance.approve(address(TokenDistributorInstance), tokenAmountsToClaim[i]);
-            }
+            address thisProxyWallet = projectTokenProxyWallets[0];
+            uint256 defecit = 1;
+            uint256 balance = ProjectTokenInstance.balanceOf(thisProxyWallet);
+            vm.prank(thisProxyWallet);
+            ProjectTokenInstance.transfer(address(0xdead), defecit);
+            vm.expectRevert(
+                abi.encodeWithSelector(
+                    IERC20Errors.ERC20InsufficientBalance.selector,
+                    thisProxyWallet,
+                    balance - defecit,
+                    balance
+                )
+            );
         }
 
         // Attempt to claim
-        vm.expectRevert();
         claimAsUser(_callerAddress, claimParams);
     }
 }
