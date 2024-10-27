@@ -132,6 +132,34 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
         claimAsUser(sampleUser, claimParams);
     }
 
+    // tests that invalid nonce causes revert with InvalidNonce error
+    function testClaimWithInvalidNonce() public {
+        VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
+            sampleKycAddress,
+            projectTokenProxyWallets,
+            sampleTokenAmountsToClaim
+        );
+
+        claimParams.nonce = 0;
+        vm.expectRevert(VVVVCTokenDistributor.InvalidNonce.selector);
+        claimAsUser(sampleUser, claimParams);
+    }
+
+    // tests that the ArrayLengthMismatch error is thrown when the lengths of the projectTokenProxyWallets and tokenAmountsToClaim arrays do not match
+    function testClaimArrayLengthMismatch() public {
+        address[] memory shorterProxyWalletArray = new address[](1);
+        shorterProxyWalletArray[0] = projectTokenProxyWallets[0];
+
+        VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
+            sampleKycAddress,
+            shorterProxyWalletArray,
+            sampleTokenAmountsToClaim
+        );
+
+        vm.expectRevert(VVVVCTokenDistributor.ArrayLengthMismatch.selector);
+        claimAsUser(sampleUser, claimParams);
+    }
+
     // Test that VCClaim is correctly emitted when project tokens are claimed
     function testEmitVCClaim() public {
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
@@ -146,7 +174,8 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             sampleKycAddress,
             address(ProjectTokenInstance),
             projectTokenProxyWallets,
-            sampleTokenAmountsToClaim
+            sampleTokenAmountsToClaim,
+            claimParams.nonce
         );
         TokenDistributorInstance.claim(claimParams);
         vm.stopPrank();
