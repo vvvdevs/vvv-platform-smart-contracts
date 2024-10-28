@@ -2,6 +2,7 @@
 pragma solidity ^0.8.23;
 
 import { MockERC20 } from "contracts/mock/MockERC20.sol";
+import { IERC20Errors } from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { VVVAuthorizationRegistry } from "contracts/auth/VVVAuthorizationRegistry.sol";
@@ -19,44 +20,13 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
     function setUp() public {
         vm.startPrank(deployer, deployer);
 
-        //placeholder address(0) for VVVAuthorizationRegistry
-        LedgerInstance = new VVVVCInvestmentLedger(
-            testSigner,
-            environmentTag,
-            address(0),
-            exchangeRateDenominator
-        );
-        ledgerDomainSeparator = LedgerInstance.DOMAIN_SEPARATOR();
-        investmentTypehash = LedgerInstance.INVESTMENT_TYPEHASH();
-
-        //supply users with payment token with which to invest
-        PaymentTokenInstance = new MockERC20(6); //USDC/T
-        PaymentTokenInstance.mint(sampleUser, 1_000_000 * 1e6);
-        PaymentTokenInstance.mint(sampleKycAddress, 1_000_000 * 1e6);
-
         //supply the proxy wallets with the project token to be withdrawn from them by investors
         ProjectTokenInstance = new MockERC20(18);
         for (uint256 i = 0; i < projectTokenProxyWallets.length; i++) {
             ProjectTokenInstance.mint(projectTokenProxyWallets[i], projectTokenAmountToProxyWallet);
         }
 
-        AuthRegistry = new VVVAuthorizationRegistry(defaultAdminTransferDelay, deployer);
-
-        TokenDistributorInstance = new VVVVCTokenDistributor(
-            address(AuthRegistry),
-            testSigner,
-            address(LedgerInstance),
-            environmentTag
-        );
-
-        //set auth permissions for tokenDistributor
-        AuthRegistry.grantRole(tokenDistributorManagerRole, address(TokenDistributorInstance));
-        bytes4 addClaimSelector = TokenDistributorInstance.addClaim.selector;
-        AuthRegistry.setPermission(
-            address(TokenDistributorInstance),
-            addClaimSelector,
-            tokenDistributorManagerRole
-        );
+        TokenDistributorInstance = new VVVVCTokenDistributor(testSigner, environmentTag);
 
         distributorDomainSeparator = TokenDistributorInstance.DOMAIN_SEPARATOR();
         claimTypehash = TokenDistributorInstance.CLAIM_TYPEHASH();
@@ -64,9 +34,7 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
         vm.stopPrank();
     }
 
-    // NOTE: this uses type(uint256).max as investment round and user allocations,
-    // so these are effectively not tested here
-    function testFuzz_InvestAndClaimSuccess(
+    function testFuzz_ClaimSuccess(
         address _callerAddress,
         address _kycAddress,
         uint256 _seed,
@@ -77,173 +45,106 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
         vm.assume(_seed != 0);
         vm.assume(_length != 0);
 
-        TestParams memory testParams;
         uint256 maxLength = 100;
         uint256 arrayLength = bound(_length, 1, maxLength);
 
-        PaymentTokenInstance.mint(_callerAddress, paymentTokenMintAmount);
+        address[] memory projectTokenProxyWallets = new address[](arrayLength);
+        uint256[] memory tokenAmountsToClaim = new uint256[](arrayLength);
 
-        testParams.investmentRoundIds = new uint256[](arrayLength);
-        testParams.tokenAmountsToInvest = new uint256[](arrayLength);
-        testParams.projectTokenProxyWallets = new address[](arrayLength);
+        uint256 totalClaimAmount = 0;
 
         for (uint256 i = 0; i < arrayLength; i++) {
-            testParams.projectTokenProxyWallets[i] = address(
+            projectTokenProxyWallets[i] = address(
                 uint160(uint256(keccak256(abi.encodePacked(_callerAddress, i))))
             );
 
-            //mint a ton to the proxy wallets so there's no issue with not enough to claim
-            ProjectTokenInstance.mint(testParams.projectTokenProxyWallets[i], 10000 * 1e18);
+            tokenAmountsToClaim[i] = bound(_seed, 0, 1000 * 1e18);
+            totalClaimAmount += tokenAmountsToClaim[i];
 
-            testParams.investmentRoundIds[i] = bound(_seed, 0, arrayLength);
-            testParams.tokenAmountsToInvest[i] = bound(
-                _seed,
-                0,
-                IERC20(address(PaymentTokenInstance)).balanceOf(_callerAddress) / arrayLength
-            );
+            // Mint tokens to the proxy wallet and approve the distributor
+            ProjectTokenInstance.mint(projectTokenProxyWallets[i], tokenAmountsToClaim[i]);
+            vm.prank(projectTokenProxyWallets[i]);
+            ProjectTokenInstance.approve(address(TokenDistributorInstance), tokenAmountsToClaim[i]);
         }
 
-        // ensure proxy wallets have approved the distributor to withdraw tokens
-        approveProjectTokenForDistributor(testParams.projectTokenProxyWallets, type(uint256).max);
-
-        // invest using generated addresses
-        for (uint256 i = 0; i < arrayLength; i++) {
-            investAsUser(
-                _callerAddress,
-                generateInvestParamsWithSignature(
-                    testParams.investmentRoundIds[i],
-                    type(uint256).max, //sample very high round limit to avoid this error
-                    testParams.tokenAmountsToInvest[i], // invested amounts
-                    type(uint256).max, //sample very high allocation
-                    exchangeRateNumerator,
-                    feeNumerator,
-                    _kycAddress
-                )
-            );
-
-            testParams.claimAmount += TokenDistributorInstance.calculateBaseClaimableProjectTokens(
-                _kycAddress,
-                address(ProjectTokenInstance),
-                testParams.projectTokenProxyWallets[i],
-                testParams.investmentRoundIds[i]
-            );
-        }
-
-        uint256 balanceTotalBefore = ProjectTokenInstance.balanceOf(_callerAddress);
+        uint256 balanceBefore = ProjectTokenInstance.balanceOf(_callerAddress);
 
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
-            _callerAddress,
             _kycAddress,
-            testParams.projectTokenProxyWallets,
-            testParams.investmentRoundIds,
-            testParams.claimAmount
+            projectTokenProxyWallets,
+            tokenAmountsToClaim
         );
 
-        // Attempt to claim across all wallets for the calling address
+        // Attempt to claim
         claimAsUser(_callerAddress, claimParams);
 
         // Check if the total claimed amount matches expected
-        assertTrue(
-            ProjectTokenInstance.balanceOf(_callerAddress) == balanceTotalBefore + testParams.claimAmount
-        );
+        assertTrue(ProjectTokenInstance.balanceOf(_callerAddress) == balanceBefore + totalClaimAmount);
     }
 
-    /**
-        address(ProjectTokenInstance) is used so this address is not fuzzed
-        Other than that, this tests for an expected revert given random inputs
-        as a check that the logic that requires a prior investment is solid
-     */
+    // Ensures no claim can be made without either a valid signature, valid nonce, or sufficient token balance
     function testFuzz_ClaimRevert(
         address _callerAddress,
         address _kycAddress,
         uint256 _seed,
-        uint256 _length
+        uint256 _length,
+        uint8 _testCase
     ) public {
-        //constraints + setup for arrays
-        uint256 lengthLimit = 100;
-        uint256 arrayLength = bound(_length, 1, lengthLimit);
-
         vm.assume(_callerAddress != address(0));
         vm.assume(_kycAddress != address(0));
         vm.assume(_seed != 0);
 
-        uint256[] memory _investmentRoundIds = new uint256[](arrayLength);
-        address[] memory _projectTokenProxyWallets = new address[](arrayLength);
-        uint256 _tokenAmountToClaim = bound(_seed, 0, type(uint256).max);
+        uint256 lengthLimit = 100;
+        uint256 arrayLength = bound(_length, 1, lengthLimit);
+
+        address[] memory projectTokenProxyWallets = new address[](arrayLength);
+        uint256[] memory tokenAmountsToClaim = new uint256[](arrayLength);
 
         for (uint256 i = 0; i < arrayLength; i++) {
-            _projectTokenProxyWallets[i] = address(
+            projectTokenProxyWallets[i] = address(
                 uint160(uint256(keccak256(abi.encodePacked(_callerAddress, i))))
             );
-            _investmentRoundIds[i] = bound(_seed, 0, arrayLength);
+            tokenAmountsToClaim[i] = bound(_seed, 1, 1000 * 1e18);
+            vm.startPrank(projectTokenProxyWallets[i]);
+            ProjectTokenInstance.mint(projectTokenProxyWallets[i], tokenAmountsToClaim[i]);
+            ProjectTokenInstance.approve(address(TokenDistributorInstance), type(uint256).max);
+            vm.stopPrank();
         }
 
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
-            _callerAddress,
             _kycAddress,
-            _projectTokenProxyWallets,
-            _investmentRoundIds,
-            _tokenAmountToClaim
+            projectTokenProxyWallets,
+            tokenAmountsToClaim
         );
 
-        // Attempt to claim for each wallet
-        // Expect any revert
-        vm.expectRevert();
+        uint256 testCase = _testCase % 3;
+
+        if (testCase == 0) {
+            // Invalid signature
+            claimParams.tokenAmountsToClaim = new uint256[](projectTokenProxyWallets.length);
+            vm.expectRevert(VVVVCTokenDistributor.InvalidSignature.selector);
+        } else if (testCase == 1) {
+            // Invalid nonce
+            claimParams.nonce = 0;
+            vm.expectRevert(VVVVCTokenDistributor.InvalidNonce.selector);
+        } else {
+            // Insufficient token balance
+            address thisProxyWallet = projectTokenProxyWallets[0];
+            uint256 defecit = 1;
+            uint256 balance = ProjectTokenInstance.balanceOf(thisProxyWallet);
+            vm.prank(thisProxyWallet);
+            ProjectTokenInstance.transfer(address(0xdead), defecit);
+            vm.expectRevert(
+                abi.encodeWithSelector(
+                    IERC20Errors.ERC20InsufficientBalance.selector,
+                    thisProxyWallet,
+                    balance - defecit,
+                    balance
+                )
+            );
+        }
+
+        // Attempt to claim
         claimAsUser(_callerAddress, claimParams);
-    }
-
-    // Tests that the distributor always returns zero when there is not an investment made + project token balance in "claim from" or proxy wallet
-    function testFuzz_CalculateBaseClaimableProjectTokensAlwaysZero(
-        address _caller,
-        uint256 _seed
-    ) public {
-        vm.assume(_caller != address(0));
-        vm.assume(_seed != 0);
-        uint256 investmentRoundId = bound(_seed, 0, type(uint256).max);
-
-        uint256 claimableAmount = TokenDistributorInstance.calculateBaseClaimableProjectTokens(
-            _caller,
-            address(ProjectTokenInstance),
-            _caller,
-            investmentRoundId
-        );
-
-        assertTrue(claimableAmount == 0);
-    }
-
-    // Tests that distributor returns correct amount in proportion to invested amount in all cases
-    function testFuzz_CalculateBaseClaimableProjectTokens(address _caller, uint256 _seed) public {
-        vm.assume(_caller != address(0));
-        // should avoid overflow and still be a reasonable upper bound
-        // must be > 0 to make assertion true
-        uint256 investedAmount = bound(_seed, 1, type(uint128).max);
-
-        uint256 thisInvestmentRoundId = sampleInvestmentRoundIds[0];
-        address thisProjectTokenProxyWallet = projectTokenProxyWallets[0];
-        uint256 projectTokenWalletBalance = ProjectTokenInstance.balanceOf(thisProjectTokenProxyWallet);
-
-        PaymentTokenInstance.mint(_caller, investedAmount);
-
-        investAsUser(
-            _caller,
-            generateInvestParamsWithSignature(
-                thisInvestmentRoundId,
-                type(uint256).max, //sample very high round limit to avoid this error
-                investedAmount, // invested amounts
-                type(uint256).max, //sample very high allocation
-                exchangeRateNumerator,
-                feeNumerator,
-                _caller
-            )
-        );
-
-        uint256 claimableAmount = TokenDistributorInstance.calculateBaseClaimableProjectTokens(
-            _caller,
-            address(ProjectTokenInstance),
-            thisProjectTokenProxyWallet,
-            thisInvestmentRoundId
-        );
-
-        assertTrue(claimableAmount == projectTokenWalletBalance);
     }
 }

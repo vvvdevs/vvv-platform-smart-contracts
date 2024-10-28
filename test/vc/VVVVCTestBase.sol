@@ -222,7 +222,7 @@ abstract contract VVVVCTestBase is Test {
 
     function getEIP712SignatureForClaim(
         bytes32 _domainSeparator,
-        bytes32 _investmentTypehash,
+        bytes32 _claimTypehash,
         VVVVCTokenDistributor.ClaimParams memory _params
     ) public view returns (bytes memory) {
         bytes32 digest = keccak256(
@@ -231,12 +231,12 @@ abstract contract VVVVCTestBase is Test {
                 _domainSeparator,
                 keccak256(
                     abi.encode(
-                        _investmentTypehash,
-                        _params.callerAddress,
-                        _params.userKycAddress,
+                        _claimTypehash,
+                        _params.kycAddress,
                         _params.projectTokenAddress,
                         _params.projectTokenProxyWallets,
-                        _params.investmentRoundIds,
+                        _params.tokenAmountsToClaim,
+                        _params.nonce,
                         _params.deadline
                     )
                 )
@@ -250,19 +250,16 @@ abstract contract VVVVCTestBase is Test {
     }
 
     function generateClaimParamsWithSignature(
-        address _callerAddress,
         address _kycAddress,
         address[] memory _projectTokenProxyWallets,
-        uint256[] memory _investmentRoundIds,
-        uint256 _tokenAmountToClaim
+        uint256[] memory _tokenAmountsToClaim
     ) public view returns (VVVVCTokenDistributor.ClaimParams memory) {
         VVVVCTokenDistributor.ClaimParams memory params = VVVVCTokenDistributor.ClaimParams({
-            callerAddress: _callerAddress,
-            userKycAddress: _kycAddress,
+            kycAddress: _kycAddress,
             projectTokenAddress: address(ProjectTokenInstance),
             projectTokenProxyWallets: _projectTokenProxyWallets,
-            investmentRoundIds: _investmentRoundIds,
-            tokenAmountToClaim: _tokenAmountToClaim,
+            tokenAmountsToClaim: _tokenAmountsToClaim,
+            nonce: TokenDistributorInstance.nonces(_kycAddress) + 1,
             deadline: block.timestamp + 1 hours,
             signature: bytes("placeholder")
         });
@@ -278,14 +275,5 @@ abstract contract VVVVCTestBase is Test {
         vm.startPrank(_claimant, _claimant);
         TokenDistributorInstance.claim(_params);
         vm.stopPrank();
-    }
-
-    function approveProjectTokenForDistributor(address[] memory proxyWallets, uint256 amount) public {
-        for (uint256 i = 0; i < proxyWallets.length; i++) {
-            require(proxyWallets[i] != address(0), "Cannot use the zero address");
-            vm.startPrank(proxyWallets[i]);
-            ProjectTokenInstance.approve(address(TokenDistributorInstance), amount);
-            vm.stopPrank();
-        }
     }
 }
