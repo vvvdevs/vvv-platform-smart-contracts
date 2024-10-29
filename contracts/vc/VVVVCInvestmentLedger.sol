@@ -1,10 +1,11 @@
 //SPDX-License-Identifier: MIT
-pragma solidity ^0.8.23;
+pragma solidity 0.8.23;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import { VVVAuthorizationRegistryChecker } from "contracts/auth/VVVAuthorizationRegistryChecker.sol";
+
 /**
  * @title VVV VC Investment Ledger
  * @notice This contract facilitates investments in VVV VC projects
@@ -89,24 +90,6 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
         uint256 exchangeRateDenominator,
         uint256 feeNumerator,
         uint256 investmentAmount
-    );
-
-    /**
-     * @notice Event emitted when a VC investment is refunded
-     * @param userKycAddress The kyc address of the user to refund
-     * @param tokenDestination The address to which to send the refund token
-     * @param investmentRound The round of the investment to refund
-     * @param refundTokenAddress The address of the token to refund
-     * @param refundTokenAmount The amount of the token to refund
-     * @param stablecoinEquivalent The equivalent amount of stablecoin to the token amount refunded
-     */
-    event VCRefund(
-        address userKycAddress,
-        address tokenDestination,
-        uint256 investmentRound,
-        address refundTokenAddress,
-        uint256 refundTokenAmount,
-        uint256 stablecoinEquivalent
     );
 
     /// @notice Error thrown when the input arrays do not have the same length
@@ -291,34 +274,6 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
             totalInvestedPerRound[investmentRound] += amountToInvest;
             emit VCInvestment(investmentRound, address(0), kycAddress, 0, 0, 0, amountToInvest);
         }
-    }
-
-    /**
-        @notice refunds a user's investment in units of the specified ERC20 token
-        @dev ex. to refund user 1 $VVV which was invested at $10 per VVV, _refundTokenAmount = 1, _stablecoinEquivalent = 10
-        @dev allows erasing manually added investment records
-     */
-    function refundUserInvestment(
-        address _userKycAddress,
-        address _tokenDestination,
-        uint256 _investmentRound,
-        address _refundTokenAddress,
-        uint256 _refundTokenAmount,
-        uint256 _stablecoinEquivalent
-    ) external onlyAuthorized {
-        kycAddressInvestedPerRound[_userKycAddress][_investmentRound] -= _stablecoinEquivalent;
-        totalInvestedPerRound[_investmentRound] -= _stablecoinEquivalent;
-
-        IERC20(_refundTokenAddress).safeTransfer(_tokenDestination, _refundTokenAmount);
-
-        emit VCRefund(
-            _userKycAddress,
-            _tokenDestination,
-            _investmentRound,
-            _refundTokenAddress,
-            _refundTokenAmount,
-            _stablecoinEquivalent
-        );
     }
 
     /// @notice admin function to pause investment

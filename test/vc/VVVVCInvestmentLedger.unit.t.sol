@@ -35,7 +35,6 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         //add permissions to ledgerManagerRole for withdraw and addInvestmentRecord on the LedgerInstance
         bytes4 withdrawSelector = LedgerInstance.withdraw.selector;
         bytes4 addInvestmentRecordsSelector = LedgerInstance.addInvestmentRecords.selector;
-        bytes4 refundSelector = LedgerInstance.refundUserInvestment.selector;
         bytes4 setInvestmentPausedSelector = LedgerInstance.setInvestmentIsPaused.selector;
         AuthRegistry.setPermission(address(LedgerInstance), withdrawSelector, ledgerManagerRole);
         AuthRegistry.setPermission(
@@ -43,7 +42,6 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             addInvestmentRecordsSelector,
             ledgerManagerRole
         );
-        AuthRegistry.setPermission(address(LedgerInstance), refundSelector, ledgerManagerRole);
         AuthRegistry.setPermission(
             address(LedgerInstance),
             setInvestmentPausedSelector,
@@ -457,117 +455,6 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         vm.startPrank(sampleUser, sampleUser);
         vm.expectRevert();
         LedgerInstance.addInvestmentRecords(kycAddresses, investmentRounds, amountsToInvest);
-        vm.stopPrank();
-    }
-
-    /**
-     * @notice Tests that an admin can refund an investment made by a user
-     */
-    function testAdminRefund() public {
-        //invest as user
-        VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
-            sampleInvestmentRoundIds[0],
-            investmentRoundSampleLimit,
-            sampleAmountsToInvest[0],
-            userPaymentTokenDefaultAllocation, //1e6
-            exchangeRateNumerator,
-            feeNumerator,
-            sampleKycAddress
-        );
-
-        uint256 preInvestBalance = PaymentTokenInstance.balanceOf(sampleUser);
-        investAsUser(sampleUser, params);
-
-        //refund same investment as admin
-        vm.startPrank(ledgerManager, ledgerManager);
-        uint256 stablecoinEquivalent = params.amountToInvest; //1:1 in this case
-
-        //calculate fees
-        uint256 tokenFee = (params.amountToInvest * params.feeNumerator) /
-            LedgerInstance.FEE_DENOMINATOR();
-        uint256 stablecoinEquivalentFee = (stablecoinEquivalent * params.feeNumerator) /
-            LedgerInstance.FEE_DENOMINATOR();
-
-        LedgerInstance.refundUserInvestment(
-            sampleKycAddress,
-            sampleUser,
-            params.investmentRound,
-            address(PaymentTokenInstance),
-            params.amountToInvest - tokenFee,
-            stablecoinEquivalent - stablecoinEquivalentFee
-        );
-
-        //confirm user is refunded, and no record of investment remains on the ledger contract
-        assertTrue(PaymentTokenInstance.balanceOf(sampleUser) == preInvestBalance - tokenFee);
-        assertTrue(
-            LedgerInstance.kycAddressInvestedPerRound(sampleKycAddress, params.investmentRound) == 0
-        );
-        assertTrue(LedgerInstance.totalInvestedPerRound(params.investmentRound) == 0);
-    }
-
-    /**
-     * @notice Tests that a non-admin cannot refund an investment made by a user
-     */
-    function testNonAdminCannotRefundInvestment() public {
-        //invest as user
-        VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
-            sampleInvestmentRoundIds[0],
-            investmentRoundSampleLimit,
-            sampleAmountsToInvest[0],
-            userPaymentTokenDefaultAllocation, //1e6
-            exchangeRateNumerator,
-            feeNumerator,
-            sampleKycAddress
-        );
-
-        investAsUser(sampleUser, params);
-
-        //refund same investment as admin
-        vm.startPrank(sampleUser, sampleUser);
-        uint256 stablecoinEquivalent = params.amountToInvest; //1:1 in this case
-        vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
-        LedgerInstance.refundUserInvestment(
-            sampleKycAddress,
-            sampleUser,
-            params.investmentRound,
-            address(PaymentTokenInstance),
-            params.amountToInvest,
-            stablecoinEquivalent
-        );
-    }
-
-    /**
-     * @notice Tests that the VCRefund event is emitted when a refund is made
-     * @dev manually adds record, then "refunds" it, by only erasing the record of investment on the ledger (transfers 0 tokens)
-     */
-    function testEmitVCRefund() public {
-        address[] memory kycAddresses = new address[](1);
-        uint256[] memory investmentRounds = new uint256[](1);
-        uint256[] memory amountsToInvest = new uint256[](1);
-        kycAddresses[0] = sampleKycAddress;
-        investmentRounds[0] = sampleInvestmentRoundIds[0];
-        amountsToInvest[0] = 1000;
-
-        vm.startPrank(ledgerManager, ledgerManager);
-        LedgerInstance.addInvestmentRecords(kycAddresses, investmentRounds, amountsToInvest);
-        vm.expectEmit(address(LedgerInstance));
-        emit VVVVCInvestmentLedger.VCRefund(
-            sampleKycAddress,
-            sampleUser,
-            investmentRounds[0],
-            address(PaymentTokenInstance),
-            0,
-            amountsToInvest[0]
-        );
-        //transfers 0 tokens, but erases the investment record
-        LedgerInstance.refundUserInvestment(
-            sampleKycAddress,
-            sampleUser,
-            investmentRounds[0],
-            address(PaymentTokenInstance),
-            0,
-            amountsToInvest[0]
-        );
         vm.stopPrank();
     }
 
