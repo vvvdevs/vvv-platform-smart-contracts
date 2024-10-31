@@ -10,7 +10,7 @@
 		1. in `contract_metrics_for_audit.md`
 2. **Smart Contract Requirements**
 	1. Venture Capital Investment and Claims (`contracts/vc/`)
-		1. `VVVVCInvestmentLedger.sol
+		1. `VVVVCInvestmentLedger.sol`
 			1. Admin
 				1. All admin-only functions are gated via the `onlyAuthorized` modifier from `contracts/auth/VVVAuthorizationRegistryChecker.sol`.
 				2. Can pause all investing via this contract
