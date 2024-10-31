@@ -161,11 +161,11 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
         ];
         uint256 totalInvestedThisRound = totalInvestedPerRound[_params.investmentRound];
 
-        //the stablecoin amount equivalent to the payment token amount supplied at the current exchange rate
+        // the stablecoin amount equivalent to the payment token amount supplied at the current exchange rate
         uint256 preFeeStableAmountEquivalent = (_params.amountToInvest * _params.exchangeRateNumerator) /
             exchangeRateDenominator;
 
-        //the post-fee stableAmountEquivalent, to contribute toward user and round limits
+        // the post-fee stableAmountEquivalent, to contribute toward user and round limits
         uint256 postFeeStableAmountEquivalent = preFeeStableAmountEquivalent -
             (preFeeStableAmountEquivalent * _params.feeNumerator) /
             FEE_DENOMINATOR;
