@@ -1,7 +1,6 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import { CompleteMerkle } from "lib/murky/src/CompleteMerkle.sol";
 import { Test } from "lib/forge-std/src/Test.sol";
 import { MockERC20 } from "contracts/mock/MockERC20.sol";
 import { VVVVCInvestmentLedger } from "contracts/vc/VVVVCInvestmentLedger.sol";
@@ -14,7 +13,6 @@ import { VVVAuthorizationRegistry } from "contracts/auth/VVVAuthorizationRegistr
 abstract contract VVVVCTestBase is Test {
     VVVAuthorizationRegistry AuthRegistry;
     VVVVCInvestmentLedger LedgerInstance;
-    CompleteMerkle m;
     MockERC20 PaymentTokenInstance;
     MockERC20 ProjectTokenInstance;
     VVVVCTokenDistributor TokenDistributorInstance;

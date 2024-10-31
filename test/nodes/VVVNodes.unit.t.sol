@@ -541,9 +541,7 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
 
         vm.deal(deployer, amountsSum);
 
-        uint256 gasLeftBefore = gasleft();
         NodesInstance.depositLaunchpadYield{ value: amountsSum }(tokenIds, amounts);
-        uint256 gasUsed = gasLeftBefore - gasleft();
         vm.stopPrank();
 
         for (uint256 i = 0; i < nodesToMint; ++i) {
@@ -658,13 +656,11 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         //deal the amount to unlock per node * nodesToMint to the contract to ensure all can claim
         vm.deal(address(NodesInstance), amountToUnlockPerNode * nodesToMint);
 
-        uint256 gasLeftBefore = gasleft();
         vm.expectEmit(address(NodesInstance));
         for (uint256 i = 0; i < nodesToMint; ++i) {
             emit VVVNodes.UnlockTransactionProcessingYield(i + 1, amountToUnlockPerNode);
         }
         NodesInstance.unlockTransactionProcessingYield(tokenIds, amountToUnlockPerNode);
-        uint256 gasUsed = gasLeftBefore - gasleft();
         vm.stopPrank();
 
         for (uint256 i = 0; i < nodesToMint; ++i) {
