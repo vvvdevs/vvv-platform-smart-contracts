@@ -58,6 +58,11 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
         assertTrue(address(TokenDistributorInstance) != address(0));
     }
 
+    // ensure claims are not paused by default
+    function testClaimsAreNotPausedByDefault() public {
+        assertFalse(TokenDistributorInstance.claimIsPaused());
+    }
+
     function testValidateSignature() public {
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
             sampleKycAddress,
@@ -131,6 +136,31 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
 
         claimAsUser(sampleKycAddress, claimParams);
         assertTrue(ProjectTokenInstance.balanceOf(sampleKycAddress) == sum(sampleTokenAmountsToClaim));
+    }
+
+    //test that claims will succeed after unpausing claims
+    function testClaimSuccessAfterUnpause() public {
+        vm.startPrank(tokenDistributorManager);
+        TokenDistributorInstance.setClaimIsPaused(true);
+        vm.stopPrank();
+
+        VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
+            sampleUser,
+            projectTokenProxyWallets,
+            sampleTokenAmountsToClaim
+        );
+
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVVVCTokenDistributor.ClaimIsPaused.selector);
+        TokenDistributorInstance.claim(claimParams);
+        vm.stopPrank();
+
+        vm.startPrank(tokenDistributorManager);
+        TokenDistributorInstance.setClaimIsPaused(false);
+        vm.stopPrank();
+
+        claimAsUser(sampleUser, claimParams);
+        assertTrue(ProjectTokenInstance.balanceOf(sampleUser) == sum(sampleTokenAmountsToClaim));
     }
 
     // tests any claim where the signature includes a parameter value that invalidates it
