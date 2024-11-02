@@ -16,7 +16,7 @@
 				2. Can manually add a record of investment contribution to an investment round
 			2. User
 				1. Can invest in an active investment round **only** when `investmentIsPaused` is `false`, within the contribution limits set in the signature supplied to the `invest` call, within the start and end times of the investment round, and when the input signature is valid, including the condition that it is not expired
-				2. A fee (signature parameter defined off-chain) is only taken from the user-invested amount if the fee value is positive, and when a fee is taken, the correct amount is taken. Fees are set by an admin off-chain at the time of round creation in an out-of-scope centralized system, then validated as a signature parameter when a user calls `invest`.
+				2. A fee (signature parameter defined off-chain) is only taken from the user-invested amount when the fee value is positive. The fee calculation (`amount * feeNumerator / FEE_DENOMINATOR`) has a precision of 1/10000, or 0.01%, since `FEE_DENOMINATOR` is set to 10,000. This level of precision is acceptable for the fee calculation.
 				3. A user without the required role cannot access any functions gated via the `onlyAuthorized` modifier.
 		3.  `VVVVCTokenDistributor.sol`
 			1. Role-Restricted
