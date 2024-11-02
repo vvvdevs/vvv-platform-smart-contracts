@@ -26,7 +26,21 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
             ProjectTokenInstance.mint(projectTokenProxyWallets[i], projectTokenAmountToProxyWallet);
         }
 
-        TokenDistributorInstance = new VVVVCTokenDistributor(testSigner, environmentTag);
+        AuthRegistry = new VVVAuthorizationRegistry(defaultAdminTransferDelay, deployer);
+
+        TokenDistributorInstance = new VVVVCTokenDistributor(
+            testSigner,
+            environmentTag,
+            address(AuthRegistry)
+        );
+
+        AuthRegistry.grantRole(tokenDistributorManagerRole, tokenDistributorManager);
+        bytes4 setClaimPausedSelector = TokenDistributorInstance.setClaimIsPaused.selector;
+        AuthRegistry.setPermission(
+            address(TokenDistributorInstance),
+            setClaimPausedSelector,
+            tokenDistributorManagerRole
+        );
 
         distributorDomainSeparator = TokenDistributorInstance.DOMAIN_SEPARATOR();
         claimTypehash = TokenDistributorInstance.CLAIM_TYPEHASH();
