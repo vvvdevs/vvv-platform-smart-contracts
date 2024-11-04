@@ -18,7 +18,21 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
     function setUp() public {
         vm.startPrank(deployer, deployer);
 
-        TokenDistributorInstance = new VVVVCTokenDistributor(testSigner, environmentTag);
+        AuthRegistry = new VVVAuthorizationRegistry(defaultAdminTransferDelay, deployer);
+
+        TokenDistributorInstance = new VVVVCTokenDistributor(
+            testSigner,
+            environmentTag,
+            address(AuthRegistry)
+        );
+
+        AuthRegistry.grantRole(tokenDistributorManagerRole, tokenDistributorManager);
+        bytes4 setClaimPausedSelector = TokenDistributorInstance.setClaimIsPaused.selector;
+        AuthRegistry.setPermission(
+            address(TokenDistributorInstance),
+            setClaimPausedSelector,
+            tokenDistributorManagerRole
+        );
 
         distributorDomainSeparator = TokenDistributorInstance.DOMAIN_SEPARATOR();
         claimTypehash = TokenDistributorInstance.CLAIM_TYPEHASH();
@@ -42,6 +56,11 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
 
     function testDeployment() public {
         assertTrue(address(TokenDistributorInstance) != address(0));
+    }
+
+    // ensure claims are not paused by default
+    function testClaimsAreNotPausedByDefault() public {
+        assertFalse(TokenDistributorInstance.claimIsPaused());
     }
 
     function testValidateSignature() public {
@@ -119,6 +138,31 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
         assertTrue(ProjectTokenInstance.balanceOf(sampleKycAddress) == sum(sampleTokenAmountsToClaim));
     }
 
+    //test that claims will succeed after unpausing claims
+    function testClaimSuccessAfterUnpause() public {
+        vm.startPrank(tokenDistributorManager);
+        TokenDistributorInstance.setClaimIsPaused(true);
+        vm.stopPrank();
+
+        VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
+            sampleUser,
+            projectTokenProxyWallets,
+            sampleTokenAmountsToClaim
+        );
+
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVVVCTokenDistributor.ClaimIsPaused.selector);
+        TokenDistributorInstance.claim(claimParams);
+        vm.stopPrank();
+
+        vm.startPrank(tokenDistributorManager);
+        TokenDistributorInstance.setClaimIsPaused(false);
+        vm.stopPrank();
+
+        claimAsUser(sampleUser, claimParams);
+        assertTrue(ProjectTokenInstance.balanceOf(sampleUser) == sum(sampleTokenAmountsToClaim));
+    }
+
     // tests any claim where the signature includes a parameter value that invalidates it
     function testClaimWithInvalidSignature() public {
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
@@ -160,6 +204,24 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
         claimAsUser(sampleUser, claimParams);
     }
 
+    // that calling claim when claimIsPaused is true causes revert ClaimIsPaused
+    function testClaimWhenPaused() public {
+        VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
+            sampleUser,
+            projectTokenProxyWallets,
+            sampleTokenAmountsToClaim
+        );
+
+        vm.startPrank(tokenDistributorManager);
+        TokenDistributorInstance.setClaimIsPaused(true);
+        vm.stopPrank();
+
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVVVCTokenDistributor.ClaimIsPaused.selector);
+        TokenDistributorInstance.claim(claimParams);
+        vm.stopPrank();
+    }
+
     // Test that VCClaim is correctly emitted when project tokens are claimed
     function testEmitVCClaim() public {
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
@@ -178,6 +240,29 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             claimParams.nonce
         );
         TokenDistributorInstance.claim(claimParams);
+        vm.stopPrank();
+    }
+
+    // test that a caller given the required role can pause and unpause claims
+    function testAuthorizedCanPauseClaims() public {
+        vm.startPrank(tokenDistributorManager);
+        TokenDistributorInstance.setClaimIsPaused(true);
+        vm.stopPrank();
+        assertTrue(TokenDistributorInstance.claimIsPaused());
+    }
+
+    function testAuthorizedCanUnpauseClaims() public {
+        vm.startPrank(tokenDistributorManager);
+        TokenDistributorInstance.setClaimIsPaused(false);
+        vm.stopPrank();
+        assertFalse(TokenDistributorInstance.claimIsPaused());
+    }
+
+    // test that a caller that is not given the required role cannot pause or unpause claims
+    function testUnauthorizedCannotCallSetClaimIsPaused() public {
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
+        TokenDistributorInstance.setClaimIsPaused(false);
         vm.stopPrank();
     }
 }
