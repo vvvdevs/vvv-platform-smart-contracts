@@ -1,7 +1,6 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import { CompleteMerkle } from "lib/murky/src/CompleteMerkle.sol";
 import { Test } from "lib/forge-std/src/Test.sol";
 import { MockERC20 } from "contracts/mock/MockERC20.sol";
 import { VVVVCInvestmentLedger } from "contracts/vc/VVVVCInvestmentLedger.sol";
@@ -14,7 +13,6 @@ import { VVVAuthorizationRegistry } from "contracts/auth/VVVAuthorizationRegistr
 abstract contract VVVVCTestBase is Test {
     VVVAuthorizationRegistry AuthRegistry;
     VVVVCInvestmentLedger LedgerInstance;
-    CompleteMerkle m;
     MockERC20 PaymentTokenInstance;
     MockERC20 ProjectTokenInstance;
     VVVVCTokenDistributor TokenDistributorInstance;
@@ -62,6 +60,8 @@ abstract contract VVVVCTestBase is Test {
     uint256 exchangeRateNumerator = 1e6;
     uint256 exchangeRateDenominator = 1e6;
     uint256 feeNumerator = 1000; //10% fee sample
+    uint256 activeRoundStartTimestamp = block.timestamp;
+    uint256 activeRoundEndTimestamp = block.timestamp + 1 days;
 
     //claim contract-specific values
     uint256 projectTokenAmountToProxyWallet = 1_000_000 * 1e18; //1 million tokens
@@ -169,13 +169,15 @@ abstract contract VVVVCTestBase is Test {
         uint256 _investmentAllocation,
         uint256 _exchangeRateNumerator,
         uint256 _feeNumerator,
-        address _kycAddress
+        address _kycAddress,
+        uint256 _investmentRoundStartTimestamp,
+        uint256 _investmentRoundEndTimestamp
     ) public view returns (VVVVCInvestmentLedger.InvestParams memory) {
         VVVVCInvestmentLedger.InvestParams memory params = VVVVCInvestmentLedger.InvestParams({
             investmentRound: _investmentRound,
             investmentRoundLimit: _investmentRoundLimit,
-            investmentRoundStartTimestamp: block.timestamp,
-            investmentRoundEndTimestamp: block.timestamp + 1 days,
+            investmentRoundStartTimestamp: _investmentRoundStartTimestamp,
+            investmentRoundEndTimestamp: _investmentRoundEndTimestamp,
             paymentTokenAddress: address(PaymentTokenInstance),
             kycAddress: _kycAddress,
             kycAddressAllocation: _investmentAllocation,
@@ -214,7 +216,9 @@ abstract contract VVVVCTestBase is Test {
                 userPaymentTokenDefaultAllocation,
                 exchangeRateNumerator,
                 feeNumerator,
-                sampleKycAddress
+                sampleKycAddress,
+                block.timestamp,
+                block.timestamp + 1 days
             );
             investAsUser(_investor, investParams);
         }
