@@ -4,12 +4,13 @@ pragma solidity 0.8.23;
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { VVVAuthorizationRegistryChecker } from "contracts/auth/VVVAuthorizationRegistryChecker.sol";
 
 /**
  * @title VVV VC Token Distributor
  * @notice This contract facilitates token distribution for VVV VC projects
  */
-contract VVVVCTokenDistributor {
+contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
     using SafeERC20 for IERC20;
 
     /// @notice EIP-712 standard definitions
@@ -25,6 +26,9 @@ contract VVVVCTokenDistributor {
 
     /// @notice The address authorized to sign investment transactions
     address public signer;
+
+    /// @notice flag to pause claims
+    bool public claimIsPaused;
 
     /// @notice Mapping to store a nonce for each KYC address
     mapping(address => uint256) public nonces;
@@ -65,6 +69,9 @@ contract VVVVCTokenDistributor {
         uint256 nonce
     );
 
+    /// @notice Error thrown when a claim is attempted while claims are paused
+    error ClaimIsPaused();
+
     /// @notice Error thrown when the signer address is not recovered from the provided signature
     error InvalidSignature();
 
@@ -74,7 +81,11 @@ contract VVVVCTokenDistributor {
     /// @notice Error thrown when the lengths of the projectTokenProxyWallets and tokenAmountsToClaim arrays do not match
     error ArrayLengthMismatch();
 
-    constructor(address _signer, string memory _environmentTag) {
+    constructor(
+        address _signer,
+        string memory _environmentTag,
+        address _authorizationRegistryAddress
+    ) VVVAuthorizationRegistryChecker(_authorizationRegistryAddress) {
         signer = _signer;
 
         // EIP-712 domain separator
@@ -93,6 +104,10 @@ contract VVVVCTokenDistributor {
         @param _params A ClaimParams struct describing the desired claim(s)
      */
     function claim(ClaimParams memory _params) public {
+        if (claimIsPaused) {
+            revert ClaimIsPaused();
+        }
+
         if (_params.projectTokenProxyWallets.length != _params.tokenAmountsToClaim.length) {
             revert ArrayLengthMismatch();
         }
@@ -105,10 +120,13 @@ contract VVVVCTokenDistributor {
             revert InvalidSignature();
         }
 
+        // update nonce
         nonces[_params.kycAddress] = _params.nonce;
 
+        // define token to transfer
         IERC20 projectToken = IERC20(_params.projectTokenAddress);
 
+        // transfer tokens from each wallet to the caller
         for (uint256 i = 0; i < _params.projectTokenProxyWallets.length; i++) {
             projectToken.safeTransferFrom(
                 _params.projectTokenProxyWallets[i],
@@ -160,5 +178,10 @@ contract VVVVCTokenDistributor {
         bool isSigner = recoveredAddress == signer;
         bool isExpired = block.timestamp > _params.deadline;
         return isSigner && !isExpired;
+    }
+
+    /// @notice admin function to pause claims
+    function setClaimIsPaused(bool _isPaused) external onlyAuthorized {
+        claimIsPaused = _isPaused;
     }
 }
