@@ -74,7 +74,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
         assertTrue(TokenDistributorInstance.isSignatureValid(claimParams));
     }
 
-    function testInvalidateSignature() public {
+    function testInvalidateSignatureWithInvalidProjectTokenProxyWallet() public {
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
             sampleKycAddress,
             sampleKycAddress,
@@ -84,6 +84,18 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
 
         claimParams.projectTokenProxyWallets[0] = address(0);
 
+        assertFalse(TokenDistributorInstance.isSignatureValid(claimParams));
+    }
+
+    function testInvalidateSignatureWithInvalidCallerAddress() public {
+        VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
+            sampleUser,
+            sampleKycAddress,
+            projectTokenProxyWallets,
+            sampleTokenAmountsToClaim
+        );
+
+        claimParams.callerAddress = address(0);
         assertFalse(TokenDistributorInstance.isSignatureValid(claimParams));
     }
 
