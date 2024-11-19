@@ -65,6 +65,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
 
     function testValidateSignature() public {
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
+            sampleUser,
             sampleKycAddress,
             projectTokenProxyWallets,
             sampleTokenAmountsToClaim
@@ -75,6 +76,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
 
     function testInvalidateSignature() public {
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
+            sampleKycAddress,
             sampleKycAddress,
             projectTokenProxyWallets,
             sampleTokenAmountsToClaim
@@ -97,6 +99,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
 
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
             sampleKycAddress,
+            sampleKycAddress,
             thisProjectTokenProxyWallets,
             thisTokenAmountsToClaim
         );
@@ -118,6 +121,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
         //claim for the same single round
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
             sampleKycAddress,
+            sampleKycAddress,
             thisProjectTokenProxyWallets,
             thisTokenAmountsToClaim
         );
@@ -129,6 +133,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
     // test claiming in multiple rounds
     function testClaimMultipleRounds() public {
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
+            sampleKycAddress,
             sampleKycAddress,
             projectTokenProxyWallets,
             sampleTokenAmountsToClaim
@@ -145,6 +150,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
         vm.stopPrank();
 
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
+            sampleUser,
             sampleUser,
             projectTokenProxyWallets,
             sampleTokenAmountsToClaim
@@ -166,6 +172,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
     // tests any claim where the signature includes a parameter value that invalidates it
     function testClaimWithInvalidSignature() public {
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
+            sampleUser,
             sampleKycAddress,
             projectTokenProxyWallets,
             sampleTokenAmountsToClaim
@@ -179,6 +186,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
     // tests that invalid nonce causes revert with InvalidNonce error
     function testClaimWithInvalidNonce() public {
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
+            sampleUser,
             sampleKycAddress,
             projectTokenProxyWallets,
             sampleTokenAmountsToClaim
@@ -195,6 +203,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
         shorterProxyWalletArray[0] = projectTokenProxyWallets[0];
 
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
+            sampleUser,
             sampleKycAddress,
             shorterProxyWalletArray,
             sampleTokenAmountsToClaim
@@ -207,6 +216,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
     // that calling claim when claimIsPaused is true causes revert ClaimIsPaused
     function testClaimWhenPaused() public {
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
+            sampleUser,
             sampleUser,
             projectTokenProxyWallets,
             sampleTokenAmountsToClaim
@@ -225,6 +235,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
     // Test that VCClaim is correctly emitted when project tokens are claimed
     function testEmitVCClaim() public {
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
+            sampleUser,
             sampleKycAddress,
             projectTokenProxyWallets,
             sampleTokenAmountsToClaim

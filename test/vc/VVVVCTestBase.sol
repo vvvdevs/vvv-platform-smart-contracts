@@ -236,6 +236,7 @@ abstract contract VVVVCTestBase is Test {
                 keccak256(
                     abi.encode(
                         _claimTypehash,
+                        _params.callerAddress,
                         _params.kycAddress,
                         _params.projectTokenAddress,
                         _params.projectTokenProxyWallets,
@@ -254,11 +255,13 @@ abstract contract VVVVCTestBase is Test {
     }
 
     function generateClaimParamsWithSignature(
+        address _callerAddress,
         address _kycAddress,
         address[] memory _projectTokenProxyWallets,
         uint256[] memory _tokenAmountsToClaim
     ) public view returns (VVVVCTokenDistributor.ClaimParams memory) {
         VVVVCTokenDistributor.ClaimParams memory params = VVVVCTokenDistributor.ClaimParams({
+            callerAddress: _callerAddress,
             kycAddress: _kycAddress,
             projectTokenAddress: address(ProjectTokenInstance),
             projectTokenProxyWallets: _projectTokenProxyWallets,

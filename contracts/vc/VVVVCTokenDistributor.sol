@@ -35,6 +35,7 @@ contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
 
     /**
         @notice Parameters for claim function
+        @param callerAddress Address of the caller
         @param kycAddress Address of the user's KYC wallet
         @param projectTokenAddress Address of the project token to be claimed
         @param projectTokenProxyWallets Array of addresses of the wallets from which the project token is to be claimed
@@ -44,6 +45,7 @@ contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
         @param signature Signature of the user's KYC wallet address
      */
     struct ClaimParams {
+        address callerAddress;
         address kycAddress;
         address projectTokenAddress;
         address[] projectTokenProxyWallets;
@@ -104,6 +106,9 @@ contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
         @param _params A ClaimParams struct describing the desired claim(s)
      */
     function claim(ClaimParams memory _params) public {
+        //ensure caller (msg.sender) is an alias of the KYC address
+        _params.callerAddress = msg.sender;
+
         if (claimIsPaused) {
             revert ClaimIsPaused();
         }
@@ -162,6 +167,7 @@ contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
                 keccak256(
                     abi.encode(
                         CLAIM_TYPEHASH,
+                        _params.callerAddress,
                         _params.kycAddress,
                         _params.projectTokenAddress,
                         _params.projectTokenProxyWallets,
