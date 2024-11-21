@@ -95,7 +95,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             sampleTokenAmountsToClaim
         );
 
-        claimParams.callerAddress = address(0);
+        claimParams.tokenRecipient = address(0);
         assertFalse(TokenDistributorInstance.isSignatureValid(claimParams));
     }
 
@@ -179,6 +179,20 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
 
         claimAsUser(sampleUser, claimParams);
         assertTrue(ProjectTokenInstance.balanceOf(sampleUser) == sum(sampleTokenAmountsToClaim));
+    }
+
+    // tests that the InvalidTokenRecipient error is thrown when the token recipient is not the caller
+    function testInvalidTokenRecipient() public {
+        VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
+            sampleUser,
+            sampleKycAddress,
+            projectTokenProxyWallets,
+            sampleTokenAmountsToClaim
+        );
+
+        claimParams.tokenRecipient = address(0);
+        vm.expectRevert(VVVVCTokenDistributor.InvalidTokenRecipient.selector);
+        claimAsUser(sampleUser, claimParams);
     }
 
     // tests any claim where the signature includes a parameter value that invalidates it

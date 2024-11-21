@@ -19,7 +19,7 @@ contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
     bytes32 public constant CLAIM_TYPEHASH =
         keccak256(
             bytes(
-                "ClaimParams(address kycAddress,address projectTokenAddress,address[] projectTokenProxyWallets,uint256[] tokenAmountsToClaim,uint256 nonce,uint256 deadline)"
+                "ClaimParams(address tokenRecipient,address kycAddress,address projectTokenAddress,address[] projectTokenProxyWallets,uint256[] tokenAmountsToClaim,uint256 nonce,uint256 deadline)"
             )
         );
     bytes32 public immutable DOMAIN_SEPARATOR;
@@ -35,7 +35,7 @@ contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
 
     /**
         @notice Parameters for claim function
-        @param callerAddress Address of the caller
+        @param tokenRecipient Address to receive the claimed tokens
         @param kycAddress Address of the user's KYC wallet
         @param projectTokenAddress Address of the project token to be claimed
         @param projectTokenProxyWallets Array of addresses of the wallets from which the project token is to be claimed
@@ -45,7 +45,7 @@ contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
         @param signature Signature of the user's KYC wallet address
      */
     struct ClaimParams {
-        address callerAddress;
+        address tokenRecipient;
         address kycAddress;
         address projectTokenAddress;
         address[] projectTokenProxyWallets;
@@ -83,6 +83,9 @@ contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
     /// @notice Error thrown when the lengths of the projectTokenProxyWallets and tokenAmountsToClaim arrays do not match
     error ArrayLengthMismatch();
 
+    /// @notice Error thrown when the token recipient is not the caller
+    error InvalidTokenRecipient();
+
     constructor(
         address _signer,
         string memory _environmentTag,
@@ -106,8 +109,10 @@ contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
         @param _params A ClaimParams struct describing the desired claim(s)
      */
     function claim(ClaimParams memory _params) public {
-        //ensure caller (msg.sender) is an alias of the KYC address
-        _params.callerAddress = msg.sender;
+        //ensure msg.sender is the signed token recipient
+        if (_params.tokenRecipient != msg.sender) {
+            revert InvalidTokenRecipient();
+        }
 
         if (claimIsPaused) {
             revert ClaimIsPaused();
@@ -135,7 +140,7 @@ contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
         for (uint256 i = 0; i < _params.projectTokenProxyWallets.length; i++) {
             projectToken.safeTransferFrom(
                 _params.projectTokenProxyWallets[i],
-                msg.sender,
+                _params.tokenRecipient,
                 _params.tokenAmountsToClaim[i]
             );
         }
@@ -167,7 +172,7 @@ contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
                 keccak256(
                     abi.encode(
                         CLAIM_TYPEHASH,
-                        _params.callerAddress,
+                        _params.tokenRecipient,
                         _params.kycAddress,
                         _params.projectTokenAddress,
                         _params.projectTokenProxyWallets,
