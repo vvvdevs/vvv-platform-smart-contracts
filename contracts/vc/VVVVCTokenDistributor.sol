@@ -164,8 +164,8 @@ contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
                         CLAIM_TYPEHASH,
                         _params.kycAddress,
                         _params.projectTokenAddress,
-                        _params.projectTokenProxyWallets,
-                        _params.tokenAmountsToClaim,
+                        keccak256(abi.encodePacked(_params.projectTokenProxyWallets)),
+                        keccak256(abi.encodePacked(_params.tokenAmountsToClaim)),
                         _params.nonce,
                         _params.deadline
                     )
