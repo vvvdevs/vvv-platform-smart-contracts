@@ -34,7 +34,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             tokenDistributorManagerRole
         );
 
-        distributorDomainSeparator = TokenDistributorInstance.DOMAIN_SEPARATOR();
+        distributorDomainSeparator = TokenDistributorInstance.computeDomainSeparator();
         claimTypehash = TokenDistributorInstance.CLAIM_TYPEHASH();
 
         ProjectTokenInstance = new MockERC20(18);
@@ -264,5 +264,20 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
         vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
         TokenDistributorInstance.setClaimIsPaused(false);
         vm.stopPrank();
+    }
+
+    /// @notice Tests that the domain separator matches reference domain separator
+    function testDomainSeparatorMatch() public {
+        assertTrue(
+            TokenDistributorInstance.computeDomainSeparator() ==
+                calculateReferenceDomainSeparator(address(TokenDistributorInstance))
+        );
+    }
+
+    /// @notice Tests that the domain separator is updated when chain ID changes
+    function testDomainSeparatorChainIdChange() public {
+        bytes32 refDomainSeparator = calculateReferenceDomainSeparator(address(TokenDistributorInstance));
+        vm.chainId(123456789);
+        assertFalse(TokenDistributorInstance.computeDomainSeparator() == refDomainSeparator);
     }
 }

@@ -48,7 +48,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             ledgerManagerRole
         );
 
-        ledgerDomainSeparator = LedgerInstance.DOMAIN_SEPARATOR();
+        ledgerDomainSeparator = LedgerInstance.computeDomainSeparator();
         investmentTypehash = LedgerInstance.INVESTMENT_TYPEHASH();
 
         PaymentTokenInstance.mint(sampleUser, paymentTokenMintAmount); //10k tokens
@@ -672,5 +672,20 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         vm.startPrank(sampleUser, sampleUser);
         vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
         LedgerInstance.setInvestmentIsPaused(true);
+    }
+
+    /// @notice Tests that the domain separator matches reference domain separator
+    function testDomainSeparatorMatch() public {
+        assertTrue(
+            LedgerInstance.computeDomainSeparator() ==
+                calculateReferenceDomainSeparator(address(LedgerInstance))
+        );
+    }
+
+    /// @notice Tests that the domain separator is updated when chain ID changes
+    function testDomainSeparatorChainIdChange() public {
+        bytes32 refDomainSeparator = calculateReferenceDomainSeparator(address(LedgerInstance));
+        vm.chainId(123456789);
+        assertFalse(LedgerInstance.computeDomainSeparator() == refDomainSeparator);
     }
 }

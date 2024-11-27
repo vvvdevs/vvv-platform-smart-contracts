@@ -25,7 +25,7 @@ contract VVVVCInvestmentLedgerFuzzTests is VVVVCTestBase {
             address(0),
             exchangeRateDenominator
         );
-        ledgerDomainSeparator = LedgerInstance.DOMAIN_SEPARATOR();
+        ledgerDomainSeparator = LedgerInstance.computeDomainSeparator();
         investmentTypehash = LedgerInstance.INVESTMENT_TYPEHASH();
 
         PaymentTokenInstance.mint(sampleUser, paymentTokenMintAmount); //10k tokens
