@@ -70,8 +70,9 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             projectTokenProxyWallets,
             sampleTokenAmountsToClaim
         );
-
+        vm.startPrank(sampleUser);
         assertTrue(TokenDistributorInstance.isSignatureValid(claimParams));
+        vm.stopPrank();
     }
 
     function testInvalidateSignatureWithInvalidProjectTokenProxyWallet() public {
@@ -95,8 +96,9 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             sampleTokenAmountsToClaim
         );
 
-        claimParams.tokenRecipient = address(0);
+        vm.startPrank(sampleKycAddress);
         assertFalse(TokenDistributorInstance.isSignatureValid(claimParams));
+        vm.stopPrank();
     }
 
     //test that claiming for a single round works
@@ -190,9 +192,8 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             sampleTokenAmountsToClaim
         );
 
-        claimParams.tokenRecipient = address(0);
-        vm.expectRevert(VVVVCTokenDistributor.InvalidTokenRecipient.selector);
-        claimAsUser(sampleUser, claimParams);
+        vm.expectRevert(VVVVCTokenDistributor.InvalidSignature.selector);
+        claimAsUser(sampleKycAddress, claimParams);
     }
 
     // tests any claim where the signature includes a parameter value that invalidates it

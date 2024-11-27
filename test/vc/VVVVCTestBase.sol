@@ -227,7 +227,8 @@ abstract contract VVVVCTestBase is Test {
     function getEIP712SignatureForClaim(
         bytes32 _domainSeparator,
         bytes32 _claimTypehash,
-        VVVVCTokenDistributor.ClaimParams memory _params
+        VVVVCTokenDistributor.ClaimParams memory _params,
+        address _msgSender
     ) public view returns (bytes memory) {
         bytes32 digest = keccak256(
             abi.encodePacked(
@@ -236,7 +237,7 @@ abstract contract VVVVCTestBase is Test {
                 keccak256(
                     abi.encode(
                         _claimTypehash,
-                        _params.tokenRecipient,
+                        _msgSender,
                         _params.kycAddress,
                         _params.projectTokenAddress,
                         _params.projectTokenProxyWallets,
@@ -255,13 +256,12 @@ abstract contract VVVVCTestBase is Test {
     }
 
     function generateClaimParamsWithSignature(
-        address _tokenRecipient,
+        address _msgSender,
         address _kycAddress,
         address[] memory _projectTokenProxyWallets,
         uint256[] memory _tokenAmountsToClaim
     ) public view returns (VVVVCTokenDistributor.ClaimParams memory) {
         VVVVCTokenDistributor.ClaimParams memory params = VVVVCTokenDistributor.ClaimParams({
-            tokenRecipient: _tokenRecipient,
             kycAddress: _kycAddress,
             projectTokenAddress: address(ProjectTokenInstance),
             projectTokenProxyWallets: _projectTokenProxyWallets,
@@ -271,7 +271,12 @@ abstract contract VVVVCTestBase is Test {
             signature: bytes("placeholder")
         });
 
-        bytes memory sig = getEIP712SignatureForClaim(distributorDomainSeparator, claimTypehash, params);
+        bytes memory sig = getEIP712SignatureForClaim(
+            distributorDomainSeparator,
+            claimTypehash,
+            params,
+            _msgSender
+        );
 
         params.signature = sig;
 
