@@ -19,7 +19,7 @@ contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
     bytes32 public constant CLAIM_TYPEHASH =
         keccak256(
             bytes(
-                "ClaimParams(address kycAddress,address projectTokenAddress,address[] projectTokenProxyWallets,uint256[] tokenAmountsToClaim,uint256 nonce,uint256 deadline)"
+                "ClaimParams(address senderAddress,address kycAddress,address projectTokenAddress,address[] projectTokenProxyWallets,uint256[] tokenAmountsToClaim,uint256 nonce,uint256 deadline)"
             )
         );
     bytes32 public immutable DOMAIN_SEPARATOR;
