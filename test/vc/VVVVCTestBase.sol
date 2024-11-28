@@ -148,6 +148,7 @@ abstract contract VVVVCTestBase is Test {
                         _params.paymentTokenAddress,
                         _params.kycAddress,
                         _params.kycAddressAllocation,
+                        _params.amountToInvest,
                         _params.exchangeRateNumerator,
                         _params.feeNumerator,
                         _params.deadline

@@ -156,6 +156,26 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         assertFalse(LedgerInstance.isSignatureValid(params));
     }
 
+    /// @notice Tests that a wrong amountToInvest param is not validated
+    function testInvalidAmountToInvest() public {
+        VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
+            sampleInvestmentRoundIds[0],
+            investmentRoundSampleLimit,
+            sampleAmountsToInvest[0],
+            userPaymentTokenDefaultAllocation,
+            exchangeRateNumerator,
+            feeNumerator,
+            sampleKycAddress,
+            activeRoundStartTimestamp,
+            activeRoundEndTimestamp
+        );
+
+        // change amountToInvest to be +1
+        params.amountToInvest += 1;
+
+        assertFalse(LedgerInstance.isSignatureValid(params));
+    }
+
     /**
      * @notice Tests investment function call by user
      * @dev defines an InvestParams struct, creates a signature for it, validates it, and invests some PaymentToken
