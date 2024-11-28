@@ -160,7 +160,7 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
 
         // the post-fee stableAmountEquivalent, to contribute toward user and round limits
         uint256 postFeeStableAmountEquivalent = preFeeStableAmountEquivalent -
-            (preFeeStableAmountEquivalent * _params.feeNumerator) /
+            (preFeeStableAmountEquivalent * _params.feeNumerator + FEE_DENOMINATOR - 1) /
             FEE_DENOMINATOR;
 
         // check if kyc address has already invested the max stablecoin-equivalent amount for this round,
