@@ -284,7 +284,7 @@ abstract contract VVVVCTestBase is Test {
     }
 
     /// @notice calculates the reference domain separator
-    function calculateReferenceDomainSeparator(address _contract) internal returns (bytes32) {
+    function calculateReferenceDomainSeparator(address _contract) internal view returns (bytes32) {
         return
             keccak256(
                 abi.encode(
