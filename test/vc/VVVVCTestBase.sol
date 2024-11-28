@@ -52,6 +52,8 @@ abstract contract VVVVCTestBase is Test {
     uint256 blockTimestamp;
 
     string environmentTag = "development";
+    bytes32 referenceDomainTypehash =
+        keccak256(bytes("EIP712Domain(string name,uint256 chainId,address verifyingContract)"));
 
     //ledger contract-specific values
     bytes32 ledgerManagerRole = keccak256("LEDGER_MANAGER_ROLE");
@@ -279,5 +281,18 @@ abstract contract VVVVCTestBase is Test {
         vm.startPrank(_claimant, _claimant);
         TokenDistributorInstance.claim(_params);
         vm.stopPrank();
+    }
+
+    /// @notice calculates the reference domain separator
+    function calculateReferenceDomainSeparator(address _contract) internal view returns (bytes32) {
+        return
+            keccak256(
+                abi.encode(
+                    referenceDomainTypehash,
+                    keccak256(abi.encodePacked("VVV", environmentTag)),
+                    block.chainid,
+                    _contract
+                )
+            );
     }
 }

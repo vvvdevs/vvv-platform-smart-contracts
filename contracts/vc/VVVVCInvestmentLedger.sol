@@ -22,7 +22,6 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
                 "InvestParams(uint256 investmentRound,uint256 investmentRoundLimit,uint256 investmentRoundStartTimestamp,uint256 investmentRoundEndTimestamp,address paymentTokenAddress,address kycAddress,uint256 kycAddressAllocation,uint256 exchangeRateNumerator,uint256 feeNumerator,uint256 deadline)"
             )
         );
-    bytes32 public immutable DOMAIN_SEPARATOR;
 
     ///@notice the denominator used to apply a fee to invested tokens
     uint256 public constant FEE_DENOMINATOR = 10_000;
@@ -32,6 +31,9 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
 
     /// @notice flag to pause investments
     bool public investmentIsPaused;
+
+    /// @notice Environment tag used in the domain separator
+    string public environmentTag;
 
     /// @notice the denominator used to convert units of payment tokens to units of $STABLE (i.e. USDC/T)
     uint256 public immutable exchangeRateDenominator;
@@ -121,17 +123,8 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
         uint256 _exchangeRateDenominator
     ) VVVAuthorizationRegistryChecker(_authorizationRegistryAddress) {
         signer = _signer;
+        environmentTag = _environmentTag;
         exchangeRateDenominator = _exchangeRateDenominator;
-
-        // EIP-712 domain separator
-        DOMAIN_SEPARATOR = keccak256(
-            abi.encode(
-                DOMAIN_TYPEHASH,
-                keccak256(abi.encodePacked("VVV", _environmentTag)),
-                block.chainid,
-                address(this)
-            )
-        );
     }
 
     /**
@@ -204,6 +197,24 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
         );
     }
 
+    /// @notice computes DOMAIN_SEPARATOR for investment transactions
+    function _computeDomainSeparator() internal view returns (bytes32) {
+        return
+            keccak256(
+                abi.encode(
+                    DOMAIN_TYPEHASH,
+                    keccak256(abi.encodePacked("VVV", environmentTag)),
+                    block.chainid,
+                    address(this)
+                )
+            );
+    }
+
+    /// @notice external wrapper for _computeDomainSeparator
+    function computeDomainSeparator() external view returns (bytes32) {
+        return _computeDomainSeparator();
+    }
+
     /**
      * @notice Checks if the provided signature is valid
      * @param _params An InvestParams struct containing the investment parameters
@@ -213,7 +224,7 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
         bytes32 digest = keccak256(
             abi.encodePacked(
                 "\x19\x01",
-                DOMAIN_SEPARATOR,
+                _computeDomainSeparator(),
                 keccak256(
                     abi.encode(
                         INVESTMENT_TYPEHASH,
