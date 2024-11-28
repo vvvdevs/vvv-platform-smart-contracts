@@ -288,6 +288,35 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         );
     }
 
+    /// @notice Tests that investing fees round up
+    function testFeeRoundingUp() public {
+        uint256 thisAmountToInvest = 10000;
+        uint256 thisFeeNumerator = 3333;
+
+        VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
+            sampleInvestmentRoundIds[0],
+            investmentRoundSampleLimit,
+            thisAmountToInvest,
+            userPaymentTokenDefaultAllocation,
+            exchangeRateNumerator,
+            thisFeeNumerator,
+            sampleKycAddress,
+            activeRoundStartTimestamp,
+            activeRoundEndTimestamp
+        );
+
+        //invested amount, given that fee is rounded up
+        uint256 expectedTotalInvested = thisAmountToInvest -
+            ((thisAmountToInvest * thisFeeNumerator + LedgerInstance.FEE_DENOMINATOR() - 1) /
+                LedgerInstance.FEE_DENOMINATOR());
+
+        investAsUser(sampleUser, params);
+
+        assertTrue(
+            LedgerInstance.totalInvestedPerRound(sampleInvestmentRoundIds[0]) == expectedTotalInvested
+        );
+    }
+
     /**
      * @notice Tests that a user cannot invest when the investment round is not active and the InactiveInvestmentRound error is thrown, when the round has not yet started
      */
