@@ -19,7 +19,7 @@ contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
     bytes32 public constant CLAIM_TYPEHASH =
         keccak256(
             bytes(
-                "ClaimParams(address kycAddress,address projectTokenAddress,address[] projectTokenProxyWallets,uint256[] tokenAmountsToClaim,uint256 nonce,uint256 deadline)"
+                "ClaimParams(address senderAddress,address kycAddress,address projectTokenAddress,address[] projectTokenProxyWallets,uint256[] tokenAmountsToClaim,uint256 nonce,uint256 deadline)"
             )
         );
 
@@ -119,7 +119,7 @@ contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
         // define token to transfer
         IERC20 projectToken = IERC20(_params.projectTokenAddress);
 
-        // transfer tokens from each wallet to the caller
+        // transfer tokens from each wallet to msg.sender directly
         for (uint256 i = 0; i < _params.projectTokenProxyWallets.length; i++) {
             projectToken.safeTransferFrom(
                 _params.projectTokenProxyWallets[i],
@@ -173,6 +173,7 @@ contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
                 keccak256(
                     abi.encode(
                         CLAIM_TYPEHASH,
+                        msg.sender,
                         _params.kycAddress,
                         _params.projectTokenAddress,
                         keccak256(abi.encodePacked(_params.projectTokenProxyWallets)),
