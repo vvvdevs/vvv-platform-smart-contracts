@@ -19,16 +19,18 @@ contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
     bytes32 public constant CLAIM_TYPEHASH =
         keccak256(
             bytes(
-                "ClaimParams(address kycAddress,address projectTokenAddress,address[] projectTokenProxyWallets,uint256[] tokenAmountsToClaim,uint256 nonce,uint256 deadline)"
+                "ClaimParams(address senderAddress,address kycAddress,address projectTokenAddress,address[] projectTokenProxyWallets,uint256[] tokenAmountsToClaim,uint256 nonce,uint256 deadline)"
             )
         );
-    bytes32 public immutable DOMAIN_SEPARATOR;
 
     /// @notice The address authorized to sign investment transactions
     address public signer;
 
     /// @notice flag to pause claims
     bool public claimIsPaused;
+
+    /// @notice The environment tag used in the domain separator
+    string public environmentTag;
 
     /// @notice Mapping to store a nonce for each KYC address
     mapping(address => uint256) public nonces;
@@ -87,16 +89,7 @@ contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
         address _authorizationRegistryAddress
     ) VVVAuthorizationRegistryChecker(_authorizationRegistryAddress) {
         signer = _signer;
-
-        // EIP-712 domain separator
-        DOMAIN_SEPARATOR = keccak256(
-            abi.encode(
-                DOMAIN_TYPEHASH,
-                keccak256(abi.encodePacked("VVV", _environmentTag)),
-                block.chainid,
-                address(this)
-            )
-        );
+        environmentTag = _environmentTag;
     }
 
     /**
@@ -126,7 +119,7 @@ contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
         // define token to transfer
         IERC20 projectToken = IERC20(_params.projectTokenAddress);
 
-        // transfer tokens from each wallet to the caller
+        // transfer tokens from each wallet to msg.sender directly
         for (uint256 i = 0; i < _params.projectTokenProxyWallets.length; i++) {
             projectToken.safeTransferFrom(
                 _params.projectTokenProxyWallets[i],
@@ -144,6 +137,24 @@ contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
         );
     }
 
+    /// @notice external wrapper for _computeDomainSeparator
+    function computeDomainSeparator() external view returns (bytes32) {
+        return _computeDomainSeparator();
+    }
+
+    /// @notice computes domain separator for claim transactions
+    function _computeDomainSeparator() internal view returns (bytes32) {
+        return
+            keccak256(
+                abi.encode(
+                    DOMAIN_TYPEHASH,
+                    keccak256(abi.encodePacked("VVV", environmentTag)),
+                    block.chainid,
+                    address(this)
+                )
+            );
+    }
+
     /// @notice external wrapper for _isSignatureValid
     function isSignatureValid(ClaimParams memory _params) external view returns (bool) {
         return _isSignatureValid(_params);
@@ -158,14 +169,15 @@ contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
         bytes32 digest = keccak256(
             abi.encodePacked(
                 "\x19\x01",
-                DOMAIN_SEPARATOR,
+                _computeDomainSeparator(),
                 keccak256(
                     abi.encode(
                         CLAIM_TYPEHASH,
+                        msg.sender,
                         _params.kycAddress,
                         _params.projectTokenAddress,
-                        _params.projectTokenProxyWallets,
-                        _params.tokenAmountsToClaim,
+                        keccak256(abi.encodePacked(_params.projectTokenProxyWallets)),
+                        keccak256(abi.encodePacked(_params.tokenAmountsToClaim)),
                         _params.nonce,
                         _params.deadline
                     )

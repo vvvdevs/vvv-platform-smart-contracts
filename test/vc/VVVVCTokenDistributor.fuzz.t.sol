@@ -42,7 +42,7 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
             tokenDistributorManagerRole
         );
 
-        distributorDomainSeparator = TokenDistributorInstance.DOMAIN_SEPARATOR();
+        distributorDomainSeparator = TokenDistributorInstance.computeDomainSeparator();
         claimTypehash = TokenDistributorInstance.CLAIM_TYPEHASH();
 
         vm.stopPrank();
@@ -84,6 +84,7 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
         uint256 balanceBefore = ProjectTokenInstance.balanceOf(_callerAddress);
 
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
+            _callerAddress,
             _kycAddress,
             projectTokenProxyWallets,
             tokenAmountsToClaim
@@ -126,6 +127,7 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
         }
 
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
+            _callerAddress,
             _kycAddress,
             projectTokenProxyWallets,
             tokenAmountsToClaim

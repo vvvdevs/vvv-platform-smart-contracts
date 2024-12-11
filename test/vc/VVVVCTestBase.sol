@@ -52,6 +52,8 @@ abstract contract VVVVCTestBase is Test {
     uint256 blockTimestamp;
 
     string environmentTag = "development";
+    bytes32 referenceDomainTypehash =
+        keccak256(bytes("EIP712Domain(string name,uint256 chainId,address verifyingContract)"));
 
     //ledger contract-specific values
     bytes32 ledgerManagerRole = keccak256("LEDGER_MANAGER_ROLE");
@@ -148,6 +150,7 @@ abstract contract VVVVCTestBase is Test {
                         _params.paymentTokenAddress,
                         _params.kycAddress,
                         _params.kycAddressAllocation,
+                        _params.amountToInvest,
                         _params.exchangeRateNumerator,
                         _params.feeNumerator,
                         _params.deadline
@@ -227,7 +230,8 @@ abstract contract VVVVCTestBase is Test {
     function getEIP712SignatureForClaim(
         bytes32 _domainSeparator,
         bytes32 _claimTypehash,
-        VVVVCTokenDistributor.ClaimParams memory _params
+        VVVVCTokenDistributor.ClaimParams memory _params,
+        address _msgSender
     ) public view returns (bytes memory) {
         bytes32 digest = keccak256(
             abi.encodePacked(
@@ -236,10 +240,11 @@ abstract contract VVVVCTestBase is Test {
                 keccak256(
                     abi.encode(
                         _claimTypehash,
+                        _msgSender,
                         _params.kycAddress,
                         _params.projectTokenAddress,
-                        _params.projectTokenProxyWallets,
-                        _params.tokenAmountsToClaim,
+                        keccak256(abi.encodePacked(_params.projectTokenProxyWallets)),
+                        keccak256(abi.encodePacked(_params.tokenAmountsToClaim)),
                         _params.nonce,
                         _params.deadline
                     )
@@ -254,6 +259,7 @@ abstract contract VVVVCTestBase is Test {
     }
 
     function generateClaimParamsWithSignature(
+        address _msgSender,
         address _kycAddress,
         address[] memory _projectTokenProxyWallets,
         uint256[] memory _tokenAmountsToClaim
@@ -268,7 +274,12 @@ abstract contract VVVVCTestBase is Test {
             signature: bytes("placeholder")
         });
 
-        bytes memory sig = getEIP712SignatureForClaim(distributorDomainSeparator, claimTypehash, params);
+        bytes memory sig = getEIP712SignatureForClaim(
+            distributorDomainSeparator,
+            claimTypehash,
+            params,
+            _msgSender
+        );
 
         params.signature = sig;
 
@@ -279,5 +290,18 @@ abstract contract VVVVCTestBase is Test {
         vm.startPrank(_claimant, _claimant);
         TokenDistributorInstance.claim(_params);
         vm.stopPrank();
+    }
+
+    /// @notice calculates the reference domain separator
+    function calculateReferenceDomainSeparator(address _contract) internal view returns (bytes32) {
+        return
+            keccak256(
+                abi.encode(
+                    referenceDomainTypehash,
+                    keccak256(abi.encodePacked("VVV", environmentTag)),
+                    block.chainid,
+                    _contract
+                )
+            );
     }
 }

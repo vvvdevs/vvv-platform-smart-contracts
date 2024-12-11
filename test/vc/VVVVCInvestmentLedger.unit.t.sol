@@ -48,7 +48,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             ledgerManagerRole
         );
 
-        ledgerDomainSeparator = LedgerInstance.DOMAIN_SEPARATOR();
+        ledgerDomainSeparator = LedgerInstance.computeDomainSeparator();
         investmentTypehash = LedgerInstance.INVESTMENT_TYPEHASH();
 
         PaymentTokenInstance.mint(sampleUser, paymentTokenMintAmount); //10k tokens
@@ -152,6 +152,26 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
 
         // Advance time past the deadline of 1 hour
         advanceBlockNumberAndTimestampInSeconds(1 hours + 2);
+
+        assertFalse(LedgerInstance.isSignatureValid(params));
+    }
+
+    /// @notice Tests that a wrong amountToInvest param is not validated
+    function testInvalidAmountToInvest() public {
+        VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
+            sampleInvestmentRoundIds[0],
+            investmentRoundSampleLimit,
+            sampleAmountsToInvest[0],
+            userPaymentTokenDefaultAllocation,
+            exchangeRateNumerator,
+            feeNumerator,
+            sampleKycAddress,
+            activeRoundStartTimestamp,
+            activeRoundEndTimestamp
+        );
+
+        // change amountToInvest to be +1
+        params.amountToInvest += 1;
 
         assertFalse(LedgerInstance.isSignatureValid(params));
     }
@@ -285,6 +305,35 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         assertTrue(
             PaymentTokenInstance.balanceOf(address(LedgerInstance)) ==
                 params.amountToInvest * numberOfInvestments
+        );
+    }
+
+    /// @notice Tests that investing fees round up
+    function testFeeRoundingUp() public {
+        uint256 thisAmountToInvest = 10000;
+        uint256 thisFeeNumerator = 3333;
+
+        VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
+            sampleInvestmentRoundIds[0],
+            investmentRoundSampleLimit,
+            thisAmountToInvest,
+            userPaymentTokenDefaultAllocation,
+            exchangeRateNumerator,
+            thisFeeNumerator,
+            sampleKycAddress,
+            activeRoundStartTimestamp,
+            activeRoundEndTimestamp
+        );
+
+        //invested amount, given that fee is rounded up
+        uint256 expectedTotalInvested = thisAmountToInvest -
+            ((thisAmountToInvest * thisFeeNumerator + LedgerInstance.FEE_DENOMINATOR() - 1) /
+                LedgerInstance.FEE_DENOMINATOR());
+
+        investAsUser(sampleUser, params);
+
+        assertTrue(
+            LedgerInstance.totalInvestedPerRound(sampleInvestmentRoundIds[0]) == expectedTotalInvested
         );
     }
 
@@ -672,5 +721,20 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         vm.startPrank(sampleUser, sampleUser);
         vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
         LedgerInstance.setInvestmentIsPaused(true);
+    }
+
+    /// @notice Tests that the domain separator matches reference domain separator
+    function testDomainSeparatorMatch() public {
+        assertTrue(
+            LedgerInstance.computeDomainSeparator() ==
+                calculateReferenceDomainSeparator(address(LedgerInstance))
+        );
+    }
+
+    /// @notice Tests that the domain separator is updated when chain ID changes
+    function testDomainSeparatorChainIdChange() public {
+        bytes32 refDomainSeparator = calculateReferenceDomainSeparator(address(LedgerInstance));
+        vm.chainId(123456789);
+        assertFalse(LedgerInstance.computeDomainSeparator() == refDomainSeparator);
     }
 }
