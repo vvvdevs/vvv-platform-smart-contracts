@@ -35,6 +35,9 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
     /// @notice Environment tag used in the domain separator
     string public environmentTag;
 
+    /// @notice Amount of decimals of the amounts stored in this contract
+    uint8 public decimals = 18;
+
     /// @notice the denominator used to convert units of payment tokens to units of $STABLE (i.e. USDC/T)
     uint256 public immutable exchangeRateDenominator;
 
@@ -291,5 +294,10 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
     /// @notice admin function to pause investment
     function setInvestmentIsPaused(bool _isPaused) external onlyAuthorized {
         investmentIsPaused = _isPaused;
+    }
+
+    /// @notice admin function to set decimals value
+    function setDecimals(uint8 _decimals) external onlyAuthorized {
+        decimals = _decimals;
     }
 }

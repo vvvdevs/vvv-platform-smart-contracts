@@ -36,6 +36,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         bytes4 withdrawSelector = LedgerInstance.withdraw.selector;
         bytes4 addInvestmentRecordsSelector = LedgerInstance.addInvestmentRecords.selector;
         bytes4 setInvestmentPausedSelector = LedgerInstance.setInvestmentIsPaused.selector;
+        bytes4 setDecimalsSelector = LedgerInstance.setDecimals.selector;
         AuthRegistry.setPermission(address(LedgerInstance), withdrawSelector, ledgerManagerRole);
         AuthRegistry.setPermission(
             address(LedgerInstance),
@@ -47,6 +48,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             setInvestmentPausedSelector,
             ledgerManagerRole
         );
+        AuthRegistry.setPermission(address(LedgerInstance), setDecimalsSelector, ledgerManagerRole);
 
         ledgerDomainSeparator = LedgerInstance.computeDomainSeparator();
         investmentTypehash = LedgerInstance.INVESTMENT_TYPEHASH();
@@ -721,6 +723,21 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         vm.startPrank(sampleUser, sampleUser);
         vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
         LedgerInstance.setInvestmentIsPaused(true);
+    }
+
+    /// @notice Tests that an admin can update decimals
+    function testAdminSetDecimals() public {
+        vm.startPrank(ledgerManager, ledgerManager);
+        uint8 newDecimals = 6;
+        LedgerInstance.setDecimals(newDecimals);
+        assertEq(LedgerInstance.decimals(), newDecimals);
+    }
+
+    /// @notice Tests that a non-admin cannot update decimals
+    function testNonAdminSetDecimals() public {
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
+        LedgerInstance.setDecimals(6);
     }
 
     /// @notice Tests that the domain separator matches reference domain separator
