@@ -328,9 +328,11 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         );
 
         //invested amount, given that fee is rounded up
-        uint256 expectedTotalInvested = thisAmountToInvest -
+        uint256 expectedTotalInvested = thisAmountToInvest *
+            1e12 -
             ((thisAmountToInvest * thisFeeNumerator + LedgerInstance.FEE_DENOMINATOR() - 1) /
-                LedgerInstance.FEE_DENOMINATOR());
+                LedgerInstance.FEE_DENOMINATOR()) *
+            1e12;
 
         investAsUser(sampleUser, params);
 
@@ -419,6 +421,30 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             PaymentTokenInstance.balanceOf(address(LedgerInstance)) ==
                 params.amountToInvest * numberOfInvestments
         );
+    }
+
+    // @notice Tests that a payment token with a number of decimals that exceeds the contract's is not accepted.
+    function testInvestUnsupportedPaymentTokenDecimals() public {
+        VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
+            sampleInvestmentRoundIds[0],
+            investmentRoundSampleLimit,
+            sampleAmountsToInvest[0],
+            userPaymentTokenDefaultAllocation,
+            exchangeRateNumerator,
+            feeNumerator,
+            sampleKycAddress,
+            activeRoundStartTimestamp,
+            activeRoundEndTimestamp
+        );
+
+        vm.startPrank(ledgerManager, ledgerManager);
+        LedgerInstance.setDecimals(5);
+        vm.stopPrank();
+
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVVVCInvestmentLedger.UnsupportedPaymentTokenDecimals.selector);
+        LedgerInstance.invest(params);
+        vm.stopPrank();
     }
 
     /**
@@ -543,7 +569,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             params.exchangeRateNumerator,
             LedgerInstance.exchangeRateDenominator(),
             params.feeNumerator,
-            params.amountToInvest - tokenFee
+            params.amountToInvest * 1e12 - tokenFee * 1e12
         );
         LedgerInstance.invest(params);
         vm.stopPrank();

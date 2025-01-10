@@ -76,8 +76,8 @@ abstract contract VVVVCTestBase is Test {
 
     //investment payment tokens
     uint256 paymentTokenMintAmount = 10_000 * 1e6;
-    uint256 userPaymentTokenDefaultAllocation = 10_000 * 1e6;
-    uint256 investmentRoundSampleLimit = 1_000_000 * 1e6;
+    uint256 userPaymentTokenDefaultAllocation = 10_000 * 1e18;
+    uint256 investmentRoundSampleLimit = 1_000_000 * 1e18;
 
     struct TestParams {
         uint256[] investmentRoundIds;
