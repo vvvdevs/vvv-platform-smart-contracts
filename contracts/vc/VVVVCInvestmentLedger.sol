@@ -94,7 +94,9 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
         uint256 exchangeRateNumerator,
         uint256 exchangeRateDenominator,
         uint256 feeNumerator,
-        uint256 investmentAmount
+        uint256 investmentAmount,
+        uint8 paymentTokenDecimals,
+        uint8 ledgerDecimals
     );
 
     /// @notice Error thrown when the input arrays do not have the same length
@@ -206,7 +208,9 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
             _params.exchangeRateNumerator,
             exchangeRateDenominator,
             _params.feeNumerator,
-            postFeeStableAmountEquivalent
+            postFeeStableAmountEquivalent,
+            paymentTokenDecimals,
+            decimals
         );
     }
 
@@ -297,7 +301,17 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
 
             kycAddressInvestedPerRound[kycAddress][investmentRound] += amountToInvest;
             totalInvestedPerRound[investmentRound] += amountToInvest;
-            emit VCInvestment(investmentRound, address(0), kycAddress, 0, 0, 0, amountToInvest);
+            emit VCInvestment(
+                investmentRound,
+                address(0),
+                kycAddress,
+                0,
+                0,
+                0,
+                amountToInvest,
+                decimals,
+                decimals
+            );
         }
     }
 

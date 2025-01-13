@@ -569,7 +569,9 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             params.exchangeRateNumerator,
             LedgerInstance.exchangeRateDenominator(),
             params.feeNumerator,
-            params.amountToInvest * 1e12 - tokenFee * 1e12
+            params.amountToInvest * 1e12 - tokenFee * 1e12,
+            6,
+            LedgerInstance.decimals()
         );
         LedgerInstance.invest(params);
         vm.stopPrank();
@@ -600,7 +602,9 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
                 0,
                 0,
                 0,
-                amountsToInvest[i]
+                amountsToInvest[i],
+                LedgerInstance.decimals(),
+                LedgerInstance.decimals()
             );
         }
         LedgerInstance.addInvestmentRecords(kycAddresses, investmentRounds, amountsToInvest);
