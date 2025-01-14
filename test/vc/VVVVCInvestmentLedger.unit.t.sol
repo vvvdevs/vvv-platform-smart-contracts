@@ -36,6 +36,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         bytes4 withdrawSelector = LedgerInstance.withdraw.selector;
         bytes4 addInvestmentRecordsSelector = LedgerInstance.addInvestmentRecords.selector;
         bytes4 setInvestmentPausedSelector = LedgerInstance.setInvestmentIsPaused.selector;
+        bytes4 setDecimalsSelector = LedgerInstance.setDecimals.selector;
         AuthRegistry.setPermission(address(LedgerInstance), withdrawSelector, ledgerManagerRole);
         AuthRegistry.setPermission(
             address(LedgerInstance),
@@ -47,6 +48,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             setInvestmentPausedSelector,
             ledgerManagerRole
         );
+        AuthRegistry.setPermission(address(LedgerInstance), setDecimalsSelector, ledgerManagerRole);
 
         ledgerDomainSeparator = LedgerInstance.computeDomainSeparator();
         investmentTypehash = LedgerInstance.INVESTMENT_TYPEHASH();
@@ -326,9 +328,11 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         );
 
         //invested amount, given that fee is rounded up
-        uint256 expectedTotalInvested = thisAmountToInvest -
+        uint256 expectedTotalInvested = thisAmountToInvest *
+            1e12 -
             ((thisAmountToInvest * thisFeeNumerator + LedgerInstance.FEE_DENOMINATOR() - 1) /
-                LedgerInstance.FEE_DENOMINATOR());
+                LedgerInstance.FEE_DENOMINATOR()) *
+            1e12;
 
         investAsUser(sampleUser, params);
 
@@ -417,6 +421,30 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             PaymentTokenInstance.balanceOf(address(LedgerInstance)) ==
                 params.amountToInvest * numberOfInvestments
         );
+    }
+
+    // @notice Tests that a payment token with a number of decimals that exceeds the contract's is not accepted.
+    function testInvestUnsupportedPaymentTokenDecimals() public {
+        VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
+            sampleInvestmentRoundIds[0],
+            investmentRoundSampleLimit,
+            sampleAmountsToInvest[0],
+            userPaymentTokenDefaultAllocation,
+            exchangeRateNumerator,
+            feeNumerator,
+            sampleKycAddress,
+            activeRoundStartTimestamp,
+            activeRoundEndTimestamp
+        );
+
+        vm.startPrank(ledgerManager, ledgerManager);
+        LedgerInstance.setDecimals(5);
+        vm.stopPrank();
+
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVVVCInvestmentLedger.UnsupportedPaymentTokenDecimals.selector);
+        LedgerInstance.invest(params);
+        vm.stopPrank();
     }
 
     /**
@@ -541,7 +569,9 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             params.exchangeRateNumerator,
             LedgerInstance.exchangeRateDenominator(),
             params.feeNumerator,
-            params.amountToInvest - tokenFee
+            params.amountToInvest * 1e12 - tokenFee * 1e12,
+            6,
+            LedgerInstance.decimals()
         );
         LedgerInstance.invest(params);
         vm.stopPrank();
@@ -572,7 +602,9 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
                 0,
                 0,
                 0,
-                amountsToInvest[i]
+                amountsToInvest[i],
+                LedgerInstance.decimals(),
+                LedgerInstance.decimals()
             );
         }
         LedgerInstance.addInvestmentRecords(kycAddresses, investmentRounds, amountsToInvest);
@@ -721,6 +753,21 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         vm.startPrank(sampleUser, sampleUser);
         vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
         LedgerInstance.setInvestmentIsPaused(true);
+    }
+
+    /// @notice Tests that an admin can update decimals
+    function testAdminSetDecimals() public {
+        vm.startPrank(ledgerManager, ledgerManager);
+        uint8 newDecimals = 6;
+        LedgerInstance.setDecimals(newDecimals);
+        assertEq(LedgerInstance.decimals(), newDecimals);
+    }
+
+    /// @notice Tests that a non-admin cannot update decimals
+    function testNonAdminSetDecimals() public {
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
+        LedgerInstance.setDecimals(6);
     }
 
     /// @notice Tests that the domain separator matches reference domain separator

@@ -1,17 +1,17 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import { VVVAuthorizationRegistryChecker } from "contracts/auth/VVVAuthorizationRegistryChecker.sol";
+import { IERC20WithDecimals } from "contracts/tokens/IERC20WithDecimals.sol";
 
 /**
  * @title VVV VC Investment Ledger
  * @notice This contract facilitates investments in VVV VC projects
  */
 contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
-    using SafeERC20 for IERC20;
+    using SafeERC20 for IERC20WithDecimals;
 
     /// @notice EIP-712 standard definitions
     bytes32 public constant DOMAIN_TYPEHASH =
@@ -34,6 +34,9 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
 
     /// @notice Environment tag used in the domain separator
     string public environmentTag;
+
+    /// @notice Amount of decimals of the amounts stored in this contract
+    uint8 public decimals = 18;
 
     /// @notice the denominator used to convert units of payment tokens to units of $STABLE (i.e. USDC/T)
     uint256 public immutable exchangeRateDenominator;
@@ -91,7 +94,9 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
         uint256 exchangeRateNumerator,
         uint256 exchangeRateDenominator,
         uint256 feeNumerator,
-        uint256 investmentAmount
+        uint256 investmentAmount,
+        uint8 paymentTokenDecimals,
+        uint8 ledgerDecimals
     );
 
     /// @notice Error thrown when the input arrays do not have the same length
@@ -108,6 +113,9 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
 
     /// @notice Error thrown when an attempt to invest is made while investment is paused
     error InvestmentPaused();
+
+    /// @notice Error thrown when the number of payment token decimals exceeds the number of decimals used by the ledger
+    error UnsupportedPaymentTokenDecimals();
 
     /**
         @notice stores the signer address and initializes the EIP-712 domain separator
@@ -154,9 +162,16 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
         ];
         uint256 totalInvestedThisRound = totalInvestedPerRound[_params.investmentRound];
 
+        uint8 paymentTokenDecimals = IERC20WithDecimals(_params.paymentTokenAddress).decimals();
+        if (decimals < paymentTokenDecimals) {
+            revert UnsupportedPaymentTokenDecimals();
+        }
+
+        uint8 decimalDifference = decimals - paymentTokenDecimals;
+
         // the stablecoin amount equivalent to the payment token amount supplied at the current exchange rate
-        uint256 preFeeStableAmountEquivalent = (_params.amountToInvest * _params.exchangeRateNumerator) /
-            exchangeRateDenominator;
+        uint256 preFeeStableAmountEquivalent = ((_params.amountToInvest * _params.exchangeRateNumerator) /
+            exchangeRateDenominator) * 10 ** decimalDifference;
 
         // the post-fee stableAmountEquivalent, to contribute toward user and round limits
         uint256 postFeeStableAmountEquivalent = preFeeStableAmountEquivalent -
@@ -179,7 +194,7 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
         totalInvestedPerRound[_params.investmentRound] += postFeeStableAmountEquivalent;
 
         // transfer tokens from msg.sender to this contract (in payment token terms)
-        IERC20(_params.paymentTokenAddress).safeTransferFrom(
+        IERC20WithDecimals(_params.paymentTokenAddress).safeTransferFrom(
             msg.sender,
             address(this),
             _params.amountToInvest
@@ -193,7 +208,9 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
             _params.exchangeRateNumerator,
             exchangeRateDenominator,
             _params.feeNumerator,
-            postFeeStableAmountEquivalent
+            postFeeStableAmountEquivalent,
+            paymentTokenDecimals,
+            decimals
         );
     }
 
@@ -258,7 +275,7 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
 
     /// @notice Allows admin to withdraw ERC20 tokens from this contract
     function withdraw(address _tokenAddress, address _to, uint256 _amount) external onlyAuthorized {
-        IERC20(_tokenAddress).safeTransfer(_to, _amount);
+        IERC20WithDecimals(_tokenAddress).safeTransfer(_to, _amount);
     }
 
     /**
@@ -284,12 +301,27 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
 
             kycAddressInvestedPerRound[kycAddress][investmentRound] += amountToInvest;
             totalInvestedPerRound[investmentRound] += amountToInvest;
-            emit VCInvestment(investmentRound, address(0), kycAddress, 0, 0, 0, amountToInvest);
+            emit VCInvestment(
+                investmentRound,
+                address(0),
+                kycAddress,
+                0,
+                0,
+                0,
+                amountToInvest,
+                decimals,
+                decimals
+            );
         }
     }
 
     /// @notice admin function to pause investment
     function setInvestmentIsPaused(bool _isPaused) external onlyAuthorized {
         investmentIsPaused = _isPaused;
+    }
+
+    /// @notice admin function to set decimals value
+    function setDecimals(uint8 _decimals) external onlyAuthorized {
+        decimals = _decimals;
     }
 }
