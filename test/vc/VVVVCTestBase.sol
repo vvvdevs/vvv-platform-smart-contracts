@@ -73,6 +73,7 @@ abstract contract VVVVCTestBase is Test {
     uint256[] sampleAmountsToInvest = [1000 * 1e6, 2000 * 1e6, 3000 * 1e6];
     uint256[] sampleTokenAmountsToClaim = [1111 * 1e18, 2222 * 1e18, 3333 * 1e18];
     uint256 sampleTokenAmountToClaim = 6666 * 1e18;
+    uint256[] dummyClaimFees = [11 * 1e18, 22 * 1e18, 33 * 1e18];
 
     //investment payment tokens
     uint256 paymentTokenMintAmount = 10_000 * 1e6;
@@ -262,13 +263,15 @@ abstract contract VVVVCTestBase is Test {
         address _msgSender,
         address _kycAddress,
         address[] memory _projectTokenProxyWallets,
-        uint256[] memory _tokenAmountsToClaim
+        uint256[] memory _tokenAmountsToClaim,
+        uint256[] memory _fees
     ) public view returns (VVVVCTokenDistributor.ClaimParams memory) {
         VVVVCTokenDistributor.ClaimParams memory params = VVVVCTokenDistributor.ClaimParams({
             kycAddress: _kycAddress,
             projectTokenAddress: address(ProjectTokenInstance),
             projectTokenProxyWallets: _projectTokenProxyWallets,
             tokenAmountsToClaim: _tokenAmountsToClaim,
+            fees: _fees,
             nonce: TokenDistributorInstance.nonces(_kycAddress) + 1,
             deadline: block.timestamp + 1 hours,
             signature: bytes("placeholder")

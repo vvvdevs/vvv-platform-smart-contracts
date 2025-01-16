@@ -19,7 +19,7 @@ contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
     bytes32 public constant CLAIM_TYPEHASH =
         keccak256(
             bytes(
-                "ClaimParams(address senderAddress,address kycAddress,address projectTokenAddress,address[] projectTokenProxyWallets,uint256[] tokenAmountsToClaim,uint256 nonce,uint256 deadline)"
+                "ClaimParams(address senderAddress,address kycAddress,address projectTokenAddress,address[] projectTokenProxyWallets,uint256[] tokenAmountsToClaim,uint256[] fees,uint256 nonce,uint256 deadline)"
             )
         );
 
@@ -41,6 +41,7 @@ contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
         @param projectTokenAddress Address of the project token to be claimed
         @param projectTokenProxyWallets Array of addresses of the wallets from which the project token is to be claimed
         @param tokenAmountsToClaim Array of amounts of project tokens to claim
+        @param fees Array of fees already deducted from claim amounts
         @param nonce KYC-wallet-based nonce for replay protection
         @param deadline Deadline for signature validity
         @param signature Signature of the user's KYC wallet address
@@ -50,6 +51,7 @@ contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
         address projectTokenAddress;
         address[] projectTokenProxyWallets;
         uint256[] tokenAmountsToClaim;
+        uint256[] fees;
         uint256 nonce;
         uint256 deadline;
         bytes signature;
@@ -61,6 +63,7 @@ contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
         @param projectTokenAddress Address of the project token to be claimed
         @param projectTokenProxyWallets Addresses of the wallets from which the project token is to be claimed
         @param tokenAmountsToClaim Amounts of project tokens claimed from each wallet
+        @param fees Amounts of fees deducted from claim amounts
         @param nonce KYC-wallet-based nonce
      */
     event VCClaim(
@@ -68,6 +71,7 @@ contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
         address indexed projectTokenAddress,
         address[] projectTokenProxyWallets,
         uint256[] tokenAmountsToClaim,
+        uint256[] fees,
         uint256 nonce
     );
 
@@ -101,7 +105,10 @@ contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
             revert ClaimIsPaused();
         }
 
-        if (_params.projectTokenProxyWallets.length != _params.tokenAmountsToClaim.length) {
+        if (
+            _params.projectTokenProxyWallets.length != _params.tokenAmountsToClaim.length ||
+            _params.projectTokenProxyWallets.length != _params.fees.length
+        ) {
             revert ArrayLengthMismatch();
         }
 
@@ -133,6 +140,7 @@ contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
             _params.projectTokenAddress,
             _params.projectTokenProxyWallets,
             _params.tokenAmountsToClaim,
+            _params.fees,
             _params.nonce
         );
     }
