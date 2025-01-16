@@ -186,6 +186,7 @@ contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
                         _params.projectTokenAddress,
                         keccak256(abi.encodePacked(_params.projectTokenProxyWallets)),
                         keccak256(abi.encodePacked(_params.tokenAmountsToClaim)),
+                        keccak256(abi.encodePacked(_params.fees)),
                         _params.nonce,
                         _params.deadline
                     )
