@@ -240,7 +240,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
     }
 
     // tests that the ArrayLengthMismatch error is thrown when the lengths of the projectTokenProxyWallets and tokenAmountsToClaim arrays do not match
-    function testClaimArrayLengthMismatch() public {
+    function testClaimProxyWalletArrayLengthMismatch() public {
         address[] memory shorterProxyWalletArray = new address[](1);
         shorterProxyWalletArray[0] = projectTokenProxyWallets[0];
 
@@ -250,6 +250,23 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             shorterProxyWalletArray,
             sampleTokenAmountsToClaim,
             dummyClaimFees
+        );
+
+        vm.expectRevert(VVVVCTokenDistributor.ArrayLengthMismatch.selector);
+        claimAsUser(sampleUser, claimParams);
+    }
+
+    // tests that the ArrayLengthMismatch error is thrown when the lengths of the fees and tokenAmountsToClaim arrays do not match
+    function testClaimFeesArrayLengthMismatch() public {
+        uint256[] memory shorterFees = new uint256[](1);
+        shorterFees[0] = dummyClaimFees[0];
+
+        VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
+            sampleUser,
+            sampleKycAddress,
+            projectTokenProxyWallets,
+            sampleTokenAmountsToClaim,
+            shorterFees
         );
 
         vm.expectRevert(VVVVCTokenDistributor.ArrayLengthMismatch.selector);
