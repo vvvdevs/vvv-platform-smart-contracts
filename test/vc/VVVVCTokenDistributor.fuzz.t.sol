@@ -64,7 +64,7 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
 
         address[] memory projectTokenProxyWallets = new address[](arrayLength);
         uint256[] memory tokenAmountsToClaim = new uint256[](arrayLength);
-
+        uint256[] memory fees = new uint256[](arrayLength);
         uint256 totalClaimAmount = 0;
 
         for (uint256 i = 0; i < arrayLength; i++) {
@@ -74,7 +74,7 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
 
             tokenAmountsToClaim[i] = bound(_seed, 0, 1000 * 1e18);
             totalClaimAmount += tokenAmountsToClaim[i];
-
+            fees[i] = bound(_seed, 0, 100 * 1e18);
             // Mint tokens to the proxy wallet and approve the distributor
             ProjectTokenInstance.mint(projectTokenProxyWallets[i], tokenAmountsToClaim[i]);
             vm.prank(projectTokenProxyWallets[i]);
@@ -87,7 +87,8 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
             _callerAddress,
             _kycAddress,
             projectTokenProxyWallets,
-            tokenAmountsToClaim
+            tokenAmountsToClaim,
+            fees
         );
 
         // Attempt to claim
@@ -114,12 +115,13 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
 
         address[] memory projectTokenProxyWallets = new address[](arrayLength);
         uint256[] memory tokenAmountsToClaim = new uint256[](arrayLength);
-
+        uint256[] memory fees = new uint256[](arrayLength);
         for (uint256 i = 0; i < arrayLength; i++) {
             projectTokenProxyWallets[i] = address(
                 uint160(uint256(keccak256(abi.encodePacked(_callerAddress, i))))
             );
             tokenAmountsToClaim[i] = bound(_seed, 1, 1000 * 1e18);
+            fees[i] = bound(_seed, 0, 100 * 1e18);
             vm.startPrank(projectTokenProxyWallets[i]);
             ProjectTokenInstance.mint(projectTokenProxyWallets[i], tokenAmountsToClaim[i]);
             ProjectTokenInstance.approve(address(TokenDistributorInstance), type(uint256).max);
@@ -130,7 +132,8 @@ contract VVVVCTokenDistributorFuzzTests is VVVVCTestBase {
             _callerAddress,
             _kycAddress,
             projectTokenProxyWallets,
-            tokenAmountsToClaim
+            tokenAmountsToClaim,
+            fees
         );
 
         uint256 testCase = _testCase % 3;

@@ -68,7 +68,8 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             sampleUser,
             sampleKycAddress,
             projectTokenProxyWallets,
-            sampleTokenAmountsToClaim
+            sampleTokenAmountsToClaim,
+            dummyClaimFees
         );
         vm.startPrank(sampleUser);
         assertTrue(TokenDistributorInstance.isSignatureValid(claimParams));
@@ -80,7 +81,8 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleKycAddress,
             projectTokenProxyWallets,
-            sampleTokenAmountsToClaim
+            sampleTokenAmountsToClaim,
+            dummyClaimFees
         );
 
         claimParams.projectTokenProxyWallets[0] = address(0);
@@ -93,7 +95,8 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             sampleUser,
             sampleKycAddress,
             projectTokenProxyWallets,
-            sampleTokenAmountsToClaim
+            sampleTokenAmountsToClaim,
+            dummyClaimFees
         );
 
         vm.startPrank(sampleKycAddress);
@@ -105,17 +108,21 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
     function testClaimSingleRound() public {
         address[] memory thisProjectTokenProxyWallets = new address[](1);
         uint256[] memory thisTokenAmountsToClaim = new uint256[](1);
+        uint256[] memory thisFees = new uint256[](1);
 
         thisProjectTokenProxyWallets[0] = projectTokenProxyWallets[0];
 
         uint256 claimAmount = sampleTokenAmountsToClaim[0];
         thisTokenAmountsToClaim[0] = claimAmount;
 
+        thisFees[0] = dummyClaimFees[0];
+
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
             sampleKycAddress,
             sampleKycAddress,
             thisProjectTokenProxyWallets,
-            thisTokenAmountsToClaim
+            thisTokenAmountsToClaim,
+            thisFees
         );
 
         claimAsUser(sampleKycAddress, claimParams);
@@ -126,18 +133,21 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
     function testClaimZeroAmount() public {
         address[] memory thisProjectTokenProxyWallets = new address[](1);
         uint256[] memory thisTokenAmountsToClaim = new uint256[](1);
-
+        uint256[] memory thisFees = new uint256[](1);
         thisProjectTokenProxyWallets[0] = projectTokenProxyWallets[0];
 
         uint256 claimAmount = 0;
         thisTokenAmountsToClaim[0] = claimAmount;
+
+        thisFees[0] = 0;
 
         //claim for the same single round
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
             sampleKycAddress,
             sampleKycAddress,
             thisProjectTokenProxyWallets,
-            thisTokenAmountsToClaim
+            thisTokenAmountsToClaim,
+            thisFees
         );
 
         claimAsUser(sampleKycAddress, claimParams);
@@ -150,7 +160,8 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleKycAddress,
             projectTokenProxyWallets,
-            sampleTokenAmountsToClaim
+            sampleTokenAmountsToClaim,
+            dummyClaimFees
         );
 
         claimAsUser(sampleKycAddress, claimParams);
@@ -167,7 +178,8 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             sampleUser,
             sampleUser,
             projectTokenProxyWallets,
-            sampleTokenAmountsToClaim
+            sampleTokenAmountsToClaim,
+            dummyClaimFees
         );
 
         vm.startPrank(sampleUser, sampleUser);
@@ -189,7 +201,8 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             sampleUser,
             sampleKycAddress,
             projectTokenProxyWallets,
-            sampleTokenAmountsToClaim
+            sampleTokenAmountsToClaim,
+            dummyClaimFees
         );
 
         vm.expectRevert(VVVVCTokenDistributor.InvalidSignature.selector);
@@ -202,7 +215,8 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             sampleUser,
             sampleKycAddress,
             projectTokenProxyWallets,
-            sampleTokenAmountsToClaim
+            sampleTokenAmountsToClaim,
+            dummyClaimFees
         );
 
         claimParams.projectTokenAddress = address(0);
@@ -216,7 +230,8 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             sampleUser,
             sampleKycAddress,
             projectTokenProxyWallets,
-            sampleTokenAmountsToClaim
+            sampleTokenAmountsToClaim,
+            dummyClaimFees
         );
 
         claimParams.nonce = 0;
@@ -225,7 +240,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
     }
 
     // tests that the ArrayLengthMismatch error is thrown when the lengths of the projectTokenProxyWallets and tokenAmountsToClaim arrays do not match
-    function testClaimArrayLengthMismatch() public {
+    function testClaimClaimAmountArrayLengthMismatch() public {
         address[] memory shorterProxyWalletArray = new address[](1);
         shorterProxyWalletArray[0] = projectTokenProxyWallets[0];
 
@@ -233,7 +248,25 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             sampleUser,
             sampleKycAddress,
             shorterProxyWalletArray,
-            sampleTokenAmountsToClaim
+            sampleTokenAmountsToClaim,
+            dummyClaimFees
+        );
+
+        vm.expectRevert(VVVVCTokenDistributor.ArrayLengthMismatch.selector);
+        claimAsUser(sampleUser, claimParams);
+    }
+
+    // tests that the ArrayLengthMismatch error is thrown when the lengths of the fees and projectTokenProxyWallets arrays do not match
+    function testClaimFeesArrayLengthMismatch() public {
+        uint256[] memory shorterFees = new uint256[](1);
+        shorterFees[0] = dummyClaimFees[0];
+
+        VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
+            sampleUser,
+            sampleKycAddress,
+            projectTokenProxyWallets,
+            sampleTokenAmountsToClaim,
+            shorterFees
         );
 
         vm.expectRevert(VVVVCTokenDistributor.ArrayLengthMismatch.selector);
@@ -246,7 +279,8 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             sampleUser,
             sampleUser,
             projectTokenProxyWallets,
-            sampleTokenAmountsToClaim
+            sampleTokenAmountsToClaim,
+            dummyClaimFees
         );
 
         vm.startPrank(tokenDistributorManager);
@@ -265,7 +299,8 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             sampleUser,
             sampleKycAddress,
             projectTokenProxyWallets,
-            sampleTokenAmountsToClaim
+            sampleTokenAmountsToClaim,
+            dummyClaimFees
         );
 
         vm.startPrank(sampleUser, sampleUser);
@@ -275,6 +310,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
             address(ProjectTokenInstance),
             projectTokenProxyWallets,
             sampleTokenAmountsToClaim,
+            dummyClaimFees,
             claimParams.nonce
         );
         TokenDistributorInstance.claim(claimParams);
