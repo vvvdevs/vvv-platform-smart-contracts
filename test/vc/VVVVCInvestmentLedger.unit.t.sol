@@ -387,7 +387,6 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         uint256 numberOfInvestments = 10;
         uint256 feeAmount = (params.amountToInvest * params.feeNumerator) /
             LedgerInstance.FEE_DENOMINATOR();
-        PaymentTokenInstance.mint(sampleUser, params.amountToInvest * numberOfInvestments);
 
         for (uint256 i = 0; i < numberOfInvestments; i++) {
             investAsUser(sampleUser, params);
