@@ -55,7 +55,7 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
      * @param investmentRoundEndTimestamp The end timestamp of the investment round
      * @param paymentTokenAddress The address of the payment token
      * @param kycAddress The address of the kyc address
-     * @param kycAddressAllocation The max amount the kyc address can invest (post-conversion to stablecoin terms)
+     * @param kycAddressAllocation The max amount the kyc address can invest
      * @param amountToInvest The amount of paymentToken to invest
      * @param exchangeRateNumerator The numerator of the conversion of payment token to stablecoin (i.e. VVV to USDC)
      * @param feeNumerator The numerator of the fee subtracted from the investment stable-equivalent amount
