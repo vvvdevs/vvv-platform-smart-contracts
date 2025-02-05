@@ -50,7 +50,7 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
     /**
      * @notice Struct for investment parameters
      * @param investmentRound The round of the investment
-     * @param investmentRoundLimit The limit of the investment round
+     * @param investmentRoundLimit The limit of the investment round (post-conversion to stablecoin terms)
      * @param investmentRoundStartTimestamp The start timestamp of the investment round
      * @param investmentRoundEndTimestamp The end timestamp of the investment round
      * @param paymentTokenAddress The address of the payment token

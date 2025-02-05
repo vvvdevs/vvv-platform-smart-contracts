@@ -367,9 +367,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
     }
 
     /**
-     * @notice Tests that a user cannot invest multiple times in a single round to exceed their limits
-     * @dev in generateInvestParamsWithSignature, the user is allocated 1000 tokens, and the round limit is 10000 tokens
-     * @dev given a 10% fee as a sample, 11 investments work but the 12th will revert
+     * @notice Tests that a user cannot invest multiple times in a single round to exceed their allocation. 10 investments work but the 11th will revert. userPaymentTokenDefaultAllocation is
+     10,000, and each investment amount (sampleAmountsToInvest[0]) is 1,000.
      */
     function testTooManyInvestmentsInSingleRound() public {
         VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
