@@ -50,12 +50,12 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
     /**
      * @notice Struct for investment parameters
      * @param investmentRound The round of the investment
-     * @param investmentRoundLimit The limit of the investment round
+     * @param investmentRoundLimit The limit of the investment round (post-conversion to stablecoin terms)
      * @param investmentRoundStartTimestamp The start timestamp of the investment round
      * @param investmentRoundEndTimestamp The end timestamp of the investment round
      * @param paymentTokenAddress The address of the payment token
      * @param kycAddress The address of the kyc address
-     * @param kycAddressAllocation The max amount the kyc address can invest
+     * @param kycAddressAllocation The max amount the kyc address can invest (post-conversion to stablecoin terms)
      * @param amountToInvest The amount of paymentToken to invest
      * @param exchangeRateNumerator The numerator of the conversion of payment token to stablecoin (i.e. VVV to USDC)
      * @param feeNumerator The numerator of the fee subtracted from the investment stable-equivalent amount
@@ -170,19 +170,17 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
         uint8 decimalDifference = decimals - paymentTokenDecimals;
 
         // the stablecoin amount equivalent to the payment token amount supplied at the current exchange rate
-        uint256 preFeeStableAmountEquivalent = ((_params.amountToInvest * _params.exchangeRateNumerator) /
+        uint256 baseStableAmountEquivalent = ((_params.amountToInvest * _params.exchangeRateNumerator) /
             exchangeRateDenominator) * 10 ** decimalDifference;
 
-        // the post-fee stableAmountEquivalent, to contribute toward user and round limits
-        uint256 postFeeStableAmountEquivalent = preFeeStableAmountEquivalent -
-            (preFeeStableAmountEquivalent * _params.feeNumerator + FEE_DENOMINATOR - 1) /
-            FEE_DENOMINATOR;
+        // Calculate fee amount separately (on top of the base amount)
+        uint256 feePaymentTokenAmount = (_params.amountToInvest * _params.feeNumerator) / FEE_DENOMINATOR;
 
         // check if kyc address has already invested the max stablecoin-equivalent amount for this round,
         // or if the total invested for this round has reached the limit
         if (
-            postFeeStableAmountEquivalent > _params.kycAddressAllocation - kycAddressInvestedThisRound ||
-            postFeeStableAmountEquivalent > _params.investmentRoundLimit - totalInvestedThisRound
+            baseStableAmountEquivalent > _params.kycAddressAllocation - kycAddressInvestedThisRound ||
+            baseStableAmountEquivalent > _params.investmentRoundLimit - totalInvestedThisRound
         ) {
             revert ExceedsAllocation();
         }
@@ -190,14 +188,14 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
         // update kyc address and total amounts invested for this investment round (in stablecoin terms)
         kycAddressInvestedPerRound[_params.kycAddress][
             _params.investmentRound
-        ] += postFeeStableAmountEquivalent;
-        totalInvestedPerRound[_params.investmentRound] += postFeeStableAmountEquivalent;
+        ] += baseStableAmountEquivalent;
+        totalInvestedPerRound[_params.investmentRound] += baseStableAmountEquivalent;
 
         // transfer tokens from msg.sender to this contract (in payment token terms)
         IERC20WithDecimals(_params.paymentTokenAddress).safeTransferFrom(
             msg.sender,
             address(this),
-            _params.amountToInvest
+            _params.amountToInvest + feePaymentTokenAmount
         );
 
         // emit VCInvestment event (in stablecoin terms)
@@ -208,7 +206,7 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
             _params.exchangeRateNumerator,
             exchangeRateDenominator,
             _params.feeNumerator,
-            postFeeStableAmountEquivalent,
+            baseStableAmountEquivalent,
             paymentTokenDecimals,
             decimals
         );
