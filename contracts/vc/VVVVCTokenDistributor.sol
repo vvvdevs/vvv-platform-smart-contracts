@@ -19,7 +19,7 @@ contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
     bytes32 public constant CLAIM_TYPEHASH =
         keccak256(
             bytes(
-                "ClaimParams(address senderAddress,address kycAddress,address projectTokenAddress,address[] projectTokenProxyWallets,uint256[] tokenAmountsToClaim,uint256[] fees,uint256 nonce,uint256 deadline)"
+                "ClaimParams(address senderAddress,address kycAddress,address projectTokenAddress,uint8 projectTokenDecimals,address[] projectTokenProxyWallets,uint256[] tokenAmountsToClaim,uint256[] fees,uint256 nonce,uint256 deadline)"
             )
         );
 
@@ -49,6 +49,7 @@ contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
     struct ClaimParams {
         address kycAddress;
         address projectTokenAddress;
+        uint8 projectTokenDecimals;
         address[] projectTokenProxyWallets;
         uint256[] tokenAmountsToClaim;
         uint256[] fees;
@@ -69,6 +70,7 @@ contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
     event VCClaim(
         address indexed kycAddress,
         address indexed projectTokenAddress,
+        uint8 projectTokenDecimals,
         address[] projectTokenProxyWallets,
         uint256[] tokenAmountsToClaim,
         uint256[] fees,
@@ -138,6 +140,7 @@ contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
         emit VCClaim(
             _params.kycAddress,
             _params.projectTokenAddress,
+            _params.projectTokenDecimals,
             _params.projectTokenProxyWallets,
             _params.tokenAmountsToClaim,
             _params.fees,
@@ -184,6 +187,7 @@ contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
                         msg.sender,
                         _params.kycAddress,
                         _params.projectTokenAddress,
+                        _params.projectTokenDecimals,
                         keccak256(abi.encodePacked(_params.projectTokenProxyWallets)),
                         keccak256(abi.encodePacked(_params.tokenAmountsToClaim)),
                         keccak256(abi.encodePacked(_params.fees)),
