@@ -308,6 +308,7 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
         emit VVVVCTokenDistributor.VCClaim(
             sampleKycAddress,
             address(ProjectTokenInstance),
+            ProjectTokenInstance.decimals(),
             projectTokenProxyWallets,
             sampleTokenAmountsToClaim,
             dummyClaimFees,

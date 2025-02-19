@@ -244,6 +244,7 @@ abstract contract VVVVCTestBase is Test {
                         _msgSender,
                         _params.kycAddress,
                         _params.projectTokenAddress,
+                        _params.projectTokenDecimals,
                         keccak256(abi.encodePacked(_params.projectTokenProxyWallets)),
                         keccak256(abi.encodePacked(_params.tokenAmountsToClaim)),
                         keccak256(abi.encodePacked(_params.fees)),
@@ -270,6 +271,7 @@ abstract contract VVVVCTestBase is Test {
         VVVVCTokenDistributor.ClaimParams memory params = VVVVCTokenDistributor.ClaimParams({
             kycAddress: _kycAddress,
             projectTokenAddress: address(ProjectTokenInstance),
+            projectTokenDecimals: ProjectTokenInstance.decimals(),
             projectTokenProxyWallets: _projectTokenProxyWallets,
             tokenAmountsToClaim: _tokenAmountsToClaim,
             fees: _fees,
