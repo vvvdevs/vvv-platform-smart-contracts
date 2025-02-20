@@ -135,6 +135,7 @@ abstract contract VVVVCTestBase is Test {
     function getEIP712SignatureForInvest(
         bytes32 _domainSeparator,
         bytes32 _investmentTypehash,
+        address _sender,
         VVVVCInvestmentLedger.InvestParams memory _params
     ) public view returns (bytes memory) {
         bytes32 digest = keccak256(
@@ -151,10 +152,10 @@ abstract contract VVVVCTestBase is Test {
                         _params.paymentTokenAddress,
                         _params.kycAddress,
                         _params.kycAddressAllocation,
-                        _params.amountToInvest,
                         _params.exchangeRateNumerator,
                         _params.feeNumerator,
-                        _params.deadline
+                        _params.deadline,
+                        _sender
                     )
                 )
             )
@@ -174,6 +175,7 @@ abstract contract VVVVCTestBase is Test {
         uint256 _exchangeRateNumerator,
         uint256 _feeNumerator,
         address _kycAddress,
+        address _sender,
         uint256 _investmentRoundStartTimestamp,
         uint256 _investmentRoundEndTimestamp
     ) public view returns (VVVVCInvestmentLedger.InvestParams memory) {
@@ -192,7 +194,12 @@ abstract contract VVVVCTestBase is Test {
             signature: bytes("placeholder")
         });
 
-        bytes memory sig = getEIP712SignatureForInvest(ledgerDomainSeparator, investmentTypehash, params);
+        bytes memory sig = getEIP712SignatureForInvest(
+            ledgerDomainSeparator,
+            investmentTypehash,
+            _sender,
+            params
+        );
 
         params.signature = sig;
 
@@ -221,6 +228,7 @@ abstract contract VVVVCTestBase is Test {
                 exchangeRateNumerator,
                 feeNumerator,
                 sampleKycAddress,
+                _investor,
                 block.timestamp,
                 block.timestamp + 1 days
             );

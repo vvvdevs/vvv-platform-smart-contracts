@@ -79,9 +79,12 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
+
+        vm.prank(sampleUser);
         assertTrue(LedgerInstance.isSignatureValid(params));
     }
 
@@ -98,6 +101,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -105,6 +109,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         //round start timestamp is off by one second
         params.investmentRoundStartTimestamp += 1;
 
+        vm.prank(sampleUser);
         assertFalse(LedgerInstance.isSignatureValid(params));
     }
 
@@ -121,6 +126,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -134,6 +140,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateDenominator
         );
 
+        vm.prank(sampleUser);
         assertFalse(newLedger.isSignatureValid(params));
     }
 
@@ -149,6 +156,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -156,6 +164,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         // Advance time past the deadline of 1 hour
         advanceBlockNumberAndTimestampInSeconds(1 hours + 2);
 
+        vm.prank(sampleUser);
         assertFalse(LedgerInstance.isSignatureValid(params));
     }
 
@@ -169,6 +178,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -176,6 +186,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         // change amountToInvest to be +1
         params.amountToInvest += 1;
 
+        vm.prank(sampleUser);
         assertFalse(LedgerInstance.isSignatureValid(params));
     }
 
@@ -192,6 +203,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -224,6 +236,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -249,6 +262,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -269,6 +283,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             newExchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -302,6 +317,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -332,6 +348,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             block.timestamp + 1 days,
             block.timestamp + 2 days
         );
@@ -356,6 +373,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             block.timestamp - 2 days,
             block.timestamp - 1 days
         );
@@ -380,6 +398,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -413,6 +432,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -440,6 +460,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -465,6 +486,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -502,6 +524,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -530,6 +553,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -709,6 +733,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
