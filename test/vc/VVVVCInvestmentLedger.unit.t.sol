@@ -451,7 +451,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
      * @notice Tests investment function call by user with invalid signature
      * @dev defines an InvestParams struct, creates a signature for it, changes a param and should fail to invest
      */
-    function testFailInvestWithInvalidSignature() public {
+    function test_RevertWhen_InvestWithInvalidSignature() public {
         VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
             sampleInvestmentRoundIds[0],
             investmentRoundSampleLimit,
@@ -467,11 +467,13 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
 
         params.investmentRoundStartTimestamp += 1;
 
-        investAsUser(sampleUser, params);
+        vm.expectRevert(VVVVCInvestmentLedger.InvalidSignature.selector);
+        vm.prank(sampleUser);
+        LedgerInstance.invest(params);
 
         //confirm that contract and user balances reflect the invested params.amountToInvest
         assertTrue(PaymentTokenInstance.balanceOf(address(LedgerInstance)) == 0);
-        assertTrue(PaymentTokenInstance.balanceOf(sampleUser) == userPaymentTokenDefaultAllocation);
+        assertTrue(PaymentTokenInstance.balanceOf(sampleUser) == paymentTokenMintAmount);
     }
 
     /**
@@ -513,9 +515,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
 
     /**
      * @notice Tests that a non-admin cannot withdraw ERC20 tokens
-     * @notice used the "testFail" approach this time due to issues expecting a revert on the first external call (balance check) rather than the withdraw function itself. This is a bit less explicit, but still confirms the non-admin call to withdraw reverts.
      */
-    function testFailNonAdminCannotWithdraw() public {
+    function test_RevertWhen_NonAdminAttemptsWithdraw() public {
         VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
             sampleInvestmentRoundIds[0],
             investmentRoundSampleLimit,
@@ -531,12 +532,11 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
 
         investAsUser(sampleUser, params);
 
+        uint256 ledgerBalance = PaymentTokenInstance.balanceOf(address(LedgerInstance));
+
+        vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
         vm.startPrank(sampleUser, sampleUser);
-        LedgerInstance.withdraw(
-            params.paymentTokenAddress,
-            deployer,
-            PaymentTokenInstance.balanceOf(address(LedgerInstance))
-        );
+        LedgerInstance.withdraw(params.paymentTokenAddress, deployer, ledgerBalance);
 
         vm.stopPrank();
     }

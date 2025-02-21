@@ -7,3 +7,5 @@ cache_path  = 'cache_forge'
 solc_version = '0.8.23'
 runs = 2000
 auto_detect_remappings = false
+allow_internal_expect_revert = true
+
