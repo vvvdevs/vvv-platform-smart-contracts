@@ -213,29 +213,6 @@ abstract contract VVVVCTestBase is Test {
         vm.stopPrank();
     }
 
-    function batchInvestAsUser(
-        address _investor,
-        uint256[] memory _investmentRoundIds,
-        uint256[] memory _amountsToInvest
-    ) public {
-        VVVVCInvestmentLedger.InvestParams memory investParams;
-        for (uint256 i = 0; i < sampleInvestmentRoundIds.length; i++) {
-            investParams = generateInvestParamsWithSignature(
-                _investmentRoundIds[i],
-                investmentRoundSampleLimit,
-                _amountsToInvest[i],
-                userPaymentTokenDefaultAllocation,
-                exchangeRateNumerator,
-                feeNumerator,
-                sampleKycAddress,
-                _investor,
-                block.timestamp,
-                block.timestamp + 1 days
-            );
-            investAsUser(_investor, investParams);
-        }
-    }
-
     function getEIP712SignatureForClaim(
         bytes32 _domainSeparator,
         bytes32 _claimTypehash,
