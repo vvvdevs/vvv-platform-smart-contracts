@@ -431,7 +431,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
      * @notice Tests investment function call by user with invalid signature
      * @dev defines an InvestParams struct, creates a signature for it, changes a param and should fail to invest
      */
-    function test_RevertIf_InvestWithInvalidSignature() public {
+    function test_RevertWhen_InvestWithInvalidSignature() public {
         VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
             sampleInvestmentRoundIds[0],
             investmentRoundSampleLimit,
@@ -494,7 +494,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
     /**
      * @notice Tests that a non-admin cannot withdraw ERC20 tokens
      */
-    function test_RevertIf_NonAdminCannotWithdraw() public {
+    function test_RevertWhen_NonAdminAttemptsWithdraw() public {
         VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
             sampleInvestmentRoundIds[0],
             investmentRoundSampleLimit,
