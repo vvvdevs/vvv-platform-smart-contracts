@@ -145,6 +145,28 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
     }
 
     /**
+     * @notice Test that a valid signature with the wrong sender for the ledger is not validated
+     * @dev sampleUser is correct sender, pranking with sampleKycAddress invalidates the signature
+     */
+    function testInvalidSignatureWrongSender() public {
+        VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
+            sampleInvestmentRoundIds[0],
+            investmentRoundSampleLimit,
+            sampleAmountsToInvest[0],
+            userPaymentTokenDefaultAllocation,
+            exchangeRateNumerator,
+            feeNumerator,
+            sampleKycAddress,
+            sampleUser,
+            activeRoundStartTimestamp,
+            activeRoundEndTimestamp
+        );
+
+        vm.prank(sampleKycAddress);
+        assertFalse(LedgerInstance.isSignatureValid(params));
+    }
+
+    /**
      * @notice Tests that an otherwise would-be-valid but expired signature is invalid
      */
     function testInvalidSignatureExpired() public {
