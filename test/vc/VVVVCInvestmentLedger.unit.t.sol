@@ -79,9 +79,12 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
+
+        vm.prank(sampleUser);
         assertTrue(LedgerInstance.isSignatureValid(params));
     }
 
@@ -98,6 +101,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -105,6 +109,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         //round start timestamp is off by one second
         params.investmentRoundStartTimestamp += 1;
 
+        vm.prank(sampleUser);
         assertFalse(LedgerInstance.isSignatureValid(params));
     }
 
@@ -121,6 +126,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -134,7 +140,30 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateDenominator
         );
 
+        vm.prank(sampleUser);
         assertFalse(newLedger.isSignatureValid(params));
+    }
+
+    /**
+     * @notice Test that a valid signature with the wrong sender for the ledger is not validated
+     * @dev sampleUser is correct sender, pranking with sampleKycAddress invalidates the signature
+     */
+    function testInvalidSignatureWrongSender() public {
+        VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
+            sampleInvestmentRoundIds[0],
+            investmentRoundSampleLimit,
+            sampleAmountsToInvest[0],
+            userPaymentTokenDefaultAllocation,
+            exchangeRateNumerator,
+            feeNumerator,
+            sampleKycAddress,
+            sampleUser,
+            activeRoundStartTimestamp,
+            activeRoundEndTimestamp
+        );
+
+        vm.prank(sampleKycAddress);
+        assertFalse(LedgerInstance.isSignatureValid(params));
     }
 
     /**
@@ -149,6 +178,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -156,26 +186,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         // Advance time past the deadline of 1 hour
         advanceBlockNumberAndTimestampInSeconds(1 hours + 2);
 
-        assertFalse(LedgerInstance.isSignatureValid(params));
-    }
-
-    /// @notice Tests that a wrong amountToInvest param is not validated
-    function testInvalidAmountToInvest() public {
-        VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
-            sampleInvestmentRoundIds[0],
-            investmentRoundSampleLimit,
-            sampleAmountsToInvest[0],
-            userPaymentTokenDefaultAllocation,
-            exchangeRateNumerator,
-            feeNumerator,
-            sampleKycAddress,
-            activeRoundStartTimestamp,
-            activeRoundEndTimestamp
-        );
-
-        // change amountToInvest to be +1
-        params.amountToInvest += 1;
-
+        vm.prank(sampleUser);
         assertFalse(LedgerInstance.isSignatureValid(params));
     }
 
@@ -192,6 +203,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -224,6 +236,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -249,6 +262,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -269,6 +283,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             newExchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -302,6 +317,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -320,6 +336,28 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         );
     }
 
+    /// @notice Tests that a amountToInvest param throws an ExceedsAllocation error when it exceeds the user's allocation
+    function test_RevertWhen_ExceedsAllocation() public {
+        uint256 feeNumerator = 0;
+
+        VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
+            sampleInvestmentRoundIds[0],
+            investmentRoundSampleLimit,
+            userPaymentTokenDefaultAllocation + 1,
+            userPaymentTokenDefaultAllocation,
+            exchangeRateNumerator,
+            feeNumerator,
+            sampleKycAddress,
+            sampleUser,
+            activeRoundStartTimestamp,
+            activeRoundEndTimestamp
+        );
+
+        vm.prank(sampleUser);
+        vm.expectRevert(VVVVCInvestmentLedger.ExceedsAllocation.selector);
+        LedgerInstance.invest(params);
+    }
+
     /**
      * @notice Tests that a user cannot invest when the investment round is not active and the InactiveInvestmentRound error is thrown, when the round has not yet started
      */
@@ -332,6 +370,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             block.timestamp + 1 days,
             block.timestamp + 2 days
         );
@@ -356,6 +395,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             block.timestamp - 2 days,
             block.timestamp - 1 days
         );
@@ -380,6 +420,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -413,6 +454,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -440,6 +482,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -467,6 +510,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -503,6 +547,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -530,6 +575,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -709,6 +755,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
