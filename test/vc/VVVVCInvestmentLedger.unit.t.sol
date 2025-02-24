@@ -79,9 +79,12 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
+
+        vm.prank(sampleUser);
         assertTrue(LedgerInstance.isSignatureValid(params));
     }
 
@@ -98,6 +101,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -105,6 +109,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         //round start timestamp is off by one second
         params.investmentRoundStartTimestamp += 1;
 
+        vm.prank(sampleUser);
         assertFalse(LedgerInstance.isSignatureValid(params));
     }
 
@@ -121,6 +126,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -134,7 +140,30 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateDenominator
         );
 
+        vm.prank(sampleUser);
         assertFalse(newLedger.isSignatureValid(params));
+    }
+
+    /**
+     * @notice Test that a valid signature with the wrong sender for the ledger is not validated
+     * @dev sampleUser is correct sender, pranking with sampleKycAddress invalidates the signature
+     */
+    function testInvalidSignatureWrongSender() public {
+        VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
+            sampleInvestmentRoundIds[0],
+            investmentRoundSampleLimit,
+            sampleAmountsToInvest[0],
+            userPaymentTokenDefaultAllocation,
+            exchangeRateNumerator,
+            feeNumerator,
+            sampleKycAddress,
+            sampleUser,
+            activeRoundStartTimestamp,
+            activeRoundEndTimestamp
+        );
+
+        vm.prank(sampleKycAddress);
+        assertFalse(LedgerInstance.isSignatureValid(params));
     }
 
     /**
@@ -149,6 +178,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -156,26 +186,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         // Advance time past the deadline of 1 hour
         advanceBlockNumberAndTimestampInSeconds(1 hours + 2);
 
-        assertFalse(LedgerInstance.isSignatureValid(params));
-    }
-
-    /// @notice Tests that a wrong amountToInvest param is not validated
-    function testInvalidAmountToInvest() public {
-        VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
-            sampleInvestmentRoundIds[0],
-            investmentRoundSampleLimit,
-            sampleAmountsToInvest[0],
-            userPaymentTokenDefaultAllocation,
-            exchangeRateNumerator,
-            feeNumerator,
-            sampleKycAddress,
-            activeRoundStartTimestamp,
-            activeRoundEndTimestamp
-        );
-
-        // change amountToInvest to be +1
-        params.amountToInvest += 1;
-
+        vm.prank(sampleUser);
         assertFalse(LedgerInstance.isSignatureValid(params));
     }
 
@@ -192,6 +203,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -224,6 +236,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -249,6 +262,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -269,6 +283,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             newExchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -302,6 +317,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -320,6 +336,28 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         );
     }
 
+    /// @notice Tests that a amountToInvest param throws an ExceedsAllocation error when it exceeds the user's allocation
+    function test_RevertWhen_ExceedsAllocation() public {
+        uint256 feeNumerator = 0;
+
+        VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
+            sampleInvestmentRoundIds[0],
+            investmentRoundSampleLimit,
+            userPaymentTokenDefaultAllocation + 1,
+            userPaymentTokenDefaultAllocation,
+            exchangeRateNumerator,
+            feeNumerator,
+            sampleKycAddress,
+            sampleUser,
+            activeRoundStartTimestamp,
+            activeRoundEndTimestamp
+        );
+
+        vm.prank(sampleUser);
+        vm.expectRevert(VVVVCInvestmentLedger.ExceedsAllocation.selector);
+        LedgerInstance.invest(params);
+    }
+
     /**
      * @notice Tests that a user cannot invest when the investment round is not active and the InactiveInvestmentRound error is thrown, when the round has not yet started
      */
@@ -332,6 +370,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             block.timestamp + 1 days,
             block.timestamp + 2 days
         );
@@ -356,6 +395,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             block.timestamp - 2 days,
             block.timestamp - 1 days
         );
@@ -380,6 +420,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -413,6 +454,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -431,7 +473,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
      * @notice Tests investment function call by user with invalid signature
      * @dev defines an InvestParams struct, creates a signature for it, changes a param and should fail to invest
      */
-    function testFailInvestWithInvalidSignature() public {
+    function test_RevertWhen_InvestWithInvalidSignature() public {
         VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
             sampleInvestmentRoundIds[0],
             investmentRoundSampleLimit,
@@ -440,17 +482,20 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
 
         params.investmentRoundStartTimestamp += 1;
 
-        investAsUser(sampleUser, params);
+        vm.expectRevert(VVVVCInvestmentLedger.InvalidSignature.selector);
+        vm.prank(sampleUser);
+        LedgerInstance.invest(params);
 
         //confirm that contract and user balances reflect the invested params.amountToInvest
         assertTrue(PaymentTokenInstance.balanceOf(address(LedgerInstance)) == 0);
-        assertTrue(PaymentTokenInstance.balanceOf(sampleUser) == userPaymentTokenDefaultAllocation);
+        assertTrue(PaymentTokenInstance.balanceOf(sampleUser) == paymentTokenMintAmount);
     }
 
     /**
@@ -465,6 +510,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -491,9 +537,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
 
     /**
      * @notice Tests that a non-admin cannot withdraw ERC20 tokens
-     * @notice used the "testFail" approach this time due to issues expecting a revert on the first external call (balance check) rather than the withdraw function itself. This is a bit less explicit, but still confirms the non-admin call to withdraw reverts.
      */
-    function testFailNonAdminCannotWithdraw() public {
+    function test_RevertWhen_NonAdminAttemptsWithdraw() public {
         VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
             sampleInvestmentRoundIds[0],
             investmentRoundSampleLimit,
@@ -502,18 +547,18 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
 
         investAsUser(sampleUser, params);
 
+        uint256 ledgerBalance = PaymentTokenInstance.balanceOf(address(LedgerInstance));
+
+        vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
         vm.startPrank(sampleUser, sampleUser);
-        LedgerInstance.withdraw(
-            params.paymentTokenAddress,
-            deployer,
-            PaymentTokenInstance.balanceOf(address(LedgerInstance))
-        );
+        LedgerInstance.withdraw(params.paymentTokenAddress, deployer, ledgerBalance);
 
         vm.stopPrank();
     }
@@ -530,6 +575,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
@@ -709,6 +755,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             feeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
