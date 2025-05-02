@@ -3,7 +3,6 @@ pragma solidity ^0.8.23;
 
 import { VVVVCTestBase } from "test/vc/VVVVCTestBase.sol";
 import { MockERC20 } from "contracts/mock/MockERC20.sol";
-import { IERC20WithDecimals } from "contracts/tokens/IERC20WithDecimals.sol";
 import { VVVVCInvestmentLedger } from "contracts/vc/VVVVCInvestmentLedger.sol";
 import { VVVAuthorizationRegistry } from "contracts/auth/VVVAuthorizationRegistry.sol";
 import { VVVAuthorizationRegistryChecker } from "contracts/auth/VVVAuthorizationRegistryChecker.sol";
@@ -209,19 +208,12 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         );
 
         uint256 preInvestBalance = PaymentTokenInstance.balanceOf(sampleUser);
-        uint256 feeAmount = (params.amountToInvest * params.feeNumerator) /
-            LedgerInstance.FEE_DENOMINATOR();
 
         investAsUser(sampleUser, params);
 
         //confirm that contract and user balances reflect the invested params.amountToInvest
-        assertTrue(
-            PaymentTokenInstance.balanceOf(address(LedgerInstance)) == params.amountToInvest + feeAmount
-        );
-        assertTrue(
-            PaymentTokenInstance.balanceOf(sampleUser) + params.amountToInvest + feeAmount ==
-                preInvestBalance
-        );
+        assertTrue(PaymentTokenInstance.balanceOf(address(LedgerInstance)) == params.amountToInvest);
+        assertTrue(PaymentTokenInstance.balanceOf(sampleUser) + params.amountToInvest == preInvestBalance);
     }
 
     ///@notice same as above, just with zero fee to confirm this works as well
@@ -323,8 +315,6 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         );
 
         uint256 numberOfInvestments = 10;
-        uint256 feeAmount = (params.amountToInvest * params.feeNumerator) /
-            LedgerInstance.FEE_DENOMINATOR();
 
         for (uint256 i = 0; i < numberOfInvestments; i++) {
             investAsUser(sampleUser, params);
@@ -332,7 +322,38 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
 
         assertTrue(
             PaymentTokenInstance.balanceOf(address(LedgerInstance)) ==
-                (params.amountToInvest + feeAmount) * numberOfInvestments
+                params.amountToInvest * numberOfInvestments
+        );
+    }
+
+    /// @notice Tests that investing fees round up
+    function testFeeRoundingUp() public {
+        uint256 thisAmountToInvest = 10000;
+        uint256 thisFeeNumerator = 3333;
+
+        VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
+            sampleInvestmentRoundIds[0],
+            investmentRoundSampleLimit,
+            thisAmountToInvest,
+            userPaymentTokenDefaultAllocation,
+            exchangeRateNumerator,
+            thisFeeNumerator,
+            sampleKycAddress,
+            activeRoundStartTimestamp,
+            activeRoundEndTimestamp
+        );
+
+        //invested amount, given that fee is rounded up
+        uint256 expectedTotalInvested = thisAmountToInvest *
+            1e12 -
+            ((thisAmountToInvest * thisFeeNumerator + LedgerInstance.FEE_DENOMINATOR() - 1) /
+                LedgerInstance.FEE_DENOMINATOR()) *
+            1e12;
+
+        investAsUser(sampleUser, params);
+
+        assertTrue(
+            LedgerInstance.totalInvestedPerRound(sampleInvestmentRoundIds[0]) == expectedTotalInvested
         );
     }
 
@@ -407,9 +428,9 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
     }
 
     /**
-     * @notice Tests that a user cannot invest multiple times in a single round to exceed their allocation. 
-     10 investments work but the 11th will revert. userPaymentTokenDefaultAllocation is 10,000,
-     and each investment amount (sampleAmountsToInvest[0]) is 1,000.
+     * @notice Tests that a user cannot invest multiple times in a single round to exceed their limits
+     * @dev in generateInvestParamsWithSignature, the user is allocated 1000 tokens, and the round limit is 10000 tokens
+     * @dev given a 10% fee as a sample, 11 investments work but the 12th will revert
      */
     function testTooManyInvestmentsInSingleRound() public {
         VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
@@ -425,9 +446,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             activeRoundEndTimestamp
         );
 
-        uint256 numberOfInvestments = 10;
-        uint256 feeAmount = (params.amountToInvest * params.feeNumerator) /
-            LedgerInstance.FEE_DENOMINATOR();
+        uint256 numberOfInvestments = 11;
+        PaymentTokenInstance.mint(sampleUser, params.amountToInvest * numberOfInvestments);
 
         for (uint256 i = 0; i < numberOfInvestments; i++) {
             investAsUser(sampleUser, params);
@@ -440,7 +460,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
 
         assertTrue(
             PaymentTokenInstance.balanceOf(address(LedgerInstance)) ==
-                (params.amountToInvest + feeAmount) * numberOfInvestments
+                params.amountToInvest * numberOfInvestments
         );
     }
 
@@ -585,11 +605,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         //this only works because in VVVVCTestBase, the exchange rate numerator and denominator are both 1e6
         uint256 tokenFee = ((params.amountToInvest * params.feeNumerator) /
             LedgerInstance.FEE_DENOMINATOR());
-        uint8 paymentTokenDecimals = IERC20WithDecimals(params.paymentTokenAddress).decimals();
-        uint256 paymentTokenToInternalUnitsConversion = 10 **
-            (LedgerInstance.decimals() - paymentTokenDecimals);
 
-        PaymentTokenInstance.approve(address(LedgerInstance), params.amountToInvest + tokenFee);
+        PaymentTokenInstance.approve(address(LedgerInstance), params.amountToInvest);
         vm.expectEmit(address(LedgerInstance));
         emit VVVVCInvestmentLedger.VCInvestment(
             params.investmentRound,
@@ -598,8 +615,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             params.exchangeRateNumerator,
             LedgerInstance.exchangeRateDenominator(),
             params.feeNumerator,
-            params.amountToInvest * paymentTokenToInternalUnitsConversion,
-            paymentTokenDecimals,
+            params.amountToInvest * 1e12 - tokenFee * 1e12,
+            6,
             LedgerInstance.decimals()
         );
         LedgerInstance.invest(params);
