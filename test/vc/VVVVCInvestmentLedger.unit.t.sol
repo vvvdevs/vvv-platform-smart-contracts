@@ -339,6 +339,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateNumerator,
             thisFeeNumerator,
             sampleKycAddress,
+            sampleUser,
             activeRoundStartTimestamp,
             activeRoundEndTimestamp
         );
