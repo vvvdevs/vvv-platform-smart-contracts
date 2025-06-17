@@ -430,7 +430,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
 
     /**
      * @notice Tests that a user cannot invest multiple times in a single round to exceed their allocation. 
-     10 investments work but the 11th will revert. userPaymentTokenDefaultAllocation is 10,000,
+     11 investments work but the 12th will revert. userPaymentTokenDefaultAllocation is 10,000,
      and each investment amount (sampleAmountsToInvest[0]) is 1,000.
      */
     function testTooManyInvestmentsInSingleRound() public {
