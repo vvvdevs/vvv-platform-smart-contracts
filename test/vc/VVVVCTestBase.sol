@@ -76,7 +76,7 @@ abstract contract VVVVCTestBase is Test {
     uint256[] dummyClaimFees = [11 * 1e18, 22 * 1e18, 33 * 1e18];
 
     //investment payment tokens
-    uint256 paymentTokenMintAmount = 11_000 * 1e6;
+    uint256 paymentTokenMintAmount = 10_000 * 1e6;
     uint256 userPaymentTokenDefaultAllocation = 10_000 * 1e18;
     uint256 investmentRoundSampleLimit = 1_000_000 * 1e18;
 
@@ -208,7 +208,7 @@ abstract contract VVVVCTestBase is Test {
 
     function investAsUser(address _investor, VVVVCInvestmentLedger.InvestParams memory _params) public {
         vm.startPrank(_investor, _investor);
-        PaymentTokenInstance.approve(address(LedgerInstance), type(uint256).max);
+        PaymentTokenInstance.approve(address(LedgerInstance), _params.amountToInvest);
         LedgerInstance.invest(_params);
         vm.stopPrank();
     }
