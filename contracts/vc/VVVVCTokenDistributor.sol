@@ -114,7 +114,7 @@ contract VVVVCTokenDistributor is VVVAuthorizationRegistryChecker {
             revert ArrayLengthMismatch();
         }
 
-        if (_params.nonce <= nonces[_params.kycAddress]) {
+        if (_params.nonce != nonces[_params.kycAddress] + 1) {
             revert InvalidNonce();
         }
 
