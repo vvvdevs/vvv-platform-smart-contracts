@@ -224,8 +224,8 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
         claimAsUser(sampleUser, claimParams);
     }
 
-    // tests that invalid nonce causes revert with InvalidNonce error
-    function testClaimWithInvalidNonce() public {
+    // tests that a nonce lower than latest_nonce + 1 causes a revert with InvalidNonce error
+    function testClaimWithInvalidNonceTooLow() public {
         VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
             sampleUser,
             sampleKycAddress,
@@ -235,6 +235,21 @@ contract VVVVCTokenDistributorUnitTests is VVVVCTestBase {
         );
 
         claimParams.nonce = 0;
+        vm.expectRevert(VVVVCTokenDistributor.InvalidNonce.selector);
+        claimAsUser(sampleUser, claimParams);
+    }
+
+    // tests that a nonce higher than latest_nonce + 1 causes a revert with InvalidNonce error
+    function testClaimWithInvalidNonceTooHigh() public {
+        VVVVCTokenDistributor.ClaimParams memory claimParams = generateClaimParamsWithSignature(
+            sampleUser,
+            sampleKycAddress,
+            projectTokenProxyWallets,
+            sampleTokenAmountsToClaim,
+            dummyClaimFees
+        );
+
+        claimParams.nonce = 2;
         vm.expectRevert(VVVVCTokenDistributor.InvalidNonce.selector);
         claimAsUser(sampleUser, claimParams);
     }
