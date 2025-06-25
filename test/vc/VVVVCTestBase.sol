@@ -155,7 +155,8 @@ abstract contract VVVVCTestBase is Test {
                         _params.exchangeRateNumerator,
                         _params.feeNumerator,
                         _params.deadline,
-                        _sender
+                        _sender,
+                        _params.distributeRewardToken
                     )
                 )
             )
@@ -177,7 +178,8 @@ abstract contract VVVVCTestBase is Test {
         address _kycAddress,
         address _sender,
         uint256 _investmentRoundStartTimestamp,
-        uint256 _investmentRoundEndTimestamp
+        uint256 _investmentRoundEndTimestamp,
+        bool _distributeRewardToken
     ) public view returns (VVVVCInvestmentLedger.InvestParams memory) {
         VVVVCInvestmentLedger.InvestParams memory params = VVVVCInvestmentLedger.InvestParams({
             investmentRound: _investmentRound,
@@ -191,7 +193,8 @@ abstract contract VVVVCTestBase is Test {
             exchangeRateNumerator: _exchangeRateNumerator,
             feeNumerator: _feeNumerator,
             deadline: block.timestamp + 1 hours,
-            signature: bytes("placeholder")
+            signature: bytes("placeholder"),
+            distributeRewardToken: _distributeRewardToken
         });
 
         bytes memory sig = getEIP712SignatureForInvest(
