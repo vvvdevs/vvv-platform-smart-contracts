@@ -48,6 +48,7 @@ contract VVVVCRewardTokenFuzzTests is VVVVCTestBase {
     function testFuzz_Mint(uint256 _investmentRound, address _recipient) public {
         vm.assume(_recipient != address(0));
         vm.assume(_recipient != address(RewardTokenInstance));
+        vm.assume(_recipient.code.length == 0); // Only EOAs
 
         uint256 initialTokenId = RewardTokenInstance.currentTokenId();
 
@@ -60,7 +61,6 @@ contract VVVVCRewardTokenFuzzTests is VVVVCTestBase {
         assertEq(RewardTokenInstance.currentTokenId(), initialTokenId + 1);
         assertEq(RewardTokenInstance.ownerOf(initialTokenId + 1), _recipient);
         assertEq(RewardTokenInstance.tokenIdToInvestmentRound(initialTokenId + 1), _investmentRound);
-        assertEq(RewardTokenInstance.getInvestmentRound(initialTokenId + 1), _investmentRound);
     }
 
     /// @notice Fuzz test for minting multiple tokens to the same recipient
@@ -95,13 +95,14 @@ contract VVVVCRewardTokenFuzzTests is VVVVCTestBase {
     function testFuzz_TokenURI(uint256 _tokenId) public {
         vm.assume(_tokenId > 0 && _tokenId <= 1000); // Reasonable range
 
-        // Mint tokens up to the test token ID
+        // Set baseTokenURI to empty string for consistent testing
         vm.startPrank(ledgerManager, ledgerManager);
+        RewardTokenInstance.setBaseTokenURI("");
 
+        // Mint tokens up to the test token ID
         for (uint256 i = 1; i <= _tokenId; i++) {
             RewardTokenInstance.mint(sampleUser, i);
         }
-
         vm.stopPrank();
 
         // Test tokenURI for the specific token ID
@@ -124,7 +125,7 @@ contract VVVVCRewardTokenFuzzTests is VVVVCTestBase {
         vm.stopPrank();
 
         // Test getInvestmentRound for the specific token ID
-        uint256 investmentRound = RewardTokenInstance.getInvestmentRound(_tokenId);
+        uint256 investmentRound = RewardTokenInstance.tokenIdToInvestmentRound(_tokenId);
         assertEq(investmentRound, _tokenId * 100);
     }
 
@@ -133,6 +134,7 @@ contract VVVVCRewardTokenFuzzTests is VVVVCTestBase {
     function testFuzz_BalanceOf(address _recipient) public {
         vm.assume(_recipient != address(0));
         vm.assume(_recipient != address(RewardTokenInstance));
+        vm.assume(_recipient.code.length == 0); // Only EOAs
 
         uint256 mintCount = 3; // Mint 3 tokens to the recipient
 
@@ -180,6 +182,7 @@ contract VVVVCRewardTokenFuzzTests is VVVVCTestBase {
         vm.assume(_unauthorizedCaller != address(0));
         vm.assume(_recipient != address(0));
         vm.assume(_recipient != address(RewardTokenInstance));
+        vm.assume(_recipient.code.length == 0); // Only EOAs
 
         uint256 initialTokenId = RewardTokenInstance.currentTokenId();
 

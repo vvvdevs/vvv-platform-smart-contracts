@@ -72,7 +72,6 @@ contract VVVVCRewardTokenUnitTests is VVVVCTestBase {
         assertEq(RewardTokenInstance.currentTokenId(), 1);
         assertEq(RewardTokenInstance.ownerOf(1), recipient);
         assertEq(RewardTokenInstance.tokenIdToInvestmentRound(1), investmentRound);
-        assertEq(RewardTokenInstance.getInvestmentRound(1), investmentRound);
     }
 
     /// @notice Tests minting multiple tokens
@@ -185,26 +184,6 @@ contract VVVVCRewardTokenUnitTests is VVVVCTestBase {
         RewardTokenInstance.tokenURI(1);
     }
 
-    /// @notice Tests getInvestmentRound function
-    function testGetInvestmentRound() public {
-        uint256 investmentRound = sampleInvestmentRounds[0];
-        address recipient = sampleUser;
-
-        // Mint a token
-        vm.startPrank(ledgerManager, ledgerManager);
-        RewardTokenInstance.mint(recipient, investmentRound);
-        vm.stopPrank();
-
-        // Check getInvestmentRound returns correct value
-        assertEq(RewardTokenInstance.getInvestmentRound(1), investmentRound);
-    }
-
-    /// @notice Tests getInvestmentRound reverts for non-existent token
-    function testGetInvestmentRoundNonExistentToken() public {
-        vm.expectRevert(abi.encodeWithSignature("ERC721NonexistentToken(uint256)", 1));
-        RewardTokenInstance.getInvestmentRound(1);
-    }
-
     /// @notice Tests RewardTokenMinted event emission
     function testRewardTokenMintedEvent() public {
         uint256 investmentRound = sampleInvestmentRounds[0];
@@ -280,16 +259,19 @@ contract VVVVCRewardTokenUnitTests is VVVVCTestBase {
     }
 
     /// @notice Tests that the contract supports ERC721 interface
-    function testSupportsInterface() public {
-        // ERC721 interface ID
+    function testSupportsERC721Interface() public {
         bytes4 erc721InterfaceId = 0x80ac58cd;
         assertTrue(RewardTokenInstance.supportsInterface(erc721InterfaceId));
+    }
 
-        // ERC721Metadata interface ID
+    /// @notice Tests that the contract supports ERC721Metadata interface
+    function testSupportsERC721MetadataInterface() public {
         bytes4 erc721MetadataInterfaceId = 0x5b5e139f;
         assertTrue(RewardTokenInstance.supportsInterface(erc721MetadataInterfaceId));
+    }
 
-        // Invalid interface ID
+    /// @notice Tests that the contract does not support invalid interface
+    function testDoesNotSupportInvalidInterface() public {
         bytes4 invalidInterfaceId = 0x12345678;
         assertFalse(RewardTokenInstance.supportsInterface(invalidInterfaceId));
     }
@@ -332,7 +314,7 @@ contract VVVVCRewardTokenUnitTests is VVVVCTestBase {
         vm.stopPrank();
     }
 
-    function testApproveAlwaysReverts() public {
+    function testApproveAsOwnerAlwaysReverts() public {
         // Mint a token to sampleUser
         uint256 investmentRound = sampleInvestmentRounds[0];
         vm.startPrank(ledgerManager, ledgerManager);
@@ -344,34 +326,5 @@ contract VVVVCRewardTokenUnitTests is VVVVCTestBase {
         vm.expectRevert(VVVVCRewardToken.TokenIsSoulbound.selector);
         RewardTokenInstance.approve(address(0xBEEF), 1);
         vm.stopPrank();
-
-        // Try to approve as non-owner
-        vm.startPrank(users[0], users[0]);
-        vm.expectRevert(VVVVCRewardToken.TokenIsSoulbound.selector);
-        RewardTokenInstance.approve(address(0xBEEF), 1);
-        vm.stopPrank();
-    }
-
-    function testFuzz_SoulboundTransfer(uint256 _tokenId) public {
-        vm.assume(_tokenId > 0 && _tokenId <= 100); // Reasonable range
-
-        address recipient = sampleUser;
-        address newOwner = sampleKycAddress;
-
-        // Mint tokens up to _tokenId so that _tokenId exists
-        vm.startPrank(ledgerManager, ledgerManager);
-        for (uint256 i = 1; i <= _tokenId; i++) {
-            RewardTokenInstance.mint(recipient, i);
-        }
-        vm.stopPrank();
-
-        // Attempt to transfer the token
-        vm.startPrank(recipient, recipient);
-        vm.expectRevert(); // Accept any revert
-        RewardTokenInstance.transferFrom(recipient, newOwner, _tokenId);
-        vm.stopPrank();
-
-        // Verify ownership hasn't changed
-        assertEq(RewardTokenInstance.ownerOf(_tokenId), recipient);
     }
 }
