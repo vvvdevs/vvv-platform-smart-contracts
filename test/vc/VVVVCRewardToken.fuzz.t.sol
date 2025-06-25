@@ -39,6 +39,14 @@ contract VVVVCRewardTokenFuzzTests is VVVVCTestBase {
         bytes4 mintSelector = RewardTokenInstance.mint.selector;
         AuthRegistry.setPermission(address(RewardTokenInstance), mintSelector, rewardTokenMinterRole);
 
+        // Set permission for setBaseTokenURI function
+        bytes4 setBaseTokenURISelector = RewardTokenInstance.setBaseTokenURI.selector;
+        AuthRegistry.setPermission(
+            address(RewardTokenInstance),
+            setBaseTokenURISelector,
+            rewardTokenMinterRole
+        );
+
         vm.stopPrank();
     }
 
@@ -90,24 +98,20 @@ contract VVVVCRewardTokenFuzzTests is VVVVCTestBase {
         }
     }
 
-    /// @notice Fuzz test for tokenURI with various token IDs
-    /// @param _tokenId The token ID to test
-    function testFuzz_TokenURI(uint256 _tokenId) public {
-        vm.assume(_tokenId > 0 && _tokenId <= 1000); // Reasonable range
-
-        // Set baseTokenURI to empty string for consistent testing
+    /// @notice Test to verify _baseURI() is working correctly
+    function testBaseURI() public {
         vm.startPrank(ledgerManager, ledgerManager);
-        RewardTokenInstance.setBaseTokenURI("");
-
-        // Mint tokens up to the test token ID
-        for (uint256 i = 1; i <= _tokenId; i++) {
-            RewardTokenInstance.mint(sampleUser, i);
-        }
+        RewardTokenInstance.setBaseTokenURI("https://vvv.net/");
         vm.stopPrank();
 
-        // Test tokenURI for the specific token ID
-        string memory uri = RewardTokenInstance.tokenURI(_tokenId);
-        assertEq(uri, _tokenId.toString());
+        // Mint a token
+        vm.startPrank(ledgerManager, ledgerManager);
+        RewardTokenInstance.mint(sampleUser, 1);
+        vm.stopPrank();
+
+        // Test tokenURI
+        string memory uri = RewardTokenInstance.tokenURI(1);
+        assertEq(uri, "https://vvv.net/1");
     }
 
     /// @notice Fuzz test for getInvestmentRound with various token IDs

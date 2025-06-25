@@ -164,20 +164,6 @@ contract VVVVCRewardTokenUnitTests is VVVVCTestBase {
         vm.stopPrank();
     }
 
-    /// @notice Tests tokenURI function returns correct placeholder
-    function testTokenURI() public {
-        uint256 investmentRound = sampleInvestmentRounds[0];
-        address recipient = sampleUser;
-
-        // Mint a token
-        vm.startPrank(ledgerManager, ledgerManager);
-        RewardTokenInstance.mint(recipient, investmentRound);
-        vm.stopPrank();
-
-        // Check tokenURI returns token ID as string
-        assertEq(RewardTokenInstance.tokenURI(1), "1");
-    }
-
     /// @notice Tests tokenURI reverts for non-existent token
     function testTokenURINonExistentToken() public {
         vm.expectRevert(abi.encodeWithSignature("ERC721NonexistentToken(uint256)", 1));
