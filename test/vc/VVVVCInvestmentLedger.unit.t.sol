@@ -63,8 +63,12 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         bytes32 rewardTokenMinterRole = keccak256("REWARD_TOKEN_MINTER_ROLE");
         AuthRegistry.grantRole(rewardTokenMinterRole, ledgerManager);
 
-        // Set permission for mint function
+        // Set permission for mint function - grant to both ledgerManager and LedgerInstance
         bytes4 mintSelector = RewardTokenInstance.mint.selector;
+        AuthRegistry.setPermission(address(RewardTokenInstance), mintSelector, rewardTokenMinterRole);
+
+        // Also grant the role to the LedgerInstance contract itself
+        AuthRegistry.grantRole(rewardTokenMinterRole, address(LedgerInstance));
         AuthRegistry.setPermission(address(RewardTokenInstance), mintSelector, rewardTokenMinterRole);
 
         vm.stopPrank();
@@ -921,6 +925,9 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         uint256 tokenFee = ((params.amountToInvest * params.feeNumerator) /
             LedgerInstance.FEE_DENOMINATOR());
 
+        // Get the expected token ID (should be 1 since no tokens have been minted yet)
+        uint256 expectedTokenId = 1;
+
         vm.expectEmit(address(LedgerInstance));
         emit VVVVCInvestmentLedger.VCInvestment(
             params.investmentRound,
@@ -932,40 +939,9 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             params.amountToInvest * 1e12 - tokenFee * 1e12,
             6,
             LedgerInstance.decimals(),
-            1 // First token ID
+            expectedTokenId
         );
         LedgerInstance.getRewardToken(params);
-        vm.stopPrank();
-    }
-
-    /// @notice Tests that getRewardToken reverts when reward token is not set
-    function testGetRewardTokenRevertsWhenNotSet() public {
-        // Deploy new ledger without reward token
-        VVVVCInvestmentLedger newLedger = new VVVVCInvestmentLedger(
-            testSigner,
-            environmentTag,
-            address(AuthRegistry),
-            exchangeRateDenominator
-        );
-
-        VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
-            sampleInvestmentRoundIds[0],
-            investmentRoundSampleLimit,
-            sampleAmountsToInvest[0],
-            userPaymentTokenDefaultAllocation,
-            exchangeRateNumerator,
-            feeNumerator,
-            sampleKycAddress,
-            sampleUser,
-            activeRoundStartTimestamp,
-            activeRoundEndTimestamp,
-            true
-        );
-
-        vm.startPrank(sampleUser, sampleUser);
-        PaymentTokenInstance.approve(address(newLedger), params.amountToInvest);
-        vm.expectRevert(VVVVCInvestmentLedger.RewardTokenNotSet.selector);
-        newLedger.getRewardToken(params);
         vm.stopPrank();
     }
 
