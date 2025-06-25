@@ -135,22 +135,22 @@ contract VVVVCRewardTokenFuzzTests is VVVVCTestBase {
 
     /// @notice Fuzz test for balanceOf with various addresses
     /// @param _recipient The recipient address to test
-    function testFuzz_BalanceOf(address _recipient) public {
+    /// @param _mintCount The number of tokens to mint
+    function testFuzz_BalanceOf(address _recipient, uint8 _mintCount) public {
         vm.assume(_recipient != address(0));
         vm.assume(_recipient != address(RewardTokenInstance));
         vm.assume(_recipient.code.length == 0); // Only EOAs
-
-        uint256 mintCount = 3; // Mint 3 tokens to the recipient
+        vm.assume(_mintCount > 0 && _mintCount <= 10); // Reasonable range for minting
 
         vm.startPrank(ledgerManager, ledgerManager);
 
-        for (uint256 i = 0; i < mintCount; i++) {
+        for (uint256 i = 0; i < _mintCount; i++) {
             RewardTokenInstance.mint(_recipient, i + 1);
         }
 
         vm.stopPrank();
 
-        assertEq(RewardTokenInstance.balanceOf(_recipient), mintCount);
+        assertEq(RewardTokenInstance.balanceOf(_recipient), _mintCount);
     }
 
     /// @notice Fuzz test for ownerOf with various token IDs
@@ -218,7 +218,7 @@ contract VVVVCRewardTokenFuzzTests is VVVVCTestBase {
 
         // Attempt to transfer the token
         vm.startPrank(recipient, recipient);
-        vm.expectRevert(); // Accept any revert
+        vm.expectRevert(VVVVCRewardToken.TokenIsSoulbound.selector);
         RewardTokenInstance.transferFrom(recipient, newOwner, _tokenId);
         vm.stopPrank();
     }
