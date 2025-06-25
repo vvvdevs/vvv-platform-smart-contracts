@@ -56,7 +56,7 @@ contract VVVVCRewardToken is ERC721, VVVAuthorizationRegistryChecker {
     function mint(address _recipient, uint256 _investmentRound) external onlyAuthorized {
         ++currentTokenId;
         tokenIdToInvestmentRound[currentTokenId] = _investmentRound;
-        _mint(_recipient, currentTokenId);
+        _safeMint(_recipient, currentTokenId);
         emit RewardTokenMinted(currentTokenId, _recipient, _investmentRound);
     }
 
@@ -71,17 +71,6 @@ contract VVVVCRewardToken is ERC721, VVVAuthorizationRegistryChecker {
     }
 
     /**
-     * @notice Returns the token URI for a given token ID
-     * @param _tokenId The ID of the token
-     * @return The token URI as a string
-     * @dev Returns baseTokenURI + tokenId
-     */
-    function tokenURI(uint256 _tokenId) public view virtual override returns (string memory) {
-        _requireOwned(_tokenId);
-        return string(abi.encodePacked(baseTokenURI, _tokenId.toString()));
-    }
-
-    /**
      * @notice Override of _update to prevent transfers (soulbound)
      */
     function _update(
@@ -90,21 +79,11 @@ contract VVVVCRewardToken is ERC721, VVVAuthorizationRegistryChecker {
         address auth
     ) internal virtual override returns (address) {
         address from = _ownerOf(tokenId);
-        // Block transfers (but allow mint and burn)
-        if (from != address(0) && to != address(0)) {
+        // Block transfers (but allow mint)
+        if (from != address(0)) {
             revert TokenIsSoulbound();
         }
         return super._update(to, tokenId, auth);
-    }
-
-    /**
-     * @notice Returns the investment round for a given token ID
-     * @param _tokenId The ID of the token
-     * @return The investment round associated with the token
-     */
-    function getInvestmentRound(uint256 _tokenId) external view returns (uint256) {
-        _requireOwned(_tokenId);
-        return tokenIdToInvestmentRound[_tokenId];
     }
 
     /**
@@ -116,5 +95,9 @@ contract VVVVCRewardToken is ERC721, VVVAuthorizationRegistryChecker {
 
     function approve(address, uint256) public pure override {
         revert TokenIsSoulbound();
+    }
+
+    function _baseURI() internal view virtual override returns (string memory) {
+        return baseTokenURI;
     }
 }
