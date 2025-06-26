@@ -867,8 +867,6 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         LedgerInstance.setDecimals(6);
     }
 
-    // ========== REWARD TOKEN TESTS ==========
-
     /// @notice Tests getRewardToken function mints a reward token
     function testGetRewardToken() public {
         VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
