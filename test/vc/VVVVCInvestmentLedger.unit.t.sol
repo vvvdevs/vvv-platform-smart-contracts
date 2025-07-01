@@ -321,7 +321,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
     }
 
     /**
-     * @notice Tests multiple investments in a single round
+     * @notice @notice Tests that a user can invest multiple times in a single round within the user and round limits
      * @dev in generateInvestParamsWithSignature, the user is allocated 1000 tokens, and the round limit is 10000 tokens
      * @dev so 10 investments work, but 11 won't
      */
@@ -519,7 +519,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
      * @notice Tests investment function call by user with invalid signature
      * @dev defines an InvestParams struct, creates a signature for it, changes a param and should fail to invest
      */
-    function testInvestInvalidSignature() public {
+    function test_RevertWhen_InvestWithInvalidSignature() public {
         VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
             sampleInvestmentRoundIds[0],
             investmentRoundSampleLimit,
@@ -547,7 +547,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
     /**
      * @notice Tests withdraw of ERC20 tokens by admin
      */
-    function testWithdraw() public {
+    function testWithdrawPostInvestment() public {
         VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
             sampleInvestmentRoundIds[0],
             investmentRoundSampleLimit,
@@ -584,7 +584,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
     /**
      * @notice Tests that a non-admin cannot withdraw ERC20 tokens
      */
-    function testWithdrawUnauthorized() public {
+    function test_RevertWhen_NonAdminAttemptsWithdraw() public {
         VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
             sampleInvestmentRoundIds[0],
             investmentRoundSampleLimit,
@@ -612,7 +612,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
     /**
      * @notice Tests emission of VCInvestment event upon user investment
      */
-    function testVCInvestmentEvent() public {
+    function testEmitVCInvestmentUser() public {
         VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
             sampleInvestmentRoundIds[0],
             investmentRoundSampleLimit,
@@ -654,7 +654,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
      * @notice Tests emission of VCInvestment event upon admin investment
      * @dev address(0) and 0 are used as placeholders because there is no payment token transferred, only ledger stablecoin-equivalent entries are updated
      */
-    function testAdminAddInvestmentRecordsEvent() public {
+    function testEmitVCInvestmentAdmin() public {
         vm.startPrank(ledgerManager, ledgerManager);
 
         uint256 numRecords = users.length;
@@ -1020,5 +1020,20 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         vm.expectRevert(VVVVCInvestmentLedger.RewardTokenNotSet.selector);
         ledgerNoReward.getRewardToken(params);
         vm.stopPrank();
+    }
+
+    /// @notice Tests that the domain separator matches reference domain separator
+    function testDomainSeparatorMatch() public {
+        assertTrue(
+            LedgerInstance.computeDomainSeparator() ==
+                calculateReferenceDomainSeparator(address(LedgerInstance))
+        );
+    }
+
+    /// @notice Tests that the domain separator is updated when chain ID changes
+    function testDomainSeparatorChainIdChange() public {
+        bytes32 refDomainSeparator = calculateReferenceDomainSeparator(address(LedgerInstance));
+        vm.chainId(123456789);
+        assertFalse(LedgerInstance.computeDomainSeparator() == refDomainSeparator);
     }
 }
