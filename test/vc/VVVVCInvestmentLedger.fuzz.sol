@@ -45,8 +45,7 @@ contract VVVVCInvestmentLedgerFuzzTests is VVVVCTestBase {
         address _kycAddress,
         uint256 _kycAddressAllocation,
         uint256 _amountToInvest,
-        uint256 _deadline,
-        bool _distributeRewardToken
+        uint256 _deadline
     ) public {
         VVVVCInvestmentLedger.InvestParams memory params = VVVVCInvestmentLedger.InvestParams({
             investmentRound: _investmentRound,
@@ -60,8 +59,7 @@ contract VVVVCInvestmentLedgerFuzzTests is VVVVCTestBase {
             exchangeRateNumerator: exchangeRateNumerator,
             feeNumerator: feeNumerator,
             deadline: _deadline,
-            signature: bytes("placeholder"),
-            distributeRewardToken: _distributeRewardToken
+            signature: bytes("")
         });
 
         params.signature = getEIP712SignatureForInvest(
@@ -71,8 +69,6 @@ contract VVVVCInvestmentLedgerFuzzTests is VVVVCTestBase {
             params
         );
 
-        //check that the investment ledger state is updated correctly given these conditions,
-        //which should yield successful investments
         if (
             _kycAddress != address(0) &&
             _paymentTokenAddress == address(PaymentTokenInstance) &&
@@ -82,19 +78,13 @@ contract VVVVCInvestmentLedgerFuzzTests is VVVVCTestBase {
             _amountToInvest <= _kycAddressAllocation &&
             _amountToInvest <= _investmentRoundLimit
         ) {
-            // For fuzz tests, we'll only test the regular invest function (not getRewardToken)
-            // since reward token functionality requires additional setup
-            if (!_distributeRewardToken) {
-                LedgerInstance.invest(params);
-                assertEq(LedgerInstance.totalInvestedPerRound(_investmentRound), _amountToInvest);
-                assertEq(
-                    LedgerInstance.kycAddressInvestedPerRound(_kycAddress, _investmentRound),
-                    _amountToInvest
-                );
-            }
+            LedgerInstance.invest(params);
+            assertEq(LedgerInstance.totalInvestedPerRound(_investmentRound), _amountToInvest);
+            assertEq(
+                LedgerInstance.kycAddressInvestedPerRound(_kycAddress, _investmentRound),
+                _amountToInvest
+            );
         } else {
-            //check that the investment ledger state is not updated given these conditions,
-            //which should yield reverts
             vm.expectRevert();
             LedgerInstance.invest(params);
             assertEq(LedgerInstance.totalInvestedPerRound(_investmentRound), 0);

@@ -20,7 +20,7 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
     bytes32 public constant INVESTMENT_TYPEHASH =
         keccak256(
             bytes(
-                "InvestParams(uint256 investmentRound,uint256 investmentRoundLimit,uint256 investmentRoundStartTimestamp,uint256 investmentRoundEndTimestamp,address paymentTokenAddress,address kycAddress,uint256 kycAddressAllocation,uint256 exchangeRateNumerator,uint256 feeNumerator,uint256 deadline,address sender,bool distributeRewardToken)"
+                "InvestParams(uint256 investmentRound,uint256 investmentRoundLimit,uint256 investmentRoundStartTimestamp,uint256 investmentRoundEndTimestamp,address paymentTokenAddress,address kycAddress,uint256 kycAddressAllocation,uint256 exchangeRateNumerator,uint256 feeNumerator,uint256 deadline,address sender)"
             )
         );
 
@@ -65,7 +65,6 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
      * @param feeNumerator The numerator of the fee subtracted from the investment stable-equivalent amount
      * @param deadline The deadline for the investment
      * @param signature The signature of the investment
-     * @param distributeRewardToken Whether to mint a reward token for this investment
      */
     struct InvestParams {
         uint256 investmentRound;
@@ -80,7 +79,6 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
         uint256 feeNumerator;
         uint256 deadline;
         bytes signature;
-        bool distributeRewardToken;
     }
 
     /**
@@ -151,95 +149,7 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
      * @param _params An InvestParams struct containing the investment parameters
      */
     function invest(InvestParams memory _params) external {
-        _params.distributeRewardToken = false;
         _invest(_params);
-    }
-
-    /**
-     * @notice Public function to invest and mint a reward token
-     * @param _params An InvestParams struct containing the investment parameters
-     */
-    function getRewardToken(InvestParams memory _params) external {
-        _params.distributeRewardToken = true;
-        _invest(_params);
-    }
-
-    /**
-     * @notice Internal function to facilitate a kyc address's investment in a project
-     * @param _params An InvestParams struct containing the investment parameters
-     */
-    function _invest(InvestParams memory _params) internal {
-        //check if investments are paused
-        if (investmentIsPaused) revert InvestmentPaused();
-
-        // check if signature is valid
-        if (!_isSignatureValid(_params)) {
-            revert InvalidSignature();
-        }
-
-        // check if the investment round is active
-        if (
-            block.timestamp < _params.investmentRoundStartTimestamp ||
-            block.timestamp > _params.investmentRoundEndTimestamp
-        ) {
-            revert InactiveInvestmentRound();
-        }
-
-        // store kyc address and total amounts invested for this investment round
-        uint256 kycAddressInvestedThisRound = kycAddressInvestedPerRound[_params.kycAddress][
-            _params.investmentRound
-        ];
-        uint256 totalInvestedThisRound = totalInvestedPerRound[_params.investmentRound];
-
-        uint8 paymentTokenDecimals = IERC20WithDecimals(_params.paymentTokenAddress).decimals();
-        if (decimals < paymentTokenDecimals) {
-            revert UnsupportedPaymentTokenDecimals();
-        }
-
-        uint8 decimalDifference = decimals - paymentTokenDecimals;
-
-        // the stablecoin amount equivalent to the payment token amount supplied at the current exchange rate
-        uint256 preFeeStableAmountEquivalent = ((_params.amountToInvest * _params.exchangeRateNumerator) /
-            exchangeRateDenominator) * 10 ** decimalDifference;
-
-        // the post-fee stableAmountEquivalent, to contribute toward user and round limits
-        uint256 postFeeStableAmountEquivalent = preFeeStableAmountEquivalent -
-            (preFeeStableAmountEquivalent * _params.feeNumerator + FEE_DENOMINATOR - 1) /
-            FEE_DENOMINATOR;
-
-        // check if kyc address has already invested the max stablecoin-equivalent amount for this round,
-        // or if the total invested for this round has reached the limit
-        if (
-            postFeeStableAmountEquivalent > _params.kycAddressAllocation - kycAddressInvestedThisRound ||
-            postFeeStableAmountEquivalent > _params.investmentRoundLimit - totalInvestedThisRound
-        ) {
-            revert ExceedsAllocation();
-        }
-
-        // update kyc address and total amounts invested for this investment round (in stablecoin terms)
-        kycAddressInvestedPerRound[_params.kycAddress][
-            _params.investmentRound
-        ] += postFeeStableAmountEquivalent;
-        totalInvestedPerRound[_params.investmentRound] += postFeeStableAmountEquivalent;
-
-        // transfer tokens from msg.sender to this contract (in payment token terms)
-        IERC20WithDecimals(_params.paymentTokenAddress).safeTransferFrom(
-            msg.sender,
-            address(this),
-            _params.amountToInvest
-        );
-
-        // Mint reward token if requested
-        uint256 mintedTokenId = 0;
-        if (_params.distributeRewardToken) {
-            if (address(rewardToken) == address(0)) {
-                revert RewardTokenNotSet();
-            }
-            rewardToken.mint(msg.sender, _params.investmentRound);
-            mintedTokenId = rewardToken.currentTokenId();
-        }
-
-        // emit VCInvestment event (in stablecoin terms)
         emit VCInvestment(
             _params.investmentRound,
             _params.paymentTokenAddress,
@@ -247,11 +157,95 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
             _params.exchangeRateNumerator,
             exchangeRateDenominator,
             _params.feeNumerator,
-            postFeeStableAmountEquivalent,
-            paymentTokenDecimals,
+            _calculatePostFeeStableAmountEquivalent(_params),
+            IERC20WithDecimals(_params.paymentTokenAddress).decimals(),
+            decimals,
+            0 // No reward token minted
+        );
+    }
+
+    /**
+     * @notice Public function to invest and mint a reward token
+     * @param _params An InvestParams struct containing the investment parameters
+     */
+    function getRewardToken(InvestParams memory _params) external {
+        _invest(_params);
+        if (address(rewardToken) == address(0)) {
+            revert RewardTokenNotSet();
+        }
+        rewardToken.mint(msg.sender, _params.investmentRound);
+        uint256 mintedTokenId = rewardToken.currentTokenId();
+        emit VCInvestment(
+            _params.investmentRound,
+            _params.paymentTokenAddress,
+            _params.kycAddress,
+            _params.exchangeRateNumerator,
+            exchangeRateDenominator,
+            _params.feeNumerator,
+            _calculatePostFeeStableAmountEquivalent(_params),
+            IERC20WithDecimals(_params.paymentTokenAddress).decimals(),
             decimals,
             mintedTokenId
         );
+    }
+
+    /**
+     * @notice Internal function to facilitate a kyc address's investment in a project
+     * @param _params An InvestParams struct containing the investment parameters
+     */
+    function _invest(InvestParams memory _params) internal {
+        if (investmentIsPaused) revert InvestmentPaused();
+        if (!_isSignatureValid(_params)) {
+            revert InvalidSignature();
+        }
+        if (
+            block.timestamp < _params.investmentRoundStartTimestamp ||
+            block.timestamp > _params.investmentRoundEndTimestamp
+        ) {
+            revert InactiveInvestmentRound();
+        }
+        uint256 kycAddressInvestedThisRound = kycAddressInvestedPerRound[_params.kycAddress][
+            _params.investmentRound
+        ];
+        uint256 totalInvestedThisRound = totalInvestedPerRound[_params.investmentRound];
+        uint8 paymentTokenDecimals = IERC20WithDecimals(_params.paymentTokenAddress).decimals();
+        if (decimals < paymentTokenDecimals) {
+            revert UnsupportedPaymentTokenDecimals();
+        }
+        uint8 decimalDifference = decimals - paymentTokenDecimals;
+        uint256 preFeeStableAmountEquivalent = ((_params.amountToInvest * _params.exchangeRateNumerator) /
+            exchangeRateDenominator) * 10 ** decimalDifference;
+        uint256 postFeeStableAmountEquivalent = preFeeStableAmountEquivalent -
+            (preFeeStableAmountEquivalent * _params.feeNumerator + FEE_DENOMINATOR - 1) /
+            FEE_DENOMINATOR;
+        if (
+            postFeeStableAmountEquivalent > _params.kycAddressAllocation - kycAddressInvestedThisRound ||
+            postFeeStableAmountEquivalent > _params.investmentRoundLimit - totalInvestedThisRound
+        ) {
+            revert ExceedsAllocation();
+        }
+        kycAddressInvestedPerRound[_params.kycAddress][
+            _params.investmentRound
+        ] += postFeeStableAmountEquivalent;
+        totalInvestedPerRound[_params.investmentRound] += postFeeStableAmountEquivalent;
+        IERC20WithDecimals(_params.paymentTokenAddress).safeTransferFrom(
+            msg.sender,
+            address(this),
+            _params.amountToInvest
+        );
+    }
+
+    function _calculatePostFeeStableAmountEquivalent(
+        InvestParams memory _params
+    ) internal view returns (uint256) {
+        uint8 paymentTokenDecimals = IERC20WithDecimals(_params.paymentTokenAddress).decimals();
+        uint8 decimalDifference = decimals - paymentTokenDecimals;
+        uint256 preFeeStableAmountEquivalent = ((_params.amountToInvest * _params.exchangeRateNumerator) /
+            exchangeRateDenominator) * 10 ** decimalDifference;
+        return
+            preFeeStableAmountEquivalent -
+            (preFeeStableAmountEquivalent * _params.feeNumerator + FEE_DENOMINATOR - 1) /
+            FEE_DENOMINATOR;
     }
 
     /// @notice computes DOMAIN_SEPARATOR for investment transactions
@@ -295,8 +289,7 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
                         _params.exchangeRateNumerator,
                         _params.feeNumerator,
                         _params.deadline,
-                        msg.sender,
-                        _params.distributeRewardToken
+                        msg.sender
                     )
                 )
             )
