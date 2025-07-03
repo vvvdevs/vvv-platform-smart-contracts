@@ -353,7 +353,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
     }
 
     /**
-     * @notice @notice Tests that a user can invest multiple times in a single round within the user and round limits
+     * @notice Tests that a user can invest multiple times in a single round within the user and round limits
      * @dev in generateInvestParamsWithSignature, the user is allocated 1000 tokens, and the round limit is 10000 tokens
      * @dev so 10 investments work, but 11 won't
      */
@@ -1041,8 +1041,6 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             address(AuthRegistry),
             exchangeRateDenominator
         );
-        bytes32 newDomainSeparator = ledgerNoReward.computeDomainSeparator();
-        bytes32 newTypehash = ledgerNoReward.INVESTMENT_TYPEHASH();
         VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
             sampleInvestmentRoundIds[0],
             investmentRoundSampleLimit,
@@ -1056,14 +1054,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             activeRoundEndTimestamp,
             true
         );
-        // Regenerate signature for the new ledger instance
-        params.signature = getEIP712SignatureForInvest(
-            newDomainSeparator,
-            newTypehash,
-            sampleUser,
-            params,
-            true
-        );
+
         PaymentTokenInstance.mint(sampleUser, params.amountToInvest);
         vm.startPrank(sampleUser, sampleUser);
         PaymentTokenInstance.approve(address(ledgerNoReward), params.amountToInvest);
