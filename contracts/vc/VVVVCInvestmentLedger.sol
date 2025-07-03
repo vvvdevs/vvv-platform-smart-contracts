@@ -5,6 +5,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import { VVVAuthorizationRegistryChecker } from "contracts/auth/VVVAuthorizationRegistryChecker.sol";
 import { IERC20WithDecimals } from "contracts/tokens/IERC20WithDecimals.sol";
+import { VVVVCRewardToken } from "contracts/vc/VVVVCRewardToken.sol";
 
 /**
  * @title VVV VC Investment Ledger
@@ -19,7 +20,7 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
     bytes32 public constant INVESTMENT_TYPEHASH =
         keccak256(
             bytes(
-                "InvestParams(uint256 investmentRound,uint256 investmentRoundLimit,uint256 investmentRoundStartTimestamp,uint256 investmentRoundEndTimestamp,address paymentTokenAddress,address kycAddress,uint256 kycAddressAllocation,uint256 exchangeRateNumerator,uint256 feeNumerator,uint256 deadline,address sender)"
+                "InvestParams(uint256 investmentRound,uint256 investmentRoundLimit,uint256 investmentRoundStartTimestamp,uint256 investmentRoundEndTimestamp,address paymentTokenAddress,address kycAddress,uint256 kycAddressAllocation,uint256 exchangeRateNumerator,uint256 feeNumerator,uint256 deadline,address sender,bool distributeRewardToken)"
             )
         );
 
@@ -40,6 +41,9 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
 
     /// @notice the denominator used to convert units of payment tokens to units of $STABLE (i.e. USDC/T)
     uint256 public immutable exchangeRateDenominator;
+
+    /// @notice The reward token contract address
+    VVVVCRewardToken public rewardToken;
 
     /// @notice stores kyc address amounts invested for each investment round
     mapping(address => mapping(uint256 => uint256)) public kycAddressInvestedPerRound;
@@ -86,6 +90,7 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
      * @param exchangeRateDenominator The denominator of the conversion of payment token to stablecoin
      * @param feeNumerator The numerator of the fee subtracted from the investment stable-equivalent amount
      * @param investmentAmount The amount invested in stablecoin terms
+     * @param mintedTokenId The ID of the minted reward token (0 if no token was minted)
      */
     event VCInvestment(
         uint256 indexed investmentRound,
@@ -96,7 +101,8 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
         uint256 feeNumerator,
         uint256 investmentAmount,
         uint8 paymentTokenDecimals,
-        uint8 ledgerDecimals
+        uint8 ledgerDecimals,
+        uint256 mintedTokenId
     );
 
     /// @notice Error thrown when the input arrays do not have the same length
@@ -117,6 +123,9 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
     /// @notice Error thrown when the number of payment token decimals exceeds the number of decimals used by the ledger
     error UnsupportedPaymentTokenDecimals();
 
+    /// @notice Error thrown when reward token contract is not set
+    error RewardTokenNotSet();
+
     /**
         @notice stores the signer address and initializes the EIP-712 domain separator
         @param _signer The address authorized to sign investment transactions
@@ -136,15 +145,67 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
     }
 
     /**
+     * @notice Public function to invest without minting a reward token
      * @notice Facilitates a kyc address's investment in a project
      * @param _params An InvestParams struct containing the investment parameters
      */
     function invest(InvestParams memory _params) external {
+        uint256 postFeeStableAmountEquivalent = _invest(_params, false);
+
+        // emit VCInvestment event (in stablecoin terms)
+        emit VCInvestment(
+            _params.investmentRound,
+            _params.paymentTokenAddress,
+            _params.kycAddress,
+            _params.exchangeRateNumerator,
+            exchangeRateDenominator,
+            _params.feeNumerator,
+            postFeeStableAmountEquivalent,
+            IERC20WithDecimals(_params.paymentTokenAddress).decimals(),
+            decimals,
+            0
+        );
+    }
+
+    /**
+     * @notice Public function to invest and mint a reward token
+     * @param _params An InvestParams struct containing the investment parameters
+     */
+    function getRewardToken(InvestParams memory _params) external {
+        if (address(rewardToken) == address(0)) {
+            revert RewardTokenNotSet();
+        }
+
+        uint256 postFeeStableAmountEquivalent = _invest(_params, true);
+        rewardToken.mint(msg.sender, _params.investmentRound);
+        uint256 mintedTokenId = rewardToken.currentTokenId();
+
+        // emit VCInvestment event (in stablecoin terms)
+        emit VCInvestment(
+            _params.investmentRound,
+            _params.paymentTokenAddress,
+            _params.kycAddress,
+            _params.exchangeRateNumerator,
+            exchangeRateDenominator,
+            _params.feeNumerator,
+            postFeeStableAmountEquivalent,
+            IERC20WithDecimals(_params.paymentTokenAddress).decimals(),
+            decimals,
+            mintedTokenId
+        );
+    }
+
+    /**
+     * @notice Internal function to facilitate a kyc address's investment in a project
+     * @param _params An InvestParams struct containing the investment parameters
+     * @param _distributeRewardToken Whether to distribute a reward token
+     */
+    function _invest(InvestParams memory _params, bool _distributeRewardToken) internal returns (uint256) {
         //check if investments are paused
         if (investmentIsPaused) revert InvestmentPaused();
 
         // check if signature is valid
-        if (!_isSignatureValid(_params)) {
+        if (!_isSignatureValid(_params, _distributeRewardToken)) {
             revert InvalidSignature();
         }
 
@@ -200,18 +261,7 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
             _params.amountToInvest
         );
 
-        // emit VCInvestment event (in stablecoin terms)
-        emit VCInvestment(
-            _params.investmentRound,
-            _params.paymentTokenAddress,
-            _params.kycAddress,
-            _params.exchangeRateNumerator,
-            exchangeRateDenominator,
-            _params.feeNumerator,
-            postFeeStableAmountEquivalent,
-            paymentTokenDecimals,
-            decimals
-        );
+        return postFeeStableAmountEquivalent;
     }
 
     /// @notice computes DOMAIN_SEPARATOR for investment transactions
@@ -235,9 +285,13 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
     /**
      * @notice Checks if the provided signature is valid
      * @param _params An InvestParams struct containing the investment parameters
+     * @param _distributeRewardToken Whether to distribute a reward token
      * @return true if the signer address is recovered from the signature, false otherwise
      */
-    function _isSignatureValid(InvestParams memory _params) internal view returns (bool) {
+    function _isSignatureValid(
+        InvestParams memory _params,
+        bool _distributeRewardToken
+    ) internal view returns (bool) {
         bytes32 digest = keccak256(
             abi.encodePacked(
                 "\x19\x01",
@@ -255,22 +309,24 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
                         _params.exchangeRateNumerator,
                         _params.feeNumerator,
                         _params.deadline,
-                        msg.sender
+                        msg.sender,
+                        _distributeRewardToken
                     )
                 )
             )
         );
-
         address recoveredAddress = ECDSA.recover(digest, _params.signature);
-
         bool isSigner = recoveredAddress == signer;
         bool isExpired = block.timestamp > _params.deadline;
         return isSigner && !isExpired;
     }
 
     /// @notice external wrapper for _isSignatureValid
-    function isSignatureValid(InvestParams memory _params) external view returns (bool) {
-        return _isSignatureValid(_params);
+    function isSignatureValid(
+        InvestParams memory _params,
+        bool _distributeRewardToken
+    ) external view returns (bool) {
+        return _isSignatureValid(_params, _distributeRewardToken);
     }
 
     /// @notice Allows admin to withdraw ERC20 tokens from this contract
@@ -310,7 +366,8 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
                 0,
                 amountToInvest,
                 decimals,
-                decimals
+                decimals,
+                0
             );
         }
     }
@@ -323,5 +380,10 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
     /// @notice admin function to set decimals value
     function setDecimals(uint8 _decimals) external onlyAuthorized {
         decimals = _decimals;
+    }
+
+    /// @notice admin function to set reward token contract
+    function setRewardToken(address _rewardToken) external onlyAuthorized {
+        rewardToken = VVVVCRewardToken(_rewardToken);
     }
 }

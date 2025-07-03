@@ -136,30 +136,27 @@ abstract contract VVVVCTestBase is Test {
         bytes32 _domainSeparator,
         bytes32 _investmentTypehash,
         address _sender,
-        VVVVCInvestmentLedger.InvestParams memory _params
+        VVVVCInvestmentLedger.InvestParams memory _params,
+        bool distributeRewardToken
     ) public view returns (bytes memory) {
-        bytes32 digest = keccak256(
-            abi.encodePacked(
-                "\x19\x01",
-                _domainSeparator,
-                keccak256(
-                    abi.encode(
-                        _investmentTypehash,
-                        _params.investmentRound,
-                        _params.investmentRoundLimit,
-                        _params.investmentRoundStartTimestamp,
-                        _params.investmentRoundEndTimestamp,
-                        _params.paymentTokenAddress,
-                        _params.kycAddress,
-                        _params.kycAddressAllocation,
-                        _params.exchangeRateNumerator,
-                        _params.feeNumerator,
-                        _params.deadline,
-                        _sender
-                    )
-                )
+        bytes32 innerHash = keccak256(
+            abi.encode(
+                _investmentTypehash,
+                _params.investmentRound,
+                _params.investmentRoundLimit,
+                _params.investmentRoundStartTimestamp,
+                _params.investmentRoundEndTimestamp,
+                _params.paymentTokenAddress,
+                _params.kycAddress,
+                _params.kycAddressAllocation,
+                _params.exchangeRateNumerator,
+                _params.feeNumerator,
+                _params.deadline,
+                _sender,
+                distributeRewardToken
             )
         );
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", _domainSeparator, innerHash));
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(testSignerKey, digest);
         bytes memory signature = toBytesConcat(r, s, v);
@@ -177,8 +174,9 @@ abstract contract VVVVCTestBase is Test {
         address _kycAddress,
         address _sender,
         uint256 _investmentRoundStartTimestamp,
-        uint256 _investmentRoundEndTimestamp
-    ) public view returns (VVVVCInvestmentLedger.InvestParams memory) {
+        uint256 _investmentRoundEndTimestamp,
+        bool distributeRewardToken
+    ) public returns (VVVVCInvestmentLedger.InvestParams memory) {
         VVVVCInvestmentLedger.InvestParams memory params = VVVVCInvestmentLedger.InvestParams({
             investmentRound: _investmentRound,
             investmentRoundLimit: _investmentRoundLimit,
@@ -198,7 +196,8 @@ abstract contract VVVVCTestBase is Test {
             ledgerDomainSeparator,
             investmentTypehash,
             _sender,
-            params
+            params,
+            distributeRewardToken
         );
 
         params.signature = sig;

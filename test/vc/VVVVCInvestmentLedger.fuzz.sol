@@ -66,7 +66,8 @@ contract VVVVCInvestmentLedgerFuzzTests is VVVVCTestBase {
             ledgerDomainSeparator,
             investmentTypehash,
             sampleUser,
-            params
+            params,
+            false
         );
 
         //check that the investment ledger state is updated correctly given these conditions,

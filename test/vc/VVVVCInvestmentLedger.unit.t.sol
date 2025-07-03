@@ -6,12 +6,16 @@ import { MockERC20 } from "contracts/mock/MockERC20.sol";
 import { VVVVCInvestmentLedger } from "contracts/vc/VVVVCInvestmentLedger.sol";
 import { VVVAuthorizationRegistry } from "contracts/auth/VVVAuthorizationRegistry.sol";
 import { VVVAuthorizationRegistryChecker } from "contracts/auth/VVVAuthorizationRegistryChecker.sol";
+import { VVVVCRewardToken } from "contracts/vc/VVVVCRewardToken.sol";
+
 /**
  * @title VVVVCInvestmentLedger Unit Tests
  * @dev use "forge test --match-contract VVVVCInvestmentLedgerUnitTests" to run tests
  * @dev use "forge coverage --match-contract VVVVCInvestmentLedger" to run coverage
  */
 contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
+    VVVVCRewardToken RewardTokenInstance;
+
     /// @notice sets up project and payment tokens, and an instance of the investment ledger
     function setUp() public {
         vm.startPrank(deployer, deployer);
@@ -29,6 +33,9 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             exchangeRateDenominator
         );
 
+        // Deploy reward token
+        RewardTokenInstance = new VVVVCRewardToken(address(AuthRegistry));
+
         //grant ledgerManager the ledgerManagerRole
         AuthRegistry.grantRole(ledgerManagerRole, ledgerManager);
 
@@ -37,6 +44,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         bytes4 addInvestmentRecordsSelector = LedgerInstance.addInvestmentRecords.selector;
         bytes4 setInvestmentPausedSelector = LedgerInstance.setInvestmentIsPaused.selector;
         bytes4 setDecimalsSelector = LedgerInstance.setDecimals.selector;
+        bytes4 setRewardTokenSelector = LedgerInstance.setRewardToken.selector;
         AuthRegistry.setPermission(address(LedgerInstance), withdrawSelector, ledgerManagerRole);
         AuthRegistry.setPermission(
             address(LedgerInstance),
@@ -49,6 +57,25 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             ledgerManagerRole
         );
         AuthRegistry.setPermission(address(LedgerInstance), setDecimalsSelector, ledgerManagerRole);
+        AuthRegistry.setPermission(address(LedgerInstance), setRewardTokenSelector, ledgerManagerRole);
+
+        // Grant reward token minter role to ledger manager
+        bytes32 rewardTokenMinterRole = keccak256("REWARD_TOKEN_MINTER_ROLE");
+        AuthRegistry.grantRole(rewardTokenMinterRole, ledgerManager);
+
+        // Set permission for mint function - grant to both ledgerManager and LedgerInstance
+        bytes4 mintSelector = RewardTokenInstance.mint.selector;
+        AuthRegistry.setPermission(address(RewardTokenInstance), mintSelector, rewardTokenMinterRole);
+
+        // Also grant the role to the LedgerInstance contract itself
+        AuthRegistry.grantRole(rewardTokenMinterRole, address(LedgerInstance));
+
+        vm.stopPrank();
+
+        // Set reward token in ledger (as ledgerManager)
+        vm.startPrank(ledgerManager, ledgerManager);
+        LedgerInstance.setRewardToken(address(RewardTokenInstance));
+        vm.stopPrank();
 
         ledgerDomainSeparator = LedgerInstance.computeDomainSeparator();
         investmentTypehash = LedgerInstance.INVESTMENT_TYPEHASH();
@@ -56,8 +83,6 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         PaymentTokenInstance.mint(sampleUser, paymentTokenMintAmount); //10k tokens
 
         generateUserAddressListAndDealEtherAndToken(PaymentTokenInstance);
-
-        vm.stopPrank();
     }
 
     /// @notice Tests deployment of VVVVCInvestmentLedger
@@ -67,7 +92,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
 
     /**
      * @notice Tests creation and validation of EIP712 signatures
-     * @dev defines an InvestParams struct, creates a signature for it, and validates it with the same struct parameters
+     * @dev defines an InvestParams struct and no reward token distribution, creates a signature for it, and validates it with the same parameters
      */
     function testValidateSignature() public {
         VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
@@ -80,11 +105,35 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
 
         vm.prank(sampleUser);
-        assertTrue(LedgerInstance.isSignatureValid(params));
+        assertTrue(LedgerInstance.isSignatureValid(params, false));
+    }
+
+    /**
+     * @notice Tests creation and validation of EIP712 signatures with reward token distribution
+     * @dev defines an InvestParams struct and reward token distribution, creates a signature for it, and validates it with the same parameters
+     */
+    function testValidateSignatureWithRewardTokenDistribution() public {
+        VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
+            sampleInvestmentRoundIds[0],
+            investmentRoundSampleLimit,
+            sampleAmountsToInvest[0],
+            userPaymentTokenDefaultAllocation,
+            exchangeRateNumerator,
+            feeNumerator,
+            sampleKycAddress,
+            sampleUser,
+            activeRoundStartTimestamp,
+            activeRoundEndTimestamp,
+            true
+        );
+
+        vm.prank(sampleUser);
+        assertTrue(LedgerInstance.isSignatureValid(params, true));
     }
 
     /**
@@ -102,14 +151,15 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
 
         //round start timestamp is off by one second
         params.investmentRoundStartTimestamp += 1;
 
         vm.prank(sampleUser);
-        assertFalse(LedgerInstance.isSignatureValid(params));
+        assertFalse(LedgerInstance.isSignatureValid(params, false));
     }
 
     /**
@@ -127,7 +177,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
 
         // but deploy another ledger with a different signer
@@ -140,7 +191,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         );
 
         vm.prank(sampleUser);
-        assertFalse(newLedger.isSignatureValid(params));
+        assertFalse(newLedger.isSignatureValid(params, false));
     }
 
     /**
@@ -158,11 +209,12 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
 
         vm.prank(sampleKycAddress);
-        assertFalse(LedgerInstance.isSignatureValid(params));
+        assertFalse(LedgerInstance.isSignatureValid(params, false));
     }
 
     /**
@@ -179,14 +231,15 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
 
         // Advance time past the deadline of 1 hour
         advanceBlockNumberAndTimestampInSeconds(1 hours + 2);
 
         vm.prank(sampleUser);
-        assertFalse(LedgerInstance.isSignatureValid(params));
+        assertFalse(LedgerInstance.isSignatureValid(params, false));
     }
 
     /**
@@ -204,7 +257,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
 
         uint256 preInvestBalance = PaymentTokenInstance.balanceOf(sampleUser);
@@ -230,7 +284,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
 
         uint256 preInvestBalance = PaymentTokenInstance.balanceOf(sampleUser);
@@ -256,7 +311,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
         investAsUser(sampleUser, params);
         uint256 userInvested = LedgerInstance.kycAddressInvestedPerRound(
@@ -277,7 +333,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
         investAsUser(sampleUser, params2);
         uint256 userInvested2 = LedgerInstance.kycAddressInvestedPerRound(
@@ -311,7 +368,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
 
         uint256 numberOfInvestments = 10;
@@ -341,7 +399,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
 
         //invested amount, given that fee is rounded up
@@ -372,7 +431,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
 
         vm.prank(sampleUser);
@@ -394,7 +454,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             block.timestamp + 1 days,
-            block.timestamp + 2 days
+            block.timestamp + 2 days,
+            false
         );
 
         vm.startPrank(sampleUser, sampleUser);
@@ -419,7 +480,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             block.timestamp - 2 days,
-            block.timestamp - 1 days
+            block.timestamp - 1 days,
+            false
         );
 
         vm.startPrank(sampleUser, sampleUser);
@@ -444,7 +506,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
 
         uint256 numberOfInvestments = 11;
@@ -477,7 +540,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
 
         vm.startPrank(ledgerManager, ledgerManager);
@@ -505,7 +569,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
 
         params.investmentRoundStartTimestamp += 1;
@@ -533,7 +598,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
 
         investAsUser(sampleUser, params);
@@ -570,7 +636,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
 
         investAsUser(sampleUser, params);
@@ -598,7 +665,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
 
         vm.startPrank(sampleUser, sampleUser);
@@ -618,7 +686,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             params.feeNumerator,
             params.amountToInvest * 1e12 - tokenFee * 1e12,
             6,
-            LedgerInstance.decimals()
+            LedgerInstance.decimals(),
+            0 // No reward token minted
         );
         LedgerInstance.invest(params);
         vm.stopPrank();
@@ -651,7 +720,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
                 0,
                 amountsToInvest[i],
                 LedgerInstance.decimals(),
-                LedgerInstance.decimals()
+                LedgerInstance.decimals(),
+                0 // No reward token minted
             );
         }
         LedgerInstance.addInvestmentRecords(kycAddresses, investmentRounds, amountsToInvest);
@@ -714,7 +784,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             amountsToInvest[i] = 1e8 + i;
             expectedTotalInvested += amountsToInvest[i];
         }
-        kycAddresses[numRecords] = address(0);
+        kycAddresses[numRecords] = address(0xBEEF);
 
         vm.startPrank(ledgerManager, ledgerManager);
         vm.expectRevert(VVVVCInvestmentLedger.ArrayLengthMismatch.selector);
@@ -775,7 +845,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
         investAsUser(sampleUser, params);
 
@@ -816,6 +887,180 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         vm.startPrank(sampleUser, sampleUser);
         vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
         LedgerInstance.setDecimals(6);
+    }
+
+    /// @notice Tests getRewardToken function mints a reward token
+    function testGetRewardToken() public {
+        VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
+            sampleInvestmentRoundIds[0],
+            investmentRoundSampleLimit,
+            sampleAmountsToInvest[0],
+            userPaymentTokenDefaultAllocation,
+            exchangeRateNumerator,
+            feeNumerator,
+            sampleKycAddress,
+            sampleUser,
+            activeRoundStartTimestamp,
+            activeRoundEndTimestamp,
+            true
+        );
+
+        uint256 preInvestBalance = PaymentTokenInstance.balanceOf(sampleUser);
+        uint256 preTokenId = RewardTokenInstance.currentTokenId();
+
+        vm.startPrank(sampleUser, sampleUser);
+        PaymentTokenInstance.approve(address(LedgerInstance), params.amountToInvest);
+        LedgerInstance.getRewardToken(params);
+        vm.stopPrank();
+
+        // Verify investment was processed
+        assertTrue(PaymentTokenInstance.balanceOf(address(LedgerInstance)) == params.amountToInvest);
+        assertTrue(PaymentTokenInstance.balanceOf(sampleUser) + params.amountToInvest == preInvestBalance);
+
+        // Verify reward token was minted
+        assertEq(RewardTokenInstance.currentTokenId(), preTokenId + 1);
+        assertEq(RewardTokenInstance.ownerOf(preTokenId + 1), sampleUser);
+        assertEq(RewardTokenInstance.tokenIdToInvestmentRound(preTokenId + 1), params.investmentRound);
+    }
+
+    /// @notice Tests getRewardToken function emits correct event with token ID
+    function testGetRewardTokenEvent() public {
+        VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
+            sampleInvestmentRoundIds[0],
+            investmentRoundSampleLimit,
+            sampleAmountsToInvest[0],
+            userPaymentTokenDefaultAllocation,
+            exchangeRateNumerator,
+            feeNumerator,
+            sampleKycAddress,
+            sampleUser,
+            activeRoundStartTimestamp,
+            activeRoundEndTimestamp,
+            true
+        );
+
+        vm.startPrank(sampleUser, sampleUser);
+        PaymentTokenInstance.approve(address(LedgerInstance), params.amountToInvest);
+
+        uint256 tokenFee = ((params.amountToInvest * params.feeNumerator) /
+            LedgerInstance.FEE_DENOMINATOR());
+
+        // Get the expected token ID (should be 1 since no tokens have been minted yet)
+        uint256 expectedTokenId = 1;
+
+        vm.expectEmit(address(LedgerInstance));
+        emit VVVVCInvestmentLedger.VCInvestment(
+            params.investmentRound,
+            params.paymentTokenAddress,
+            params.kycAddress,
+            params.exchangeRateNumerator,
+            LedgerInstance.exchangeRateDenominator(),
+            params.feeNumerator,
+            params.amountToInvest * 1e12 - tokenFee * 1e12,
+            6,
+            LedgerInstance.decimals(),
+            expectedTokenId
+        );
+        LedgerInstance.getRewardToken(params);
+        vm.stopPrank();
+    }
+
+    /// @notice Tests that admin can set reward token
+    function testAdminSetRewardToken() public {
+        address newRewardToken = makeAddr("newRewardToken");
+
+        vm.startPrank(ledgerManager, ledgerManager);
+        LedgerInstance.setRewardToken(newRewardToken);
+        assertEq(address(LedgerInstance.rewardToken()), newRewardToken);
+        vm.stopPrank();
+    }
+
+    /// @notice Tests that non-admin cannot set reward token
+    function testNonAdminSetRewardToken() public {
+        address newRewardToken = makeAddr("newRewardToken");
+
+        vm.startPrank(sampleUser, sampleUser);
+        vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
+        LedgerInstance.setRewardToken(newRewardToken);
+        vm.stopPrank();
+    }
+
+    /// @notice Tests that multiple reward tokens can be minted for different investments
+    function testMultipleRewardTokens() public {
+        VVVVCInvestmentLedger.InvestParams memory params1 = generateInvestParamsWithSignature(
+            sampleInvestmentRoundIds[0],
+            investmentRoundSampleLimit,
+            sampleAmountsToInvest[0],
+            userPaymentTokenDefaultAllocation,
+            exchangeRateNumerator,
+            feeNumerator,
+            sampleKycAddress,
+            sampleUser,
+            activeRoundStartTimestamp,
+            activeRoundEndTimestamp,
+            true
+        );
+
+        VVVVCInvestmentLedger.InvestParams memory params2 = generateInvestParamsWithSignature(
+            sampleInvestmentRoundIds[1],
+            investmentRoundSampleLimit,
+            sampleAmountsToInvest[1],
+            userPaymentTokenDefaultAllocation,
+            exchangeRateNumerator,
+            feeNumerator,
+            sampleKycAddress,
+            sampleUser,
+            activeRoundStartTimestamp,
+            activeRoundEndTimestamp,
+            true
+        );
+
+        vm.startPrank(sampleUser, sampleUser);
+        PaymentTokenInstance.approve(
+            address(LedgerInstance),
+            params1.amountToInvest + params2.amountToInvest
+        );
+
+        LedgerInstance.getRewardToken(params1);
+        LedgerInstance.getRewardToken(params2);
+        vm.stopPrank();
+
+        assertEq(RewardTokenInstance.currentTokenId(), 2);
+        assertEq(RewardTokenInstance.ownerOf(1), sampleUser);
+        assertEq(RewardTokenInstance.ownerOf(2), sampleUser);
+        assertEq(RewardTokenInstance.tokenIdToInvestmentRound(1), params1.investmentRound);
+        assertEq(RewardTokenInstance.tokenIdToInvestmentRound(2), params2.investmentRound);
+    }
+
+    /// @notice Tests that getRewardToken reverts if rewardToken is not set
+    function testGetRewardTokenRevertsIfRewardTokenNotSet() public {
+        // Deploy a new ledger without setting reward token
+        VVVVCInvestmentLedger ledgerNoReward = new VVVVCInvestmentLedger(
+            testSigner,
+            environmentTag,
+            address(AuthRegistry),
+            exchangeRateDenominator
+        );
+        VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
+            sampleInvestmentRoundIds[0],
+            investmentRoundSampleLimit,
+            sampleAmountsToInvest[0],
+            userPaymentTokenDefaultAllocation,
+            exchangeRateNumerator,
+            feeNumerator,
+            sampleKycAddress,
+            sampleUser,
+            activeRoundStartTimestamp,
+            activeRoundEndTimestamp,
+            true
+        );
+
+        PaymentTokenInstance.mint(sampleUser, params.amountToInvest);
+        vm.startPrank(sampleUser, sampleUser);
+        PaymentTokenInstance.approve(address(ledgerNoReward), params.amountToInvest);
+        vm.expectRevert(VVVVCInvestmentLedger.RewardTokenNotSet.selector);
+        ledgerNoReward.getRewardToken(params);
+        vm.stopPrank();
     }
 
     /// @notice Tests that the domain separator matches reference domain separator
