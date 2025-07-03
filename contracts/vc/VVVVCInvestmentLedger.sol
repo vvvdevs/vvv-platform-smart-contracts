@@ -20,7 +20,7 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
     bytes32 public constant INVESTMENT_TYPEHASH =
         keccak256(
             bytes(
-                "InvestParams(uint256 investmentRound,uint256 investmentRoundLimit,uint256 investmentRoundStartTimestamp,uint256 investmentRoundEndTimestamp,address paymentTokenAddress,address kycAddress,uint256 kycAddressAllocation,uint256 exchangeRateNumerator,uint256 feeNumerator,uint256 deadline,address sender)"
+                "InvestParams(uint256 investmentRound,uint256 investmentRoundLimit,uint256 investmentRoundStartTimestamp,uint256 investmentRoundEndTimestamp,address paymentTokenAddress,address kycAddress,uint256 kycAddressAllocation,uint256 exchangeRateNumerator,uint256 feeNumerator,uint256 deadline,address sender,bool distributeRewardToken)"
             )
         );
 
