@@ -9,4 +9,3 @@ runs = 2000
 auto_detect_remappings = false
 allow_internal_expect_revert = true
 optimizer = true
-

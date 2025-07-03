@@ -245,24 +245,11 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
             _params.exchangeRateNumerator,
             exchangeRateDenominator,
             _params.feeNumerator,
-            _calculatePostFeeStableAmountEquivalent(_params),
+            postFeeStableAmountEquivalent,
             IERC20WithDecimals(_params.paymentTokenAddress).decimals(),
             decimals,
             mintedTokenId
         );
-    }
-
-    function _calculatePostFeeStableAmountEquivalent(
-        InvestParams memory _params
-    ) internal view returns (uint256) {
-        uint8 paymentTokenDecimals = IERC20WithDecimals(_params.paymentTokenAddress).decimals();
-        uint8 decimalDifference = decimals - paymentTokenDecimals;
-        uint256 preFeeStableAmountEquivalent = ((_params.amountToInvest * _params.exchangeRateNumerator) /
-            exchangeRateDenominator) * 10 ** decimalDifference;
-        return
-            preFeeStableAmountEquivalent -
-            (preFeeStableAmountEquivalent * _params.feeNumerator + FEE_DENOMINATOR - 1) /
-            FEE_DENOMINATOR;
     }
 
     /// @notice computes DOMAIN_SEPARATOR for investment transactions
