@@ -105,7 +105,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
 
         vm.prank(sampleUser);
@@ -127,7 +128,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
 
         //round start timestamp is off by one second
@@ -152,7 +154,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
 
         // but deploy another ledger with a different signer
@@ -183,7 +186,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
 
         vm.prank(sampleKycAddress);
@@ -204,7 +208,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
 
         // Advance time past the deadline of 1 hour
@@ -229,7 +234,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
 
         uint256 preInvestBalance = PaymentTokenInstance.balanceOf(sampleUser);
@@ -255,7 +261,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
 
         uint256 preInvestBalance = PaymentTokenInstance.balanceOf(sampleUser);
@@ -281,7 +288,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
         investAsUser(sampleUser, params);
         uint256 userInvested = LedgerInstance.kycAddressInvestedPerRound(
@@ -302,7 +310,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
         investAsUser(sampleUser, params2);
         uint256 userInvested2 = LedgerInstance.kycAddressInvestedPerRound(
@@ -336,7 +345,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
 
         uint256 numberOfInvestments = 10;
@@ -366,7 +376,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
 
         //invested amount, given that fee is rounded up
@@ -397,7 +408,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
 
         vm.prank(sampleUser);
@@ -419,7 +431,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             block.timestamp + 1 days,
-            block.timestamp + 2 days
+            block.timestamp + 2 days,
+            false
         );
 
         vm.startPrank(sampleUser, sampleUser);
@@ -444,7 +457,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             block.timestamp - 2 days,
-            block.timestamp - 1 days
+            block.timestamp - 1 days,
+            false
         );
 
         vm.startPrank(sampleUser, sampleUser);
@@ -469,7 +483,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
 
         uint256 numberOfInvestments = 11;
@@ -502,7 +517,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
 
         vm.startPrank(ledgerManager, ledgerManager);
@@ -530,7 +546,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
 
         params.investmentRoundStartTimestamp += 1;
@@ -558,7 +575,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
 
         investAsUser(sampleUser, params);
@@ -595,7 +613,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
 
         investAsUser(sampleUser, params);
@@ -623,7 +642,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
 
         vm.startPrank(sampleUser, sampleUser);
@@ -802,7 +822,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            false
         );
         investAsUser(sampleUser, params);
 
@@ -857,7 +878,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            true
         );
 
         uint256 preInvestBalance = PaymentTokenInstance.balanceOf(sampleUser);
@@ -890,7 +912,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            true
         );
 
         vm.startPrank(sampleUser, sampleUser);
@@ -951,7 +974,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            true
         );
 
         VVVVCInvestmentLedger.InvestParams memory params2 = generateInvestParamsWithSignature(
@@ -964,7 +988,8 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            true
         );
 
         vm.startPrank(sampleUser, sampleUser);
@@ -1005,14 +1030,16 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
             sampleKycAddress,
             sampleUser,
             activeRoundStartTimestamp,
-            activeRoundEndTimestamp
+            activeRoundEndTimestamp,
+            true
         );
         // Regenerate signature for the new ledger instance
         params.signature = getEIP712SignatureForInvest(
             newDomainSeparator,
             newTypehash,
             sampleUser,
-            params
+            params,
+            true
         );
         PaymentTokenInstance.mint(sampleUser, params.amountToInvest);
         vm.startPrank(sampleUser, sampleUser);

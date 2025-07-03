@@ -136,7 +136,8 @@ abstract contract VVVVCTestBase is Test {
         bytes32 _domainSeparator,
         bytes32 _investmentTypehash,
         address _sender,
-        VVVVCInvestmentLedger.InvestParams memory _params
+        VVVVCInvestmentLedger.InvestParams memory _params,
+        bool distributeRewardToken
     ) public view returns (bytes memory) {
         bytes32 digest = keccak256(
             abi.encodePacked(
@@ -155,7 +156,8 @@ abstract contract VVVVCTestBase is Test {
                         _params.exchangeRateNumerator,
                         _params.feeNumerator,
                         _params.deadline,
-                        _sender
+                        _sender,
+                        distributeRewardToken
                     )
                 )
             )
@@ -177,8 +179,9 @@ abstract contract VVVVCTestBase is Test {
         address _kycAddress,
         address _sender,
         uint256 _investmentRoundStartTimestamp,
-        uint256 _investmentRoundEndTimestamp
-    ) public view returns (VVVVCInvestmentLedger.InvestParams memory) {
+        uint256 _investmentRoundEndTimestamp,
+        bool distributeRewardToken
+    ) public returns (VVVVCInvestmentLedger.InvestParams memory) {
         VVVVCInvestmentLedger.InvestParams memory params = VVVVCInvestmentLedger.InvestParams({
             investmentRound: _investmentRound,
             investmentRoundLimit: _investmentRoundLimit,
@@ -198,7 +201,8 @@ abstract contract VVVVCTestBase is Test {
             ledgerDomainSeparator,
             investmentTypehash,
             _sender,
-            params
+            params,
+            distributeRewardToken
         );
 
         params.signature = sig;

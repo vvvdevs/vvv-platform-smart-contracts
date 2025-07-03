@@ -66,7 +66,8 @@ contract VVVVCInvestmentLedgerFuzzTests is VVVVCTestBase {
             ledgerDomainSeparator,
             investmentTypehash,
             sampleUser,
-            params
+            params,
+            false
         );
 
         if (
