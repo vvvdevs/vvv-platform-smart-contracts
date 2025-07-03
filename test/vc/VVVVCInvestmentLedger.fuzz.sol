@@ -59,7 +59,7 @@ contract VVVVCInvestmentLedgerFuzzTests is VVVVCTestBase {
             exchangeRateNumerator: exchangeRateNumerator,
             feeNumerator: feeNumerator,
             deadline: _deadline,
-            signature: bytes("")
+            signature: bytes("placeholder")
         });
 
         params.signature = getEIP712SignatureForInvest(
@@ -70,6 +70,8 @@ contract VVVVCInvestmentLedgerFuzzTests is VVVVCTestBase {
             false
         );
 
+        //check that the investment ledger state is updated correctly given these conditions,
+        //which should yield successful investments
         if (
             _kycAddress != address(0) &&
             _paymentTokenAddress == address(PaymentTokenInstance) &&
@@ -86,6 +88,8 @@ contract VVVVCInvestmentLedgerFuzzTests is VVVVCTestBase {
                 _amountToInvest
             );
         } else {
+            //check that the investment ledger state is not updated given these conditions,
+            //which should yield reverts
             vm.expectRevert();
             LedgerInstance.invest(params);
             assertEq(LedgerInstance.totalInvestedPerRound(_investmentRound), 0);
