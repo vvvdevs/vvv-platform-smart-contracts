@@ -189,7 +189,7 @@ abstract contract VVVVCTestBase is Test {
             exchangeRateNumerator: _exchangeRateNumerator,
             feeNumerator: _feeNumerator,
             deadline: block.timestamp + 1 hours,
-            signature: bytes("")
+            signature: bytes("placeholder")
         });
 
         bytes memory sig = getEIP712SignatureForInvest(
