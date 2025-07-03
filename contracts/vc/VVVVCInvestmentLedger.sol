@@ -150,7 +150,21 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
      * @param _params An InvestParams struct containing the investment parameters
      */
     function invest(InvestParams memory _params) external {
-        _invest(_params, false);
+        uint256 postFeeStableAmountEquivalent = _invest(_params, false);
+
+        // emit VCInvestment event (in stablecoin terms)
+        emit VCInvestment(
+            _params.investmentRound,
+            _params.paymentTokenAddress,
+            _params.kycAddress,
+            _params.exchangeRateNumerator,
+            exchangeRateDenominator,
+            _params.feeNumerator,
+            postFeeStableAmountEquivalent,
+            IERC20WithDecimals(_params.paymentTokenAddress).decimals(),
+            decimals,
+            0
+        );
     }
 
     /**
@@ -158,7 +172,27 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
      * @param _params An InvestParams struct containing the investment parameters
      */
     function getRewardToken(InvestParams memory _params) external {
-        _invest(_params, true);
+        uint256 postFeeStableAmountEquivalent = _invest(_params, true);
+
+        if (address(rewardToken) == address(0)) {
+            revert RewardTokenNotSet();
+        }
+        rewardToken.mint(msg.sender, _params.investmentRound);
+        uint256 mintedTokenId = rewardToken.currentTokenId();
+
+        // emit VCInvestment event (in stablecoin terms)
+        emit VCInvestment(
+            _params.investmentRound,
+            _params.paymentTokenAddress,
+            _params.kycAddress,
+            _params.exchangeRateNumerator,
+            exchangeRateDenominator,
+            _params.feeNumerator,
+            postFeeStableAmountEquivalent,
+            IERC20WithDecimals(_params.paymentTokenAddress).decimals(),
+            decimals,
+            mintedTokenId
+        );
     }
 
     /**
@@ -166,7 +200,7 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
      * @param _params An InvestParams struct containing the investment parameters
      * @param distributeRewardToken Whether to distribute a reward token
      */
-    function _invest(InvestParams memory _params, bool distributeRewardToken) internal {
+    function _invest(InvestParams memory _params, bool distributeRewardToken) internal returns (uint256) {
         //check if investments are paused
         if (investmentIsPaused) revert InvestmentPaused();
 
@@ -227,29 +261,7 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
             _params.amountToInvest
         );
 
-        // mint reward token if applicable
-        uint256 mintedTokenId = 0;
-        if (distributeRewardToken) {
-            if (address(rewardToken) == address(0)) {
-                revert RewardTokenNotSet();
-            }
-            rewardToken.mint(msg.sender, _params.investmentRound);
-            mintedTokenId = rewardToken.currentTokenId();
-        }
-
-        // emit VCInvestment event (in stablecoin terms)
-        emit VCInvestment(
-            _params.investmentRound,
-            _params.paymentTokenAddress,
-            _params.kycAddress,
-            _params.exchangeRateNumerator,
-            exchangeRateDenominator,
-            _params.feeNumerator,
-            postFeeStableAmountEquivalent,
-            IERC20WithDecimals(_params.paymentTokenAddress).decimals(),
-            decimals,
-            mintedTokenId
-        );
+        return postFeeStableAmountEquivalent;
     }
 
     /// @notice computes DOMAIN_SEPARATOR for investment transactions
