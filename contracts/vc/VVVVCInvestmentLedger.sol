@@ -172,11 +172,11 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
      * @param _params An InvestParams struct containing the investment parameters
      */
     function getRewardToken(InvestParams memory _params) external {
-        uint256 postFeeStableAmountEquivalent = _invest(_params, true);
-
         if (address(rewardToken) == address(0)) {
             revert RewardTokenNotSet();
         }
+
+        uint256 postFeeStableAmountEquivalent = _invest(_params, true);
         rewardToken.mint(msg.sender, _params.investmentRound);
         uint256 mintedTokenId = rewardToken.currentTokenId();
 
