@@ -146,6 +146,7 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
 
     /**
      * @notice Public function to invest without minting a reward token
+     * @notice Facilitates a kyc address's investment in a project
      * @param _params An InvestParams struct containing the investment parameters
      */
     function invest(InvestParams memory _params) external {
@@ -194,44 +195,77 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
      * @param _params An InvestParams struct containing the investment parameters
      */
     function _invest(InvestParams memory _params) internal {
+        //check if investments are paused
         if (investmentIsPaused) revert InvestmentPaused();
+
+        // check if signature is valid
         if (!_isSignatureValid(_params)) {
             revert InvalidSignature();
         }
+
+        // check if the investment round is active
         if (
             block.timestamp < _params.investmentRoundStartTimestamp ||
             block.timestamp > _params.investmentRoundEndTimestamp
         ) {
             revert InactiveInvestmentRound();
         }
+
+        // store kyc address and total amounts invested for this investment round
         uint256 kycAddressInvestedThisRound = kycAddressInvestedPerRound[_params.kycAddress][
             _params.investmentRound
         ];
         uint256 totalInvestedThisRound = totalInvestedPerRound[_params.investmentRound];
+
         uint8 paymentTokenDecimals = IERC20WithDecimals(_params.paymentTokenAddress).decimals();
         if (decimals < paymentTokenDecimals) {
             revert UnsupportedPaymentTokenDecimals();
         }
+
         uint8 decimalDifference = decimals - paymentTokenDecimals;
+
+        // the stablecoin amount equivalent to the payment token amount supplied at the current exchange rate
         uint256 preFeeStableAmountEquivalent = ((_params.amountToInvest * _params.exchangeRateNumerator) /
             exchangeRateDenominator) * 10 ** decimalDifference;
+
+        // the post-fee stableAmountEquivalent, to contribute toward user and round limits
         uint256 postFeeStableAmountEquivalent = preFeeStableAmountEquivalent -
             (preFeeStableAmountEquivalent * _params.feeNumerator + FEE_DENOMINATOR - 1) /
             FEE_DENOMINATOR;
+
+        // check if kyc address has already invested the max stablecoin-equivalent amount for this round,
+        // or if the total invested for this round has reached the limit
         if (
             postFeeStableAmountEquivalent > _params.kycAddressAllocation - kycAddressInvestedThisRound ||
             postFeeStableAmountEquivalent > _params.investmentRoundLimit - totalInvestedThisRound
         ) {
             revert ExceedsAllocation();
         }
+
+        // update kyc address and total amounts invested for this investment round (in stablecoin terms)
         kycAddressInvestedPerRound[_params.kycAddress][
             _params.investmentRound
         ] += postFeeStableAmountEquivalent;
         totalInvestedPerRound[_params.investmentRound] += postFeeStableAmountEquivalent;
+
+        // transfer tokens from msg.sender to this contract (in payment token terms)
         IERC20WithDecimals(_params.paymentTokenAddress).safeTransferFrom(
             msg.sender,
             address(this),
             _params.amountToInvest
+        );
+
+        // emit VCInvestment event (in stablecoin terms)
+        emit VCInvestment(
+            _params.investmentRound,
+            _params.paymentTokenAddress,
+            _params.kycAddress,
+            _params.exchangeRateNumerator,
+            exchangeRateDenominator,
+            _params.feeNumerator,
+            postFeeStableAmountEquivalent,
+            paymentTokenDecimals,
+            decimals
         );
     }
 
