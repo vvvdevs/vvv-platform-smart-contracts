@@ -92,7 +92,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
 
     /**
      * @notice Tests creation and validation of EIP712 signatures
-     * @dev defines an InvestParams struct, creates a signature for it, and validates it with the same struct parameters
+     * @dev defines an InvestParams struct and no reward token distribution, creates a signature for it, and validates it with the same parameters
      */
     function testValidateSignature() public {
         VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
@@ -110,7 +110,30 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         );
 
         vm.prank(sampleUser);
-        assertTrue(LedgerInstance.isSignatureValid(params));
+        assertTrue(LedgerInstance.isSignatureValid(params, false));
+    }
+
+    /**
+     * @notice Tests creation and validation of EIP712 signatures with reward token distribution
+     * @dev defines an InvestParams struct and reward token distribution, creates a signature for it, and validates it with the same parameters
+     */
+    function testValidateSignatureWithRewardTokenDistribution() public {
+        VVVVCInvestmentLedger.InvestParams memory params = generateInvestParamsWithSignature(
+            sampleInvestmentRoundIds[0],
+            investmentRoundSampleLimit,
+            sampleAmountsToInvest[0],
+            userPaymentTokenDefaultAllocation,
+            exchangeRateNumerator,
+            feeNumerator,
+            sampleKycAddress,
+            sampleUser,
+            activeRoundStartTimestamp,
+            activeRoundEndTimestamp,
+            true
+        );
+
+        vm.prank(sampleUser);
+        assertTrue(LedgerInstance.isSignatureValid(params, true));
     }
 
     /**
@@ -136,7 +159,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         params.investmentRoundStartTimestamp += 1;
 
         vm.prank(sampleUser);
-        assertFalse(LedgerInstance.isSignatureValid(params));
+        assertFalse(LedgerInstance.isSignatureValid(params, false));
     }
 
     /**
@@ -168,7 +191,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         );
 
         vm.prank(sampleUser);
-        assertFalse(newLedger.isSignatureValid(params));
+        assertFalse(newLedger.isSignatureValid(params, false));
     }
 
     /**
@@ -191,7 +214,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         );
 
         vm.prank(sampleKycAddress);
-        assertFalse(LedgerInstance.isSignatureValid(params));
+        assertFalse(LedgerInstance.isSignatureValid(params, false));
     }
 
     /**
@@ -216,7 +239,7 @@ contract VVVVCInvestmentLedgerUnitTests is VVVVCTestBase {
         advanceBlockNumberAndTimestampInSeconds(1 hours + 2);
 
         vm.prank(sampleUser);
-        assertFalse(LedgerInstance.isSignatureValid(params));
+        assertFalse(LedgerInstance.isSignatureValid(params, false));
     }
 
     /**

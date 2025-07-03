@@ -198,14 +198,14 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
     /**
      * @notice Internal function to facilitate a kyc address's investment in a project
      * @param _params An InvestParams struct containing the investment parameters
-     * @param distributeRewardToken Whether to distribute a reward token
+     * @param _distributeRewardToken Whether to distribute a reward token
      */
-    function _invest(InvestParams memory _params, bool distributeRewardToken) internal returns (uint256) {
+    function _invest(InvestParams memory _params, bool _distributeRewardToken) internal returns (uint256) {
         //check if investments are paused
         if (investmentIsPaused) revert InvestmentPaused();
 
         // check if signature is valid
-        if (!_isSignatureValid(_params, distributeRewardToken)) {
+        if (!_isSignatureValid(_params, _distributeRewardToken)) {
             revert InvalidSignature();
         }
 
@@ -285,12 +285,12 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
     /**
      * @notice Checks if the provided signature is valid
      * @param _params An InvestParams struct containing the investment parameters
-     * @param distributeRewardToken Whether to distribute a reward token
+     * @param _distributeRewardToken Whether to distribute a reward token
      * @return true if the signer address is recovered from the signature, false otherwise
      */
     function _isSignatureValid(
         InvestParams memory _params,
-        bool distributeRewardToken
+        bool _distributeRewardToken
     ) internal view returns (bool) {
         bytes32 digest = keccak256(
             abi.encodePacked(
@@ -310,7 +310,7 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
                         _params.feeNumerator,
                         _params.deadline,
                         msg.sender,
-                        distributeRewardToken
+                        _distributeRewardToken
                     )
                 )
             )
@@ -322,8 +322,11 @@ contract VVVVCInvestmentLedger is VVVAuthorizationRegistryChecker {
     }
 
     /// @notice external wrapper for _isSignatureValid
-    function isSignatureValid(InvestParams memory _params) external view returns (bool) {
-        return _isSignatureValid(_params, false);
+    function isSignatureValid(
+        InvestParams memory _params,
+        bool _distributeRewardToken
+    ) external view returns (bool) {
+        return _isSignatureValid(_params, _distributeRewardToken);
     }
 
     /// @notice Allows admin to withdraw ERC20 tokens from this contract
