@@ -251,6 +251,10 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         //advance enough to accrue some vested tokens
         advanceBlockNumberAndTimestampInSeconds(2 weeks);
 
+        uint256 expectedVestedAmount = (block.timestamp - vestingSince) * amountToVestPerSecond; //2 weeks of vesting
+
+        vm.expectEmit(address(NodesInstance));
+        emit VVVNodes.UpdateClaimableFromVesting(tokenId, expectedVestedAmount);
         //unstaking 1 token should deactivate the node
         NodesInstance.unstake(tokenId, 1);
         vm.stopPrank();
@@ -258,8 +262,6 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         //post-deactivation unvested amount is slightly less, the difference has become claimable
         (uint256 unvestedAmountPostDeactivation, , , uint256 claimableAmount, , ) = NodesInstance
             .tokenData(tokenId);
-
-        uint256 expectedVestedAmount = (block.timestamp - vestingSince) * amountToVestPerSecond; //2 weeks of vesting
 
         //change in unvested amount is same as amount made claimable during deactivation
         assertEq(unvestedAmountPreDeactivation - unvestedAmountPostDeactivation, claimableAmount);
@@ -291,6 +293,8 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
 
         advanceBlockNumberAndTimestampInSeconds(vestingDuration * 2);
 
+        vm.expectEmit(address(NodesInstance));
+        emit VVVNodes.UpdateClaimableFromVesting(userTokenId, refTotalVestedTokens);
         NodesInstance.claim(userTokenId);
 
         //check post-vesting unvested tokens and owner wallet balance for userTokenId
@@ -804,7 +808,15 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         bool isActiveAfterStake = NodesInstance.isNodeActive(tokenId);
         vm.stopPrank();
 
+        (, uint256 vestingSince, , , uint256 amountToVestPerSecond, ) = NodesInstance.tokenData(tokenId);
+
+        //advance enough to accrue some vested tokens
+        advanceBlockNumberAndTimestampInSeconds(2 weeks);
+        uint256 expectedVestedAmount = (block.timestamp - vestingSince) * amountToVestPerSecond;
+
         vm.startPrank(deployer, deployer);
+        vm.expectEmit(address(NodesInstance));
+        emit VVVNodes.UpdateClaimableFromVesting(tokenId, expectedVestedAmount);
         NodesInstance.setActivationThreshold(activationThreshold + 1);
         vm.stopPrank();
 

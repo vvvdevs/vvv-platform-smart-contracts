@@ -76,6 +76,9 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
     ///@notice Emitted when a token's vestingSince is updated
     event VestingSinceUpdated(uint256 indexed tokenId, uint256 newVestingSince);
 
+    ///@notice Emitted when claimable amount is updated through vesting
+    event UpdateClaimableFromVesting(uint256 indexed tokenId, uint256 vestedAmount);
+
     ///@notice Thrown when input array lengths are not matched
     error ArrayLengthMismatch();
 
@@ -177,7 +180,7 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
             _isNodeActive(token.stakedAmount, activationThreshold) &&
             !_isNodeActive(token.stakedAmount - _amount, activationThreshold)
         ) {
-            _updateClaimableFromVesting(token);
+            _updateClaimableFromVesting(_tokenId, token);
         }
 
         token.stakedAmount -= _amount;
@@ -193,7 +196,7 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
         if (msg.sender != ownerOf(_tokenId)) revert CallerIsNotTokenOwner();
         TokenData storage token = tokenData[_tokenId];
 
-        _updateClaimableFromVesting(token);
+        _updateClaimableFromVesting(_tokenId, token);
         uint256 amountToClaim = token.claimableAmount;
 
         if (amountToClaim == 0) revert NoClaimableTokens();
@@ -279,7 +282,7 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
                     _isNodeActive(token.stakedAmount, activationThreshold) &&
                     !_isNodeActive(token.stakedAmount, _activationThreshold)
                 ) {
-                    _updateClaimableFromVesting(token);
+                    _updateClaimableFromVesting(i, token);
                 }
             }
         } else if (_activationThreshold < activationThreshold) {
@@ -343,11 +346,12 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
     }
 
     ///@notice utilized in claiming and deactivation, updates the claimable tokens accumulated from vesting
-    function _updateClaimableFromVesting(TokenData storage _tokenData) private {
+    function _updateClaimableFromVesting(uint256 _tokenId, TokenData storage _tokenData) private {
         uint256 currentVestedAmount = _calculateVestedTokens(_tokenData);
 
         _tokenData.unvestedAmount -= currentVestedAmount;
         _tokenData.claimableAmount += currentVestedAmount;
+        emit UpdateClaimableFromVesting(_tokenId, currentVestedAmount);
     }
 
     ///@notice calculates vested tokens for a given tokenId since the last timestamp (vestingSince) update (does not account for claimed)
