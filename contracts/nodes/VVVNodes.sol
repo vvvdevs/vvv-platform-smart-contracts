@@ -46,6 +46,9 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
     ///@notice Maps a TokenData struct to each tokenId
     mapping(uint256 => TokenData) public tokenData;
 
+    ///@notice Address of the ERC-20 token used for staking, rewards, and withdrawals
+    address public vvvToken;
+
     ///@notice Emitted when accrued yield is claimed
     event Claim(uint256 indexed tokenId, uint256 amount);
 
@@ -76,6 +79,9 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
     ///@notice Emitted when a token's vestingSince is updated
     event VestingSinceUpdated(uint256 indexed tokenId, uint256 newVestingSince);
 
+    ///@notice Emitted when the VVV token address is configured
+    event SetVvvToken(address indexed vvvToken);
+
     ///@notice Thrown when input array lengths are not matched
     error ArrayLengthMismatch();
 
@@ -88,9 +94,6 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
     ///@notice Thrown when a mint is attempted past the total supply
     error MaxSupplyReached();
 
-    ///@notice Thrown when msg.value doesn't match the sum of amounts to be distributed to each node
-    error MsgValueDistAmountMismatch();
-
     ///@notice Thrown when there are no claimable tokens for a node
     error NoClaimableTokens();
 
@@ -100,11 +103,14 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
     ///@notice Thrown when there is an attempt to unlock transaction processing yield when 0 yield remains to be unlocked
     error NoRemainingUnlockableYield(uint256 tokenId);
 
-    ///@notice Thrown when a native transfer fails
-    error TransferFailed();
-
     ///@notice Thrown when an attempt is made to stake/unstake 0 $VVV
     error ZeroTokenTransfer();
+
+    ///@notice Thrown when functionality requiring the VVV token is invoked before configuration
+    error VvvTokenNotSet();
+
+    ///@notice Thrown when attempting to configure the VVV token with the zero address
+    error InvalidVvvTokenAddress();
 
     constructor(
         address _authorizationRegistry,
@@ -148,23 +154,25 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
     }
 
     ///@notice Stakes $VVV, handles activation if amount added causes total staked to surpass activation threshold
-    function stake(uint256 _tokenId) external payable {
-        if (msg.value == 0) revert ZeroTokenTransfer();
+    function stake(uint256 _tokenId, uint256 _amount) external {
+        if (_amount == 0) revert ZeroTokenTransfer();
         if (msg.sender != ownerOf(_tokenId)) revert CallerIsNotTokenOwner();
         TokenData storage token = tokenData[_tokenId];
+        IERC20 vToken = _getConfiguredVvvToken();
 
         //if node is inactive and this stake activates it, set vestingSince to the current timestamp
         if (
             !_isNodeActive(token.stakedAmount, activationThreshold) &&
-            _isNodeActive(msg.value + token.stakedAmount, activationThreshold)
+            _isNodeActive(_amount + token.stakedAmount, activationThreshold)
         ) {
             token.vestingSince = block.timestamp;
             emit VestingSinceUpdated(_tokenId, token.vestingSince);
         }
 
-        token.stakedAmount += msg.value;
+        token.stakedAmount += _amount;
+        vToken.safeTransferFrom(msg.sender, address(this), _amount);
 
-        emit Stake(_tokenId, msg.value);
+        emit Stake(_tokenId, _amount);
     }
 
     ///@notice Unstakes $VVV, handles deactivation if amount removed causes total staked to fall below activation threshold
@@ -172,6 +180,7 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
         if (_amount == 0) revert ZeroTokenTransfer();
         if (msg.sender != ownerOf(_tokenId)) revert CallerIsNotTokenOwner();
         TokenData storage token = tokenData[_tokenId];
+        IERC20 vToken = _getConfiguredVvvToken();
 
         if (
             _isNodeActive(token.stakedAmount, activationThreshold) &&
@@ -182,8 +191,7 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
 
         token.stakedAmount -= _amount;
 
-        (bool success, ) = msg.sender.call{ value: _amount }("");
-        if (!success) revert TransferFailed();
+        vToken.safeTransfer(msg.sender, _amount);
 
         emit Unstake(_tokenId, _amount);
     }
@@ -202,8 +210,8 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
         //update vestingSince to the current timestamp to maintain correct vesting calculations
         token.vestingSince = block.timestamp;
 
-        (bool success, ) = msg.sender.call{ value: amountToClaim }("");
-        if (!success) revert TransferFailed();
+        IERC20 vToken = _getConfiguredVvvToken();
+        vToken.safeTransfer(msg.sender, amountToClaim);
 
         emit VestingSinceUpdated(_tokenId, token.vestingSince);
         emit Claim(_tokenId, amountToClaim);
@@ -220,10 +228,10 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
     function depositLaunchpadYield(
         uint256[] calldata _tokenIds,
         uint256[] calldata _amounts
-    ) external payable onlyAuthorized {
+    ) external onlyAuthorized {
         if (_tokenIds.length != _amounts.length) revert ArrayLengthMismatch();
-        if (msg.value == 0) revert ZeroTokenTransfer();
         uint256 amountsSum;
+        IERC20 vToken = _getConfiguredVvvToken();
 
         for (uint256 i = 0; i < _tokenIds.length; i++) {
             uint256 thisTokenId = _tokenIds[i];
@@ -238,7 +246,9 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
             emit DepositLaunchpadYield(thisTokenId, thisAmount);
         }
 
-        if (amountsSum != msg.value) revert MsgValueDistAmountMismatch();
+        if (amountsSum == 0) revert ZeroTokenTransfer();
+
+        vToken.safeTransferFrom(msg.sender, address(this), amountsSum);
     }
 
     ///@notice unlocks transaction processing yield for selected tokens
@@ -318,8 +328,8 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
 
     ///@notice Withdraws $VVV from the contract
     function withdraw(uint256 _amount) external onlyAuthorized {
-        (bool success, ) = msg.sender.call{ value: _amount }("");
-        if (!success) revert TransferFailed();
+        IERC20 vToken = _getConfiguredVvvToken();
+        vToken.safeTransfer(msg.sender, _amount);
     }
 
     ///@notice returns whether a node of input tokenId is active
@@ -374,5 +384,19 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
         uint256 _activationThreshold
     ) private pure returns (bool) {
         return _stakedVVVAmount >= _activationThreshold;
+    }
+
+    ///@notice Sets the ERC-20 token used by the contract
+    function setVvvToken(address _vvvToken) external onlyAuthorized {
+        if (_vvvToken == address(0)) revert InvalidVvvTokenAddress();
+        vvvToken = _vvvToken;
+        emit SetVvvToken(_vvvToken);
+    }
+
+    ///@notice Returns the configured VVV token or reverts if unset
+    function _getConfiguredVvvToken() private view returns (IERC20) {
+        address token = vvvToken;
+        if (token == address(0)) revert VvvTokenNotSet();
+        return IERC20(token);
     }
 }
