@@ -158,7 +158,7 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
         if (_amount == 0) revert ZeroTokenTransfer();
         if (msg.sender != ownerOf(_tokenId)) revert CallerIsNotTokenOwner();
         TokenData storage token = tokenData[_tokenId];
-        IERC20 vToken = _getConfiguredVToken();
+        IERC20 vvvToken = _getConfiguredVToken();
 
         //if node is inactive and this stake activates it, set vestingSince to the current timestamp
         if (
@@ -170,7 +170,7 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
         }
 
         token.stakedAmount += _amount;
-        vToken.safeTransferFrom(msg.sender, address(this), _amount);
+        vvvToken.safeTransferFrom(msg.sender, address(this), _amount);
 
         emit Stake(_tokenId, _amount);
     }
@@ -180,7 +180,7 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
         if (_amount == 0) revert ZeroTokenTransfer();
         if (msg.sender != ownerOf(_tokenId)) revert CallerIsNotTokenOwner();
         TokenData storage token = tokenData[_tokenId];
-        IERC20 vToken = _getConfiguredVToken();
+        IERC20 vvvToken = _getConfiguredVToken();
 
         if (
             _isNodeActive(token.stakedAmount, activationThreshold) &&
@@ -191,7 +191,7 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
 
         token.stakedAmount -= _amount;
 
-        vToken.safeTransfer(msg.sender, _amount);
+        vvvToken.safeTransfer(msg.sender, _amount);
 
         emit Unstake(_tokenId, _amount);
     }
@@ -210,8 +210,8 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
         //update vestingSince to the current timestamp to maintain correct vesting calculations
         token.vestingSince = block.timestamp;
 
-        IERC20 vToken = _getConfiguredVToken();
-        vToken.safeTransfer(msg.sender, amountToClaim);
+        IERC20 vvvToken = _getConfiguredVToken();
+        vvvToken.safeTransfer(msg.sender, amountToClaim);
 
         emit VestingSinceUpdated(_tokenId, token.vestingSince);
         emit Claim(_tokenId, amountToClaim);
@@ -231,7 +231,7 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
     ) external onlyAuthorized {
         if (_tokenIds.length != _amounts.length) revert ArrayLengthMismatch();
         uint256 amountsSum;
-        IERC20 vToken = _getConfiguredVToken();
+        IERC20 vvvToken = _getConfiguredVToken();
 
         for (uint256 i = 0; i < _tokenIds.length; i++) {
             uint256 thisTokenId = _tokenIds[i];
@@ -248,7 +248,7 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
 
         if (amountsSum == 0) revert ZeroTokenTransfer();
 
-        vToken.safeTransferFrom(msg.sender, address(this), amountsSum);
+        vvvToken.safeTransferFrom(msg.sender, address(this), amountsSum);
     }
 
     ///@notice unlocks transaction processing yield for selected tokens
@@ -328,8 +328,8 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
 
     ///@notice Withdraws $VVV from the contract
     function withdraw(uint256 _amount) external onlyAuthorized {
-        IERC20 vToken = _getConfiguredVToken();
-        vToken.safeTransfer(msg.sender, _amount);
+        IERC20 vvvToken = _getConfiguredVToken();
+        vvvToken.safeTransfer(msg.sender, _amount);
     }
 
     ///@notice returns whether a node of input tokenId is active
