@@ -20,7 +20,7 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         vm.stopPrank();
 
         vm.prank(deployer, deployer);
-        NodesInstance.setVvvToken(address(VVVTokenInstance));
+        NodesInstance.setVToken(address(VVVTokenInstance));
     }
 
     function testDeployment() public {
@@ -124,28 +124,28 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         vm.stopPrank();
     }
 
-    function testSetVvvToken() public {
+    function testSetVToken() public {
         vm.startPrank(deployer, deployer);
         VVVToken newToken = new VVVToken(type(uint256).max, type(uint256).max, address(AuthRegistry));
         vm.expectEmit(address(NodesInstance));
-        emit VVVNodes.SetVvvToken(address(newToken));
-        NodesInstance.setVvvToken(address(newToken));
+        emit VVVNodes.SetVToken(address(newToken));
+        NodesInstance.setVToken(address(newToken));
         vm.stopPrank();
 
         assertEq(NodesInstance.vvvToken(), address(newToken));
     }
 
-    function testSetVvvTokenZeroAddressReverts() public {
+    function testSetVTokenZeroAddressReverts() public {
         vm.startPrank(deployer, deployer);
-        vm.expectRevert(VVVNodes.InvalidVvvTokenAddress.selector);
-        NodesInstance.setVvvToken(address(0));
+        vm.expectRevert(VVVNodes.InvalidVTokenAddress.selector);
+        NodesInstance.setVToken(address(0));
         vm.stopPrank();
     }
 
-    function testNonAdminCannotSetVvvToken() public {
+    function testNonAdminCannotSetVToken() public {
         startUserPrank();
         vm.expectRevert(VVVAuthorizationRegistryChecker.UnauthorizedCaller.selector);
-        NodesInstance.setVvvToken(address(1));
+        NodesInstance.setVToken(address(1));
         vm.stopPrank();
     }
 
@@ -211,7 +211,7 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
     }
 
     //tests that staking reverts when the VVV token is not configured
-    function testStakeRevertsWhenVvvTokenNotSet() public {
+    function testStakeRevertsWhenVTokenNotSet() public {
         vm.startPrank(deployer, deployer);
         VVVNodes nodesWithoutToken = new VVVNodes(
             address(AuthRegistry),
@@ -225,7 +225,7 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
 
         vm.startPrank(sampleUser, sampleUser);
         VVVTokenInstance.approve(address(nodesWithoutToken), type(uint256).max);
-        vm.expectRevert(VVVNodes.VvvTokenNotSet.selector);
+        vm.expectRevert(VVVNodes.VTokenNotSet.selector);
         nodesWithoutToken.stake(1, activationThreshold);
         vm.stopPrank();
     }
@@ -990,14 +990,14 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
     }
 
     //tests that withdraw reverts when the VVV token is not configured
-    function testWithdrawRevertsWhenVvvTokenNotSet() public {
+    function testWithdrawRevertsWhenVTokenNotSet() public {
         vm.startPrank(deployer, deployer);
         VVVNodes nodesWithoutToken = new VVVNodes(
             address(AuthRegistry),
             defaultBaseURI,
             activationThreshold
         );
-        vm.expectRevert(VVVNodes.VvvTokenNotSet.selector);
+        vm.expectRevert(VVVNodes.VTokenNotSet.selector);
         nodesWithoutToken.withdraw(1);
         vm.stopPrank();
     }
