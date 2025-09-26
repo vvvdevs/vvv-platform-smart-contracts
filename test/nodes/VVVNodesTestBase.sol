@@ -44,4 +44,13 @@ abstract contract VVVNodesTestBase is Test {
         vm.warp(blockTimestamp);
         vm.roll(blockNumber);
     }
+
+    function startUserPrank() internal {
+        startPrankWithApproval(sampleUser, address(NodesInstance));
+    }
+
+    function startPrankWithApproval(address actor, address spender) internal {
+        vm.startPrank(actor, actor);
+        VVVTokenInstance.approve(spender, type(uint256).max);
+    }
 }
