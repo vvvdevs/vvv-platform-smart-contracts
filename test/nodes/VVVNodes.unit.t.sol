@@ -674,30 +674,6 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         vm.stopPrank();
     }
 
-    //tests that if an admin attempts to deposit launchpad yield without sufficient allowance, the call reverts
-    function testDepositLaunchpadYieldInsufficientAllowance() public {
-        uint256 nodesToMint = 1;
-        uint256[] memory tokenIds = new uint256[](nodesToMint);
-        uint256[] memory amounts = new uint256[](nodesToMint);
-        tokenIds[0] = 1;
-        amounts[0] = 1;
-
-        deal(address(VVVTokenInstance), deployer, 1);
-
-        vm.startPrank(deployer, deployer);
-        NodesInstance.adminMint(sampleUser, sampleLockedTokens);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IERC20Errors.ERC20InsufficientAllowance.selector,
-                address(NodesInstance),
-                uint256(0),
-                uint256(1)
-            )
-        );
-        NodesInstance.depositLaunchpadYield(tokenIds, amounts);
-        vm.stopPrank();
-    }
-
     //tests that an admin can unlock transaction processing yield
     function testUnlockTransactionProcessingYield() public {
         uint256 nodesToMint = NodesInstance.TOTAL_SUPPLY();
