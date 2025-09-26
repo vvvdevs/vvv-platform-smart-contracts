@@ -132,7 +132,7 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         NodesInstance.setVvvToken(address(newToken));
         vm.stopPrank();
 
-        assertEq(NodesInstance.vvvToken(), address(newToken));
+        assertEq(address(NodesInstance.vvvToken()), address(newToken));
     }
 
     function testSetVvvTokenZeroAddress() public {
@@ -142,7 +142,7 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         NodesInstance.setVvvToken(address(0));
         vm.stopPrank();
 
-        assertEq(NodesInstance.vvvToken(), address(0));
+        assertEq(address(NodesInstance.vvvToken()), address(0));
     }
 
     function testNonAdminCannotSetVvvToken() public {

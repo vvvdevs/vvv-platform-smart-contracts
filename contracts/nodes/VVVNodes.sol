@@ -46,8 +46,8 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
     ///@notice Maps a TokenData struct to each tokenId
     mapping(uint256 => TokenData) public tokenData;
 
-    ///@notice Address of the ERC-20 token used for staking, rewards, and withdrawals
-    address public vvvToken;
+    ///@notice ERC-20 token used for staking, rewards, and withdrawals
+    IERC20 public vvvToken;
 
     ///@notice Emitted when accrued yield is claimed
     event Claim(uint256 indexed tokenId, uint256 amount);
@@ -385,14 +385,14 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
 
     ///@notice Sets the ERC-20 token used by the contract
     function setVvvToken(address _vvvToken) external onlyAuthorized {
-        vvvToken = _vvvToken;
+        vvvToken = IERC20(_vvvToken);
         emit SetVvvToken(_vvvToken);
     }
 
     ///@notice Returns the configured VVV token or reverts if unset
     function _getConfiguredVvvToken() private view returns (IERC20) {
-        address token = vvvToken;
-        if (token == address(0)) revert VvvTokenNotSet();
-        return IERC20(token);
+        IERC20 token = vvvToken;
+        if (address(token) == address(0)) revert VvvTokenNotSet();
+        return token;
     }
 }
