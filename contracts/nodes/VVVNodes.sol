@@ -120,6 +120,7 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
         activationThreshold = _activationThreshold;
         authorizationRegistry = _authorizationRegistry;
         baseURI = _newBaseURI;
+        emit SetActivationThreshold(_activationThreshold);
     }
 
     ///@notice Mints a node of the input tier to the recipient
