@@ -60,6 +60,7 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
         uint256 indexed tokenId,
         address indexed recipient,
         uint256 unvestedAmount,
+        uint256 vestingSince,
         uint256 lockedTransactionProcessingYield,
         uint256 amountToVestPerSecond,
         uint256 stakedAmount
@@ -157,6 +158,7 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
             tokenId,
             _recipient,
             unvestedAmount,
+            vestingSince,
             lockedTransactionProcessingYield,
             amountToVestPerSecond,
             _stakedAmount

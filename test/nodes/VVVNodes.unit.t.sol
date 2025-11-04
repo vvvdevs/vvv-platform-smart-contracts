@@ -38,6 +38,7 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
             1,
             sampleUser,
             unvestedAmount,
+            block.timestamp,
             lockedTransactionProcessingYield,
             amountToVestPerSecond,
             activationThreshold
@@ -64,6 +65,35 @@ contract VVVNodesUnitTest is VVVNodesTestBase {
         assertEq(amountToVestPerSecondRead, amountToVestPerSecond);
         assertEq(stakedAmountRead, activationThreshold);
         assertTrue(isActive);
+    }
+
+    //tests that minting a node with a staked amount below the activation threshold results in an inactive node
+    function testAdminMintInactive() public {
+        uint256 stakedAmount = activationThreshold - 1;
+        uint256 unvestedAmount = (sampleLockedTokens * 60) / 100;
+        uint256 lockedTransactionProcessingYield = sampleLockedTokens - unvestedAmount;
+        uint256 amountToVestPerSecond = unvestedAmount / NodesInstance.VESTING_DURATION();
+
+        vm.startPrank(deployer, deployer);
+        vm.expectEmit(address(NodesInstance));
+        emit VVVNodes.Mint(
+            1,
+            sampleUser,
+            unvestedAmount,
+            0,
+            lockedTransactionProcessingYield,
+            amountToVestPerSecond,
+            stakedAmount
+        );
+        NodesInstance.adminMint(sampleUser, sampleLockedTokens, stakedAmount);
+        vm.stopPrank();
+
+        (, uint256 vestingSinceRead, , , , uint256 stakedAmountRead) = NodesInstance.tokenData(1);
+        bool isActive = NodesInstance.isNodeActive(1);
+
+        assertFalse(isActive);
+        assertEq(vestingSinceRead, 0);
+        assertEq(stakedAmountRead, stakedAmount);
     }
 
     //tests that an admin cannot mint above the max supply
