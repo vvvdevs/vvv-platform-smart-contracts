@@ -60,8 +60,10 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
         uint256 indexed tokenId,
         address indexed recipient,
         uint256 unvestedAmount,
+        uint256 vestingSince,
         uint256 lockedTransactionProcessingYield,
-        uint256 amountToVestPerSecond
+        uint256 amountToVestPerSecond,
+        uint256 stakedAmount
     );
 
     ///@notice Emitted when the node activation threshold is set
@@ -124,7 +126,11 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
     }
 
     ///@notice Mints a node of the input tier to the recipient
-    function adminMint(address _recipient, uint256 _lockedTokens) external onlyAuthorized {
+    function adminMint(
+        address _recipient,
+        uint256 _lockedTokens,
+        uint256 _stakedAmount
+    ) external onlyAuthorized {
         ++tokenId;
         if (tokenId > TOTAL_SUPPLY) revert MaxSupplyReached();
 
@@ -133,7 +139,10 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
         uint256 lockedTransactionProcessingYield = _lockedTokens - unvestedAmount;
         uint256 claimableAmount;
         uint256 amountToVestPerSecond = unvestedAmount / VESTING_DURATION;
-        uint256 stakedAmount;
+
+        if (_isNodeActive(_stakedAmount, activationThreshold)) {
+            vestingSince = block.timestamp;
+        }
 
         tokenData[tokenId] = TokenData(
             unvestedAmount,
@@ -141,7 +150,7 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
             lockedTransactionProcessingYield,
             claimableAmount,
             amountToVestPerSecond,
-            stakedAmount
+            _stakedAmount
         );
 
         _mint(_recipient, tokenId);
@@ -149,8 +158,10 @@ contract VVVNodes is ERC721, VVVAuthorizationRegistryChecker {
             tokenId,
             _recipient,
             unvestedAmount,
+            vestingSince,
             lockedTransactionProcessingYield,
-            amountToVestPerSecond
+            amountToVestPerSecond,
+            _stakedAmount
         );
     }
 
